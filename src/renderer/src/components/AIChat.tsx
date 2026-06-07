@@ -490,7 +490,7 @@ function AIChat(): React.JSX.Element {
     setInput(e.target.value)
     const el = e.target
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+    el.style.height = `${el.scrollHeight}px`
   }
 
   const isChatMode = messages.length > 0

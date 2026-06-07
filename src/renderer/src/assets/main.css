@@ -575,7 +575,8 @@ body {
   line-height: 1.4;
   resize: none;
   padding: 4px 0;
-  max-height: 100px;
+  max-height: 99px;
+  overflow-y: auto;
 }
 
 .ai-chat-input::placeholder {
