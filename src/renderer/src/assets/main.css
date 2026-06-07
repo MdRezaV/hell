@@ -425,8 +425,8 @@ body {
 .ai-chat-input-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 8px 8px 14px;
+  gap: 8px;
+  padding: 10px 10px 8px 14px;
   background: var(--color-surface-0);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -435,25 +435,20 @@ body {
     box-shadow var(--transition-normal);
 }
 
-.ai-chat-input-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-
 .ai-chat-input-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 4px;
+  padding-top: 6px;
   border-top: 1px solid var(--color-border-subtle);
+  gap: 8px;
 }
 
 .ai-chat-input-mode {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 6px 2px 0;
+  gap: 8px;
 }
 
 .ai-chat-input-mode-label {
@@ -464,9 +459,14 @@ body {
   letter-spacing: 0.06em;
 }
 
-.ai-chat-input-mode-select {
-  padding: 2px 20px 2px 8px;
-  font-size: 11px;
+.ai-chat-input-mode-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 140px;
+  padding: 6px 10px;
+  font-size: 12px;
   font-family: inherit;
   font-weight: 500;
   color: var(--color-text);
@@ -474,26 +474,91 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='9' height='5' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236c7086' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
   transition:
     border-color var(--transition-fast),
     background var(--transition-fast),
     color var(--transition-fast);
 }
 
-.ai-chat-input-mode-select:hover {
+.ai-chat-input-mode-trigger:hover {
   border-color: var(--ctp-overlay0);
   background: var(--color-surface-1);
 }
 
-.ai-chat-input-mode-select:focus {
-  outline: none;
+.ai-chat-input-mode-trigger svg.chevron {
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.ai-chat-input-mode.open .ai-chat-input-mode-trigger {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px rgba(137, 180, 250, 0.25);
+}
+
+.ai-chat-input-mode.open .ai-chat-input-mode-trigger svg.chevron {
+  transform: rotate(180deg);
+}
+
+.ai-chat-mode-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: menuFadeIn 0.12s ease;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-chat-mode-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.ai-chat-mode-option:hover {
+  background: var(--color-surface-2);
+}
+
+.ai-chat-mode-option.active {
+  background: rgba(137, 180, 250, 0.12);
+  color: var(--ctp-blue);
+}
+
+.ai-chat-mode-option .mode-check {
+  color: var(--ctp-blue);
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.ai-chat-mode-option.active .mode-check {
+  opacity: 1;
 }
 
 .ai-chat-input-wrapper:focus-within {
@@ -502,7 +567,7 @@ body {
 }
 
 .ai-chat-input {
-  flex: 1;
+  width: 100%;
   background: transparent;
   border: none;
   outline: none;
@@ -511,7 +576,7 @@ body {
   font-family: inherit;
   line-height: 1.5;
   resize: none;
-  padding: 4px 0;
+  padding: 2px 0;
   max-height: 120px;
 }
 

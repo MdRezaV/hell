@@ -8,6 +8,7 @@ import {
   MessageSquarePlus,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Pencil,
   RefreshCw,
   Check,
@@ -34,6 +35,67 @@ function generateId(): string {
 type ChatMode = 'Coding' | 'Write Tests' | 'Search For Bugs'
 
 const CHAT_MODES: ChatMode[] = ['Coding', 'Write Tests', 'Search For Bugs']
+
+function ModeSelector({
+  mode,
+  onChange
+}: {
+  mode: ChatMode
+  onChange: (mode: ChatMode) => void
+}): React.JSX.Element {
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent): void => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  return (
+    <div className={`ai-chat-input-mode ${isOpen ? 'open' : ''}`} ref={ref}>
+      <span className="ai-chat-input-mode-label">Mode</span>
+      <button
+        type="button"
+        className="ai-chat-input-mode-trigger"
+        onClick={() => setIsOpen(v => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span>{mode}</span>
+        <ChevronDown size={13} className="chevron" />
+      </button>
+      {isOpen && (
+        <div className="ai-chat-mode-menu" role="listbox">
+          {CHAT_MODES.map(m => (
+            <button
+              key={m}
+              type="button"
+              className={`ai-chat-mode-option ${m === mode ? 'active' : ''}`}
+              role="option"
+              aria-selected={m === mode}
+              onClick={() => {
+                onChange(m)
+                setIsOpen(false)
+              }}
+            >
+              <span>{m}</span>
+              <Check size={13} className="mode-check" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const DUMMY_RESPONSES: Record<string, string> = {
   hello:
@@ -426,17 +488,18 @@ function AIChat(): React.JSX.Element {
         </div>
         <div className="ai-chat-input-bar ai-chat-input-bar-centered">
           <div className="ai-chat-input-wrapper">
-            <div className="ai-chat-input-row">
-              <textarea
-                ref={inputRef}
-                className="ai-chat-input"
-                placeholder="Type a message..."
-                value={input}
-                onChange={handleTextareaInput}
-                onKeyDown={handleKeyDown}
-                rows={1}
-                disabled={isLoading}
-              />
+            <textarea
+              ref={inputRef}
+              className="ai-chat-input"
+              placeholder="Type a message..."
+              value={input}
+              onChange={handleTextareaInput}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              disabled={isLoading}
+            />
+            <div className="ai-chat-input-footer">
+              <ModeSelector mode={mode} onChange={setMode} />
               <button
                 className="ai-chat-send"
                 onClick={handleSend}
@@ -446,26 +509,10 @@ function AIChat(): React.JSX.Element {
                 <Send size={16} />
               </button>
             </div>
-            <div className="ai-chat-input-footer">
-              <div className="ai-chat-input-mode">
-                <span className="ai-chat-input-mode-label">Mode</span>
-                <select
-                  className="ai-chat-input-mode-select"
-                  value={mode}
-                  onChange={e => setMode(e.target.value as ChatMode)}
-                >
-                  {CHAT_MODES.map(m => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="ai-chat-hint">
-                Press <span className="kbd">Enter</span> to send,{' '}
-                <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
-              </div>
-            </div>
+          </div>
+          <div className="ai-chat-hint">
+            Press <span className="kbd">Enter</span> to send,{' '}
+            <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
           </div>
         </div>
       </div>
@@ -509,17 +556,18 @@ function AIChat(): React.JSX.Element {
       </div>
       <div className="ai-chat-input-bar">
         <div className="ai-chat-input-wrapper">
-          <div className="ai-chat-input-row">
-            <textarea
-              ref={inputRef}
-              className="ai-chat-input"
-              placeholder="Type a message..."
-              value={input}
-              onChange={handleTextareaInput}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              disabled={isLoading}
-            />
+          <textarea
+            ref={inputRef}
+            className="ai-chat-input"
+            placeholder="Type a message..."
+            value={input}
+            onChange={handleTextareaInput}
+            onKeyDown={handleKeyDown}
+            rows={1}
+            disabled={isLoading}
+          />
+          <div className="ai-chat-input-footer">
+            <ModeSelector mode={mode} onChange={setMode} />
             <button
               className="ai-chat-send"
               onClick={handleSend}
@@ -528,22 +576,6 @@ function AIChat(): React.JSX.Element {
             >
               <Send size={16} />
             </button>
-          </div>
-          <div className="ai-chat-input-footer">
-            <div className="ai-chat-input-mode">
-              <span className="ai-chat-input-mode-label">Mode</span>
-              <select
-                className="ai-chat-input-mode-select"
-                value={mode}
-                onChange={e => setMode(e.target.value as ChatMode)}
-              >
-                {CHAT_MODES.map(m => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
       </div>
