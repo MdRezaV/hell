@@ -31,6 +31,10 @@ function generateId(): string {
   return `msg-${Date.now()}-${nextId++}`
 }
 
+type ChatMode = 'Coding' | 'Write Tests' | 'Search For Bugs'
+
+const CHAT_MODES: ChatMode[] = ['Coding', 'Write Tests', 'Search For Bugs']
+
 const DUMMY_RESPONSES: Record<string, string> = {
   hello:
     "Hello! I'm your AI assistant. I can help you with coding questions, explain concepts, or just have a conversation. What would you like to talk about?",
@@ -243,6 +247,7 @@ function AIChat(): React.JSX.Element {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -440,6 +445,20 @@ function AIChat(): React.JSX.Element {
               <Send size={16} />
             </button>
           </div>
+          <div className="ai-chat-mode-bar">
+            <span className="ai-chat-mode-label">Mode</span>
+            <select
+              className="ai-chat-mode-select"
+              value={mode}
+              onChange={e => setMode(e.target.value as ChatMode)}
+            >
+              {CHAT_MODES.map(m => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="ai-chat-hint">
             Press <span className="kbd">Enter</span> to send,{' '}
             <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
@@ -455,6 +474,7 @@ function AIChat(): React.JSX.Element {
         <div className="ai-chat-header-left">
           <Bot size={14} />
           <span>AI Assistant</span>
+          <span className="ai-chat-mode-badge">{mode}</span>
           {isLoading && <Loader2 size={12} className="spin" />}
         </div>
         <div className="ai-chat-header-actions">
