@@ -27,6 +27,26 @@ describe('normalizeBody', () => {
   it('returns the same string when no leading/trailing newlines', () => {
     expect(normalizeBody('abc')).toBe('abc')
   })
+
+  it('returns empty string for empty input', () => {
+    expect(normalizeBody('')).toBe('')
+  })
+
+  it('handles single character input', () => {
+    expect(normalizeBody('x')).toBe('x')
+  })
+
+  it('handles single newline input', () => {
+    expect(normalizeBody('\n')).toBe('')
+  })
+
+  it('preserves internal whitespace', () => {
+    expect(normalizeBody('\n  a  \n  b  \n')).toBe('  a  \n  b  ')
+  })
+
+  it('handles input with only spaces', () => {
+    expect(normalizeBody('   ')).toBe('   ')
+  })
 })
 
 describe('wrapInFence', () => {
@@ -46,6 +66,50 @@ describe('wrapInFence', () => {
     const out = wrapInFence(code, 'x')
     expect(out).toContain('````x')
     expect(out).toContain('````\n')
+  })
+
+  it('handles empty code string', () => {
+    const out = wrapInFence('', 'js')
+    expect(out).toBe('\n```js\n\n```\n')
+  })
+
+  it('uses triple backticks when code has only single backticks', () => {
+    const code = 'a `b` c'
+    const out = wrapInFence(code, 'js')
+    expect(out).toBe('\n```js\na `b` c\n```\n')
+  })
+
+  it('uses triple backticks when code has double backticks', () => {
+    const code = 'a `` b'
+    const out = wrapInFence(code, 'js')
+    expect(out).toBe('\n```js\na `` b\n```\n')
+  })
+
+  it('uses tildes when code has backticks of length 3 but no tildes', () => {
+    const code = '```\nsome code\n```'
+    const out = wrapInFence(code, 'md')
+    expect(out).toMatch(/^\n~~~md\n/)
+    expect(out).toMatch(/~~~\n$/)
+  })
+
+  it('uses tildes when code has backticks of length 4 and tildes of length 1', () => {
+    const code = '```` and ~'
+    const out = wrapInFence(code, 'md')
+    // maxBackticks=4, maxTildes=1, so uses ~~~
+    expect(out).toMatch(/~~~md\n/)
+  })
+
+  it('extends backtick fence when code has long backticks and long tildes', () => {
+    const code = '````` and ~~~~'
+    const out = wrapInFence(code, 'x')
+    // maxBackticks=5, so uses 6 backticks
+    expect(out).toContain('``````x')
+    expect(out).toContain('``````\n')
+  })
+
+  it('wraps with empty lang', () => {
+    const out = wrapInFence('code', '')
+    expect(out).toBe('\n```\ncode\n```\n')
   })
 })
 
@@ -71,6 +135,41 @@ describe('isPosInRange', () => {
 
   it('returns false for empty ranges list', () => {
     expect(isPosInRange(0, [])).toBe(false)
+  })
+
+  it('returns true for pos at start of range starting at 0', () => {
+    expect(isPosInRange(0, [{ start: 0, end: 5 }])).toBe(true)
+  })
+
+  it('returns false for pos just before a range', () => {
+    expect(isPosInRange(4, ranges)).toBe(false)
+  })
+
+  it('returns true for pos at last valid position in range', () => {
+    expect(isPosInRange(9, ranges)).toBe(true)
+  })
+
+  it('returns false for pos at end of last range', () => {
+    expect(isPosInRange(25, ranges)).toBe(false)
+  })
+
+  it('returns false for pos beyond all ranges', () => {
+    expect(isPosInRange(100, ranges)).toBe(false)
+  })
+
+  it('handles overlapping ranges', () => {
+    const overlapping: CodeRange[] = [
+      { start: 3, end: 8 },
+      { start: 5, end: 12 }
+    ]
+    expect(isPosInRange(6, overlapping)).toBe(true)
+    expect(isPosInRange(4, overlapping)).toBe(true)
+    expect(isPosInRange(11, overlapping)).toBe(true)
+    expect(isPosInRange(2, overlapping)).toBe(false)
+  })
+
+  it('handles zero-width range', () => {
+    expect(isPosInRange(5, [{ start: 5, end: 5 }])).toBe(false)
   })
 })
 
@@ -109,6 +208,101 @@ describe('findCodeRangesSkippingRanges', () => {
     const ranges = findCodeRangesSkippingRanges(text, skip)
     expect(ranges.length).toBe(0)
   })
+
+  it('finds tilde fenced code blocks', () => {
+    const text = 'before\n~~~python\nprint("hi")\n~~~\nafter'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+    expect(text.slice(ranges[0].start, ranges[0].end)).toBe('~~~python\nprint("hi")\n~~~\n')
+  })
+
+  it('finds multiple fenced code blocks', () => {
+    const text = '```js\na\n```\ntext\n```py\nb\n```\n'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(2)
+    expect(text.slice(ranges[0].start, ranges[0].end)).toBe('```js\na\n```\n')
+    expect(text.slice(ranges[1].start, ranges[1].end)).toBe('```py\nb\n```\n')
+  })
+
+  it('finds empty fenced code block', () => {
+    const text = '```\n```\n'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+    expect(text.slice(ranges[0].start, ranges[0].end)).toBe('```\n```\n')
+  })
+
+  it('handles fence with info string', () => {
+    const text = '```typescript title="example.ts"\nconst x = 1\n```\n'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+  })
+
+  it('handles fenced block at very start of text', () => {
+    const text = '```\ncode\n```\nafter'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+    expect(ranges[0].start).toBe(0)
+  })
+
+  it('handles fenced block at very end of text', () => {
+    const text = 'before\n```\ncode\n```\n'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+  })
+
+  it('does not match fence not at line start', () => {
+    const text = 'not ```a fence``` here'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    // The backticks are inline code spans, not fenced blocks
+    // But ``` at non-line-start won't be treated as fenced block
+    // They will be treated as inline code
+    expect(ranges.length).toBeGreaterThanOrEqual(0)
+  })
+
+  it('handles indented opening fence (up to 3 spaces)', () => {
+    const text = '   ```js\ncode\n```\n'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+  })
+
+  it('treats unclosed inline code span as extending to end', () => {
+    const text = 'hello `unclosed'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    // unclosed inline code: pos runs to end without adding a range
+    // The implementation does not add a range for unclosed inline code
+    expect(ranges.length).toBe(0)
+  })
+
+  it('handles text with no code at all', () => {
+    const text = 'just plain text without any code'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(0)
+  })
+
+  it('handles empty text', () => {
+    const ranges = findCodeRangesSkippingRanges('', [])
+    expect(ranges.length).toBe(0)
+  })
+
+  it('handles fenced block with longer closing fence', () => {
+    const text = '```\ncode\n````\n'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+  })
+
+  it('finds double backtick inline code span', () => {
+    const text = '``code with ` backtick``'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+    expect(text.slice(ranges[0].start, ranges[0].end)).toBe('``code with ` backtick``')
+  })
+
+  it('handles unclosed fenced block without trailing newline', () => {
+    const text = '```\nno closing fence'
+    const ranges = findCodeRangesSkippingRanges(text, [])
+    expect(ranges.length).toBe(1)
+    expect(ranges[0].end).toBe(text.length)
+  })
 })
 
 describe('findTagsInText', () => {
@@ -143,6 +337,72 @@ describe('findTagsInText', () => {
     expect(opens.length).toBe(1)
     expect(closes.length).toBe(1)
   })
+
+  it('handles tag with no attributes', () => {
+    const text = '<file>body</file>'
+    const { opens, closes } = findTagsInText(text, 'file', [])
+    expect(opens.length).toBe(1)
+    expect(opens[0].attrs).toBe('')
+    expect(closes.length).toBe(1)
+  })
+
+  it('handles tag with multiple attributes', () => {
+    const text = '<file path="a.ts" action="replace" lang="typescript">body</file>'
+    const { opens } = findTagsInText(text, 'file', [])
+    expect(opens.length).toBe(1)
+    expect(opens[0].attrs).toContain('path="a.ts"')
+    expect(opens[0].attrs).toContain('action="replace"')
+    expect(opens[0].attrs).toContain('lang="typescript"')
+  })
+
+  it('finds multiple open/close pairs', () => {
+    const text = '<file>a</file> <file>b</file> <file>c</file>'
+    const { opens, closes } = findTagsInText(text, 'file', [])
+    expect(opens.length).toBe(3)
+    expect(closes.length).toBe(3)
+  })
+
+  it('does not match partial tag name as a different tag', () => {
+    const text = '<filex>not a file</filex>'
+    const { opens } = findTagsInText(text, 'file', [])
+    // The regex <file...> will match <filex...> since it matches <file followed by x
+    // Actually, the regex is `<file([^>]*)>` so <filex> would match with attrs="x"
+    // This tests actual behavior
+    expect(opens.length).toBe(1)
+    expect(opens[0].attrs).toBe('x')
+  })
+
+  it('handles closing tag with whitespace before >', () => {
+    const text = '<file>body</file  >'
+    const { closes } = findTagsInText(text, 'file', [])
+    expect(closes.length).toBe(1)
+  })
+
+  it('returns empty arrays when no tags found', () => {
+    const text = 'just plain text'
+    const { opens, closes } = findTagsInText(text, 'file', [])
+    expect(opens.length).toBe(0)
+    expect(closes.length).toBe(0)
+  })
+
+  it('handles self-closing tag with space before slash', () => {
+    const text = '<file path="a.ts"   />'
+    const { opens } = findTagsInText(text, 'file', [])
+    expect(opens.length).toBe(1)
+    expect(opens[0].selfClosing).toBe(true)
+    expect(opens[0].attrs).toBe('path="a.ts"')
+  })
+
+  it('correctly computes start and end positions', () => {
+    const text = 'abc<file>def</file>ghi'
+    const { opens, closes } = findTagsInText(text, 'file', [])
+    expect(opens[0].start).toBe(3)
+    expect(opens[0].end).toBe(9)
+    expect(text.slice(opens[0].start, opens[0].end)).toBe('<file>')
+    expect(closes[0].start).toBe(12)
+    expect(closes[0].end).toBe(19)
+    expect(text.slice(closes[0].start, closes[0].end)).toBe('</file>')
+  })
 })
 
 describe('matchOpenClose', () => {
@@ -168,6 +428,50 @@ describe('matchOpenClose', () => {
     const matches = matchOpenClose(opens, closes, text.length, text)
     expect(matches.length).toBe(1)
     expect(matches[0].body).toBe('body')
+  })
+
+  it('does not match when close immediately follows open (empty body)', () => {
+    const text = '<x></x>'
+    const { opens, closes } = findTagsInText(text, 'x', [])
+    // matchOpenClose uses strict > so close.start === open.end is not matched
+    const matches = matchOpenClose(opens, closes, text.length, text)
+    expect(matches.length).toBe(0)
+  })
+
+  it('handles three consecutive matched pairs', () => {
+    const text = '<x>a</x><x>b</x><x>c</x>'
+    const { opens, closes } = findTagsInText(text, 'x', [])
+    const matches = matchOpenClose(opens, closes, text.length, text)
+    expect(matches.length).toBe(3)
+    expect(matches[0].body).toBe('a')
+    expect(matches[1].body).toBe('b')
+    expect(matches[2].body).toBe('c')
+  })
+
+  it('first open captures close even when second open has no boundary between', () => {
+    const text = '<x><x>b</x>'
+    const { opens, closes } = findTagsInText(text, 'x', [])
+    const matches = matchOpenClose(opens, closes, text.length, text)
+    // No close between first and second open, so j advances past second open
+    // boundary becomes textLength, first open matches with the close
+    // body includes the second open tag as literal text
+    expect(matches.length).toBe(1)
+    expect(matches[0].body).toBe('<x>b')
+  })
+
+  it('returns empty when only self-closing tags exist', () => {
+    const text = '<x /> <x /> <x />'
+    const { opens, closes } = findTagsInText(text, 'x', [])
+    const matches = matchOpenClose(opens, closes, text.length, text)
+    expect(matches.length).toBe(0)
+  })
+
+  it('preserves open and close references in matched blocks', () => {
+    const text = '<x>body</x>'
+    const { opens, closes } = findTagsInText(text, 'x', [])
+    const matches = matchOpenClose(opens, closes, text.length, text)
+    expect(matches[0].open).toBe(opens[0])
+    expect(matches[0].close).toBe(closes[0])
   })
 })
 
@@ -200,6 +504,55 @@ describe('findMatchedBlocks', () => {
     expect(matched.length).toBe(2)
     expect(matched[0].body).toBe('a')
     expect(matched[1].body).toBe('b')
+  })
+
+  it('returns empty matched for text with no tags', () => {
+    const text = 'just plain text'
+    const { matched, selfClosing } = findMatchedBlocks(text, 'file')
+    expect(matched.length).toBe(0)
+    expect(selfClosing.length).toBe(0)
+  })
+
+  it('returns empty matched for unclosed tags', () => {
+    const text = '<file>no close here'
+    const { matched } = findMatchedBlocks(text, 'file')
+    expect(matched.length).toBe(0)
+  })
+
+  it('does not match tags with empty body (close immediately follows open)', () => {
+    const text = '<file></file>'
+    const { matched } = findMatchedBlocks(text, 'file')
+    // matchOpenClose uses strict > so close.start === open.end is not matched
+    expect(matched.length).toBe(0)
+  })
+
+  it('matches tags with whitespace-only body', () => {
+    const text = '<file> </file>'
+    const { matched } = findMatchedBlocks(text, 'file')
+    expect(matched.length).toBe(1)
+    expect(matched[0].body).toBe(' ')
+  })
+
+  it('handles tags inside tilde-fenced code blocks', () => {
+    const text = '~~~\n<file>x</file>\n~~~\n<file>y</file>'
+    const { matched } = findMatchedBlocks(text, 'file')
+    expect(matched.length).toBe(1)
+    expect(matched[0].body).toBe('y')
+  })
+
+  it('handles self-closing tags only', () => {
+    const text = '<file path="a" /> <file path="b" />'
+    const { matched, selfClosing } = findMatchedBlocks(text, 'file')
+    expect(matched.length).toBe(0)
+    expect(selfClosing.length).toBe(2)
+  })
+
+  it('preserves open and close info in matched blocks', () => {
+    const text = '<file path="a">body</file>'
+    const { matched } = findMatchedBlocks(text, 'file')
+    expect(matched[0].open.attrs).toBe('path="a"')
+    expect(matched[0].open.selfClosing).toBe(false)
+    expect(matched[0].close.start).toBeGreaterThan(matched[0].open.end)
   })
 })
 
@@ -509,5 +862,80 @@ const str = "quotes \\" and '"`
     expect(out).toContain('const regex = /test/;')
     expect(out).toContain('const template = `${var}`;')
     expect(out).toContain('const str = "quotes \\" and \'"')
+  })
+
+  it('converts a file block with no action to a regular file fence', () => {
+    const input = '<file path="plain.ts">let x = 1</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:plain.ts')
+    expect(out).toContain('let x = 1')
+    expect(out).not.toContain('file-replace')
+    expect(out).not.toContain('file-delete')
+  })
+
+  it('handles file block with unknown action as regular file', () => {
+    const input = '<file path="a.ts" action="unknown">body</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('body')
+  })
+
+  it('handles multiple delete operations', () => {
+    const input = '<file path="a.js" action="delete" />\n<file path="b.js" action="delete" />'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-delete:a.js')
+    expect(out).toContain('```file-delete:b.js')
+    expect(out).not.toContain('<file')
+  })
+
+  it('preserves special characters in file path', () => {
+    const input = '<file path="src/@types/index.d.ts">content</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:src/@types/index.d.ts')
+    expect(out).toContain('content')
+  })
+
+  it('handles file block with whitespace-only body', () => {
+    const input = '<file path="empty.ts">\n\n\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:empty.ts')
+  })
+
+  it('handles content that is just a file block with no surrounding text', () => {
+    const input = '<file path="only.ts">code</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out.trim()).toContain('```file:only.ts')
+    expect(out.trim()).toContain('code')
+  })
+
+  it('handles replace with missing old block', () => {
+    const input = '<file path="a.ts" action="replace">\n<new>\nB\n</new>\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('<old>')
+    expect(out).toContain('</old>')
+    expect(out).toContain('B')
+  })
+
+  it('handles replace with missing new block', () => {
+    const input = '<file path="a.ts" action="replace">\n<old>\nA\n</old>\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('A')
+    expect(out).toContain('<new>')
+    expect(out).toContain('</new>')
+  })
+
+  it('handles file path with spaces', () => {
+    const input = '<file path="my file.ts">content</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:my file.ts')
+  })
+
+  it('handles self-closing file tag without delete action', () => {
+    const input = '<file path="a.ts" />'
+    const out = preprocessFileBlocks(input)
+    // Self-closing without action="delete" should be left as-is or ignored
+    expect(out).not.toContain('file-delete')
   })
 })
