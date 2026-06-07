@@ -97,34 +97,8 @@ function ModeSelector({
   )
 }
 
-const DUMMY_RESPONSES: Record<string, string> = {
-  hello:
-    "Hello! I'm your AI assistant. I can help you with coding questions, explain concepts, or just have a conversation. What would you like to talk about?",
-  hi: "Hi there! How can I help you today? Feel free to ask me anything about programming, design, or any other topic.",
-  help: "I can help with:\n\n- **Code explanations** — Ask me about any programming concept\n- **Debugging** — Describe your issue and I'll suggest solutions\n- **Architecture** — Discuss design patterns and best practices\n- **General questions** — Ask me anything!\n\nJust type your question below.",
-  install:
-    "To install dependencies, run:\n\n```command\nnpm install\n```\n\nThen start the development server:\n\n```command\nnpm run dev\n```\n\nThe app will open automatically at `http://localhost:5173`.",
-  react:
-    "React is a JavaScript library for building user interfaces. Key concepts include:\n\n- **Components** — Reusable UI building blocks\n- **JSX** — Syntax extension for writing HTML-like code in JavaScript\n- **Hooks** — `useState`, `useEffect`, etc. for managing state and side effects\n- **Virtual DOM** — Efficient rendering through diffing\n\nWould you like me to dive deeper into any of these?",
-  typescript:
-    "TypeScript adds static typing to JavaScript. Benefits include:\n\n- **Type safety** — Catch errors at compile time\n- **Better IDE support** — Autocomplete, refactoring, navigation\n- **Interfaces & Types** — Define contracts for your data\n- **Generics** — Write reusable, type-safe code\n\nWhat specific TypeScript topic are you interested in?"
-}
-
 function getAIResponse(userMessage: string): string {
-  const lower = userMessage.toLowerCase().trim()
-
-  for (const [keyword, response] of Object.entries(DUMMY_RESPONSES)) {
-    if (lower.includes(keyword)) return response
-  }
-
-  const fallbacks = [
-    "That's an interesting question! Let me think about this...\n\nBased on my understanding, I'd suggest breaking this down into smaller parts. Could you provide more context about what you're trying to achieve?",
-    "Great question! Here are some thoughts:\n\n1. Consider the **architecture** of your solution\n2. Think about **edge cases** and error handling\n3. Keep the code **readable** and maintainable\n\nWould you like me to elaborate on any of these points?",
-    "I'd be happy to help with that. Here's my take:\n\nThe key is to approach this systematically. Start with the simplest working version, then iterate and improve. What specific aspect would you like to focus on first?",
-    "That's a common challenge! Here are a few approaches:\n\n- **Option A** — Simple and straightforward, good for prototyping\n- **Option B** — More robust, better for production\n- **Option C** — Most flexible, but adds complexity\n\nWhich direction interests you most?"
-  ]
-
-  return fallbacks[Math.floor(Math.random() * fallbacks.length)]
+  return userMessage
 }
 
 function formatTime(date: Date): string {
