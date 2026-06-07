@@ -560,7 +560,7 @@ function AIChat(): React.JSX.Element {
             disabled={isLoading}
           />
           <div className="ai-chat-input-footer">
-            <ModeSelector mode={mode} onChange={setMode} />
+            <span />
             <button
               className="ai-chat-send"
               onClick={handleSend}
