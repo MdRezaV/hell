@@ -13,6 +13,7 @@ import {
   Check,
   X
 } from 'lucide-react'
+import Markdown from './Markdown'
 
 interface MessageVariant {
   content: string
@@ -101,6 +102,8 @@ const DUMMY_RESPONSES: Record<string, string> = {
     "Hello! I'm your AI assistant. I can help you with coding questions, explain concepts, or just have a conversation. What would you like to talk about?",
   hi: "Hi there! How can I help you today? Feel free to ask me anything about programming, design, or any other topic.",
   help: "I can help with:\n\n- **Code explanations** — Ask me about any programming concept\n- **Debugging** — Describe your issue and I'll suggest solutions\n- **Architecture** — Discuss design patterns and best practices\n- **General questions** — Ask me anything!\n\nJust type your question below.",
+  install:
+    "To install dependencies, run:\n\n```command\nnpm install\n```\n\nThen start the development server:\n\n```command\nnpm run dev\n```\n\nThe app will open automatically at `http://localhost:5173`.",
   react:
     "React is a JavaScript library for building user interfaces. Key concepts include:\n\n- **Components** — Reusable UI building blocks\n- **JSX** — Syntax extension for writing HTML-like code in JavaScript\n- **Hooks** — `useState`, `useEffect`, etc. for managing state and side effects\n- **Virtual DOM** — Efficient rendering through diffing\n\nWould you like me to dive deeper into any of these?",
   typescript:
@@ -220,19 +223,18 @@ function MessageBubble({
                   <span className="chat-typing-dot" />
                   <span className="chat-typing-dot" />
                 </div>
-              ) : (
+              ) : isUser ? (
                 <div className="chat-bubble-content">
                   {variant.content.split('\n').map((line, i) => (
                     <span key={i}>
-                      {line.split(/(\*\*[^*]+\*\*)/).map((segment, j) => {
-                        if (segment.startsWith('**') && segment.endsWith('**')) {
-                          return <strong key={j}>{segment.slice(2, -2)}</strong>
-                        }
-                        return segment
-                      })}
+                      {line}
                       {i < variant.content.split('\n').length - 1 && <br />}
                     </span>
                   ))}
+                </div>
+              ) : (
+                <div className="chat-bubble-content">
+                  <Markdown content={variant.content} />
                 </div>
               )}
             </div>
