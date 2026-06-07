@@ -424,7 +424,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 8px 4px 10px;
+  padding: 8px 12px;
   background: var(--color-surface-0);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -596,6 +596,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
   padding: 6px 10px;
   flex-shrink: 0;
   font-size: 12px;
