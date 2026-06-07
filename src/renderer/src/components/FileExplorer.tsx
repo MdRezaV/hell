@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 interface FileNode {
   name: string
@@ -39,9 +39,62 @@ function FileIcon(): React.JSX.Element {
   )
 }
 
-function TreeNode({ node, level }: { node: FileNode; level: number }): React.JSX.Element {
+type CheckState = 'checked' | 'unchecked' | 'indeterminate'
+
+function getCheckState(
+  node: FileNode,
+  checkedPaths: Set<string>
+): CheckState {
+  if (node.type === 'file') {
+    return checkedPaths.has(node.path) ? 'checked' : 'unchecked'
+  }
+
+  if (!node.children || node.children.length === 0) {
+    return checkedPaths.has(node.path) ? 'checked' : 'unchecked'
+  }
+
+  const childStates = node.children.map(child => getCheckState(child, checkedPaths))
+  const hasChecked = childStates.some(s => s === 'checked' || s === 'indeterminate')
+  const allChecked = childStates.every(s => s === 'checked')
+
+  if (allChecked) return 'checked'
+  if (hasChecked) return 'indeterminate'
+  return 'unchecked'
+}
+
+function getAllPaths(node: FileNode): string[] {
+  const paths = [node.path]
+  if (node.children) {
+    node.children.forEach(child => {
+      paths.push(...getAllPaths(child))
+    })
+  }
+  return paths
+}
+
+function TreeNode({
+  node,
+  level,
+  checkedPaths,
+  onToggle
+}: {
+  node: FileNode
+  level: number
+  checkedPaths: Set<string>
+  onToggle: (node: FileNode, checked: boolean) => void
+}): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
+  const checkState = getCheckState(node, checkedPaths)
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    e.stopPropagation()
+    onToggle(node, e.target.checked)
+  }
+
+  const handleCheckboxClick = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+  }
 
   return (
     <div>
@@ -50,6 +103,18 @@ function TreeNode({ node, level }: { node: FileNode; level: number }): React.JSX
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => hasChildren && setIsOpen(!isOpen)}
       >
+        <span className="tree-checkbox" onClick={handleCheckboxClick}>
+          <input
+            type="checkbox"
+            checked={checkState === 'checked'}
+            ref={(el) => {
+              if (el) {
+                el.indeterminate = checkState === 'indeterminate'
+              }
+            }}
+            onChange={handleCheckboxChange}
+          />
+        </span>
         <span className="tree-chevron">
           {hasChildren ? (isOpen ? <ChevronDown /> : <ChevronRight />) : null}
         </span>
@@ -61,7 +126,13 @@ function TreeNode({ node, level }: { node: FileNode; level: number }): React.JSX
       {isOpen && hasChildren && (
         <div>
           {node.children!.map(child => (
-            <TreeNode key={child.path} node={child} level={level + 1} />
+            <TreeNode
+              key={child.path}
+              node={child}
+              level={level + 1}
+              checkedPaths={checkedPaths}
+              onToggle={onToggle}
+            />
           ))}
         </div>
       )}
@@ -72,6 +143,7 @@ function TreeNode({ node, level }: { node: FileNode; level: number }): React.JSX
 function FileExplorer(): React.JSX.Element {
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [tree, setTree] = useState<FileNode[]>([])
+  const [checkedPaths, setCheckedPaths] = useState<Set<string>>(new Set())
 
   const handleOpenWorkspace = async (): Promise<void> => {
     const path = await window.electron.ipcRenderer.invoke('open-workspace')
@@ -79,8 +151,24 @@ function FileExplorer(): React.JSX.Element {
       setWorkspace(path)
       const files = await window.electron.ipcRenderer.invoke('read-directory', path)
       setTree(files)
+      setCheckedPaths(new Set())
     }
   }
+
+  const handleToggle = useCallback((node: FileNode, checked: boolean): void => {
+    setCheckedPaths(prev => {
+      const next = new Set(prev)
+      const paths = getAllPaths(node)
+      
+      if (checked) {
+        paths.forEach(p => next.add(p))
+      } else {
+        paths.forEach(p => next.delete(p))
+      }
+      
+      return next
+    })
+  }, [])
 
   if (!workspace) {
     return (
@@ -97,7 +185,13 @@ function FileExplorer(): React.JSX.Element {
       </div>
       <div className="explorer-tree">
         {tree.map(node => (
-          <TreeNode key={node.path} node={node} level={0} />
+          <TreeNode
+            key={node.path}
+            node={node}
+            level={0}
+            checkedPaths={checkedPaths}
+            onToggle={handleToggle}
+          />
         ))}
       </div>
     </div>
