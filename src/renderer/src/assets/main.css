@@ -12,16 +12,42 @@ body {
   margin: 0;
 }
 
+/* ── Layout ────────────────────────────────────────────── */
 .ide-layout {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
 }
 
+.titlebar {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-background-mute);
+  border-bottom: 1px solid var(--color-border);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.titlebar-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
 .left-pane {
-  width: 250px;
-  min-width: 150px;
-  border-right: 1px solid var(--ev-c-gray-3);
+  width: 280px;
+  min-width: 180px;
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   background: var(--color-background-soft);
@@ -30,27 +56,142 @@ body {
 .right-pane {
   flex: 1;
   background: var(--color-background);
-}
-
-.explorer-empty {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: auto;
+}
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  background: var(--color-accent);
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.statusbar-item {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-accent-text);
+  opacity: 0.85;
+}
+
+.statusbar-spacer {
+  flex: 1;
+}
+
+/* ── Panel ─────────────────────────────────────────────── */
+.panel {
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.panel-header {
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.panel-header p {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* ── Welcome Panel ─────────────────────────────────────── */
+.welcome-panel {
+  text-align: center;
+  max-width: 400px;
+}
+
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  color: var(--ctp-lavender);
+  opacity: 0.7;
+}
+
+.welcome-panel h2 {
+  margin-bottom: 8px;
+}
+
+.welcome-panel p {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.welcome-shortcuts {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--color-surface-1);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.shortcut-label {
+  color: var(--color-text-secondary);
+}
+
+.shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 1px 0 var(--color-border);
+}
+
+/* ── File Explorer ─────────────────────────────────────── */
+.explorer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   height: 100%;
+  gap: 12px;
 }
 
-.explorer-empty button {
-  padding: 8px 16px;
-  background: var(--ev-button-alt-bg);
-  color: var(--ev-button-alt-text);
-  border: 1px solid var(--ev-button-alt-border);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+.explorer-empty-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--ctp-overlay0);
+  opacity: 0.5;
 }
 
-.explorer-empty button:hover {
-  background: var(--ev-button-alt-hover-bg);
+.explorer-empty p {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
 }
 
 .file-explorer {
@@ -61,48 +202,93 @@ body {
 }
 
 .explorer-header {
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background-mute);
+}
+
+.explorer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.explorer-header-title {
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--ev-c-text-2);
-  border-bottom: 1px solid var(--ev-c-gray-3);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.explorer-header-actions button {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.explorer-header-actions button:hover {
+  background: var(--color-surface-1);
+  color: var(--color-text);
+}
+
+.explorer-header-actions button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.explorer-count {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  font-weight: 500;
+  padding: 0 4px;
 }
 
 .explorer-tree {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 4px 0;
   font-size: 13px;
 }
 
 .tree-node {
   display: flex;
   align-items: center;
-  padding: 3px 8px;
+  padding: 2px 8px 2px 0;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   font-size: 13px;
-  line-height: 22px;
+  line-height: 26px;
+  transition: background var(--transition-fast);
+  border-radius: 0;
 }
 
 .tree-node:hover {
-  background: var(--ev-c-gray-3);
+  background: var(--color-surface-0);
 }
 
-.tree-checkbox {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 6px;
-}
-
-.tree-checkbox input[type="checkbox"] {
-  margin: 0;
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
+.tree-node:active {
+  background: var(--color-surface-1);
 }
 
 .tree-chevron {
@@ -110,8 +296,26 @@ body {
   align-items: center;
   justify-content: center;
   width: 16px;
+  height: 26px;
   flex-shrink: 0;
-  color: var(--ev-c-text-2);
+  color: var(--color-text-faint);
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.tree-node:hover .tree-chevron {
+  color: var(--color-text-subtle);
+}
+
+.tree-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 26px;
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .tree-icon {
@@ -121,10 +325,38 @@ body {
   width: 18px;
   flex-shrink: 0;
   margin-right: 6px;
-  color: var(--ev-c-text-2);
+}
+
+.tree-icon.folder {
+  color: var(--ctp-blue);
+}
+
+.tree-icon.file {
+  color: var(--ctp-subtext0);
 }
 
 .tree-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.tree-node:hover .tree-label {
+  color: var(--ctp-text);
+}
+
+/* ── Versions ──────────────────────────────────────────── */
+.versions {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background-mute);
+  flex-shrink: 0;
+}
+
+.versions li {
+  font-size: 11px;
+  color: var(--color-text-faint);
 }

@@ -100,9 +100,12 @@ function TreeNode({
     <div>
       <div
         className="tree-node"
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        style={{ paddingLeft: `${level * 16}px` }}
         onClick={() => hasChildren && setIsOpen(!isOpen)}
       >
+        <span className="tree-chevron">
+          {hasChildren ? (isOpen ? <ChevronDown /> : <ChevronRight />) : null}
+        </span>
         <span className="tree-checkbox" onClick={handleCheckboxClick}>
           <input
             type="checkbox"
@@ -115,10 +118,7 @@ function TreeNode({
             onChange={handleCheckboxChange}
           />
         </span>
-        <span className="tree-chevron">
-          {hasChildren ? (isOpen ? <ChevronDown /> : <ChevronRight />) : null}
-        </span>
-        <span className="tree-icon">
+        <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
           {node.type === 'directory' ? <FolderIcon /> : <FileIcon />}
         </span>
         <span className="tree-label">{node.name}</span>
@@ -140,6 +140,33 @@ function TreeNode({
   )
 }
 
+function countFiles(nodes: FileNode[]): number {
+  let count = 0
+  for (const node of nodes) {
+    if (node.type === 'file') count++
+    if (node.children) count += countFiles(node.children)
+  }
+  return count
+}
+
+function FolderOpenIcon(): React.JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M1 3.5A1.5 1.5 0 012.5 2h2.764a1 1 0 01.707.293l.828.828A1 1 0 007.5 3.5H13.5A1.5 1.5 0 0115 5v1H5.5a2 2 0 00-1.897 1.355L1.5 13V3.5z" fill="currentColor" opacity="0.6"/>
+      <path d="M1.5 13l2.103-5.645A2 2 0 015.5 6h9a1.5 1.5 0 011.415 2.008l-1.8 5A1.5 1.5 0 0112.7 14H2.5a1 1 0 01-1-1z" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function RefreshIcon(): React.JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13.5 8A5.5 5.5 0 112.55 5.5" />
+      <polyline points="13 2 13.5 5.5 10 6" />
+    </svg>
+  )
+}
+
 function FileExplorer(): React.JSX.Element {
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [tree, setTree] = useState<FileNode[]>([])
@@ -153,6 +180,13 @@ function FileExplorer(): React.JSX.Element {
       setTree(files)
       setCheckedPaths(new Set())
     }
+  }
+
+  const handleRefresh = async (): Promise<void> => {
+    if (!workspace) return
+    const files = await window.electron.ipcRenderer.invoke('read-directory', workspace)
+    setTree(files)
+    setCheckedPaths(new Set())
   }
 
   const handleToggle = useCallback((node: FileNode, checked: boolean): void => {
@@ -170,9 +204,16 @@ function FileExplorer(): React.JSX.Element {
     })
   }, [])
 
+  const fileCount = countFiles(tree)
+  const checkedCount = checkedPaths.size
+
   if (!workspace) {
     return (
       <div className="explorer-empty">
+        <svg className="explorer-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+        </svg>
+        <p>No folder opened</p>
         <button onClick={handleOpenWorkspace}>Open Workspace</button>
       </div>
     )
@@ -181,7 +222,18 @@ function FileExplorer(): React.JSX.Element {
   return (
     <div className="file-explorer">
       <div className="explorer-header">
-        <span>{workspace.split(/[/\\]/).pop()}</span>
+        <div className="explorer-header-left">
+          <span className="explorer-header-title">{workspace.split(/[/\\]/).pop()}</span>
+          <span className="explorer-count">{checkedCount}/{fileCount}</span>
+        </div>
+        <div className="explorer-header-actions">
+          <button onClick={handleRefresh} title="Refresh">
+            <RefreshIcon />
+          </button>
+          <button onClick={handleOpenWorkspace} title="Open Folder">
+            <FolderOpenIcon />
+          </button>
+        </div>
       </div>
       <div className="explorer-tree">
         {tree.map(node => (
