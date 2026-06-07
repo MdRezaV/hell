@@ -789,7 +789,7 @@ body {
 
 .chat-message {
   display: flex;
-  max-width: 100%;
+  max-width: 90%;
   animation: fadeIn 0.2s ease;
 }
 
@@ -1282,7 +1282,7 @@ body {
 
 /* ── File Block ───────────────────────────────────────── */
 .md-file-block {
-  margin: 10px 0;
+  margin: 12px 0;
   background: var(--color-background-mute);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
@@ -1298,38 +1298,58 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
-  background: var(--color-surface-0);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: 8px 16px 6px;
+  background: var(--color-background-mute);
+  border-bottom: 1px dashed var(--color-border-subtle);
   gap: 8px;
 }
 
 .md-file-path {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12px;
   font-weight: 600;
   font-family: inherit;
+  color: var(--color-text);
+  overflow: hidden;
+  letter-spacing: 0.01em;
+}
+
+.md-file-path-icon {
+  flex-shrink: 0;
   color: var(--ctp-blue);
+}
+
+.md-file-path-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  letter-spacing: 0.01em;
+}
+
+.md-file-path-segment {
+  color: var(--color-text-muted);
+}
+
+.md-file-path-segment:last-child {
+  color: var(--color-text);
+  font-weight: 700;
 }
 
 .md-file-copy {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  font-family: inherit;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   color: var(--color-text-subtle);
   background: transparent;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   flex-shrink: 0;
-  line-height: 1.4;
   transition:
     background var(--transition-fast),
     color var(--transition-fast),
@@ -1337,43 +1357,50 @@ body {
 }
 
 .md-file-copy:hover {
-  background: var(--color-surface-1);
+  background: var(--color-surface-2);
   color: var(--color-text);
-  border-color: var(--ctp-overlay0);
+  border-color: var(--color-border-subtle);
+}
+
+.md-file-copy:active {
+  background: var(--color-background-mute);
+}
+
+.md-file-copy.copied {
+  color: var(--ctp-green);
 }
 
 .md-file-code {
+  overflow-y: auto;
   overflow-x: auto;
   font-size: 12px;
   line-height: 1.55;
+  padding: 8px 0;
+  max-height: 404px;
+  background: var(--color-background-mute);
 }
 
-.md-file-block .md-file-lines {
+.md-file-lines {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  border-collapse: collapse;
-  margin: 0;
   font-size: inherit;
 }
 
-.md-file-block .md-file-lines tr {
-  background: transparent;
+.md-file-line {
+  display: flex;
+  align-items: stretch;
+  transition: background var(--transition-fast);
 }
 
-.md-file-block .md-file-lines tr:hover td {
-  background: rgba(137, 180, 250, 0.04);
-}
-
-.md-file-block .md-file-lines td {
-  padding: 0;
-  border: none;
-  text-align: left;
-  vertical-align: top;
+.md-file-line:hover {
+  background: rgba(137, 180, 250, 0.05);
 }
 
 .md-file-line-number {
-  width: 1%;
-  min-width: 40px;
-  padding: 0 10px 0 12px;
+  flex-shrink: 0;
+  width: 48px;
+  padding: 1px 12px 1px 20px;
   text-align: right;
   color: var(--ctp-overlay0);
   font-size: 11px;
@@ -1381,12 +1408,23 @@ body {
   font-weight: 500;
   user-select: none;
   white-space: nowrap;
-  border-right: 1px solid var(--color-border-subtle);
 }
 
 .md-file-line-content {
-  padding: 0 12px;
+  flex: 1;
+  padding: 1px 20px 1px 16px;
   white-space: pre;
+  min-width: 0;
+}
+
+.md-file-line-content code {
+  display: block;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  color: var(--color-text);
+  font-size: inherit;
+  font-family: inherit;
 }
 
 .md-file-line-content code {

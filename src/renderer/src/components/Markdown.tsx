@@ -1,9 +1,9 @@
- 
+
 import { useState, Children, isValidElement, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
-import { Play, Check, Copy } from 'lucide-react'
+import { Play, Check, FileCode2 } from 'lucide-react'
 
 interface MarkdownProps {
   content: string
@@ -55,6 +55,7 @@ function preprocessFileBlocks(content: string): string {
 function FileBlock({ path, code }: { path: string; code: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
   const lines = code.replace(/\n$/, '').split('\n')
+  const segments = path.split(/[/\\]/)
 
   const handleCopy = async (): Promise<void> => {
     try {
@@ -69,28 +70,36 @@ function FileBlock({ path, code }: { path: string; code: string }): React.JSX.El
   return (
     <div className="md-file-block">
       <div className="md-file-header">
-        <span className="md-file-path" title={path}>{path}</span>
+        <span className="md-file-path" title={path}>
+          <FileCode2 size={14} strokeWidth={2} className="md-file-path-icon" />
+          <span className="md-file-path-text">
+            {segments.map((seg, i) => (
+              <span key={i}>
+                {i > 0 && <span className="md-file-path-segment">/</span>}
+                <span className="md-file-path-segment">{seg}</span>
+              </span>
+            ))}
+          </span>
+        </span>
         <button
           type="button"
-          className="md-file-copy"
+          className={`md-file-copy${copied ? ' copied' : ''}`}
           onClick={handleCopy}
-          title={copied ? 'Copied' : 'Copy'}
+          title={copied ? 'Copied' : 'Copy code'}
+          aria-label={copied ? 'Copied' : 'Copy code'}
         >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
+          {copied ? <Check size={16} strokeWidth={2.25} /> : <FileCode2 size={16} strokeWidth={2} />}
         </button>
       </div>
       <div className="md-file-code">
-        <table className="md-file-lines">
-          <tbody>
-            {lines.map((line, i) => (
-              <tr key={i}>
-                <td className="md-file-line-number">{i + 1}</td>
-                <td className="md-file-line-content"><code>{line}</code></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="md-file-lines">
+          {lines.map((line, i) => (
+            <div key={i} className="md-file-line">
+              <div className="md-file-line-number">{i + 1}</div>
+              <div className="md-file-line-content"><code>{line}</code></div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
