@@ -426,42 +426,46 @@ function AIChat(): React.JSX.Element {
         </div>
         <div className="ai-chat-input-bar ai-chat-input-bar-centered">
           <div className="ai-chat-input-wrapper">
-            <textarea
-              ref={inputRef}
-              className="ai-chat-input"
-              placeholder="Type a message..."
-              value={input}
-              onChange={handleTextareaInput}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              disabled={isLoading}
-            />
-            <button
-              className="ai-chat-send"
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              title="Send message"
-            >
-              <Send size={16} />
-            </button>
-          </div>
-          <div className="ai-chat-mode-bar">
-            <span className="ai-chat-mode-label">Mode</span>
-            <select
-              className="ai-chat-mode-select"
-              value={mode}
-              onChange={e => setMode(e.target.value as ChatMode)}
-            >
-              {CHAT_MODES.map(m => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="ai-chat-hint">
-            Press <span className="kbd">Enter</span> to send,{' '}
-            <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
+            <div className="ai-chat-input-row">
+              <textarea
+                ref={inputRef}
+                className="ai-chat-input"
+                placeholder="Type a message..."
+                value={input}
+                onChange={handleTextareaInput}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                disabled={isLoading}
+              />
+              <button
+                className="ai-chat-send"
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                title="Send message"
+              >
+                <Send size={16} />
+              </button>
+            </div>
+            <div className="ai-chat-input-footer">
+              <div className="ai-chat-input-mode">
+                <span className="ai-chat-input-mode-label">Mode</span>
+                <select
+                  className="ai-chat-input-mode-select"
+                  value={mode}
+                  onChange={e => setMode(e.target.value as ChatMode)}
+                >
+                  {CHAT_MODES.map(m => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="ai-chat-hint">
+                Press <span className="kbd">Enter</span> to send,{' '}
+                <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -505,24 +509,42 @@ function AIChat(): React.JSX.Element {
       </div>
       <div className="ai-chat-input-bar">
         <div className="ai-chat-input-wrapper">
-          <textarea
-            ref={inputRef}
-            className="ai-chat-input"
-            placeholder="Type a message..."
-            value={input}
-            onChange={handleTextareaInput}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            disabled={isLoading}
-          />
-          <button
-            className="ai-chat-send"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            title="Send message"
-          >
-            <Send size={16} />
-          </button>
+          <div className="ai-chat-input-row">
+            <textarea
+              ref={inputRef}
+              className="ai-chat-input"
+              placeholder="Type a message..."
+              value={input}
+              onChange={handleTextareaInput}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              disabled={isLoading}
+            />
+            <button
+              className="ai-chat-send"
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              title="Send message"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+          <div className="ai-chat-input-footer">
+            <div className="ai-chat-input-mode">
+              <span className="ai-chat-input-mode-label">Mode</span>
+              <select
+                className="ai-chat-input-mode-select"
+                value={mode}
+                onChange={e => setMode(e.target.value as ChatMode)}
+              >
+                {CHAT_MODES.map(m => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>

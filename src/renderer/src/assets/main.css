@@ -424,8 +424,8 @@ body {
 
 .ai-chat-input-wrapper {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 8px 8px 14px;
   background: var(--color-surface-0);
   border: 1px solid var(--color-border);
@@ -433,6 +433,67 @@ body {
   transition:
     border-color var(--transition-normal),
     box-shadow var(--transition-normal);
+}
+
+.ai-chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.ai-chat-input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.ai-chat-input-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 0;
+}
+
+.ai-chat-input-mode-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ai-chat-input-mode-select {
+  padding: 2px 20px 2px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='9' height='5' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236c7086' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.ai-chat-input-mode-select:hover {
+  border-color: var(--ctp-overlay0);
+  background: var(--color-surface-1);
+}
+
+.ai-chat-input-mode-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px rgba(137, 180, 250, 0.25);
 }
 
 .ai-chat-input-wrapper:focus-within {
@@ -507,58 +568,7 @@ body {
   padding: 1px 4px;
 }
 
-/* Mode Selector */
-.ai-chat-mode-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 14px;
-  padding: 6px 8px 6px 12px;
-  background: var(--color-surface-0);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.ai-chat-mode-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.ai-chat-mode-select {
-  padding: 4px 26px 4px 10px;
-  font-size: 12px;
-  font-family: inherit;
-  font-weight: 500;
-  color: var(--color-text);
-  background: var(--color-surface-1);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236c7086' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  transition:
-    border-color var(--transition-normal),
-    box-shadow var(--transition-normal),
-    background var(--transition-normal);
-}
-
-.ai-chat-mode-select:hover {
-  border-color: var(--ctp-overlay0);
-  background: var(--color-surface-2);
-}
-
-.ai-chat-mode-select:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 var(--focus-ring-width) rgba(137, 180, 250, 0.2);
-}
-
+/* Mode Badge (chat header) */
 .ai-chat-mode-badge {
   display: inline-flex;
   align-items: center;
