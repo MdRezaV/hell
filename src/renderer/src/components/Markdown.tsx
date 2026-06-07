@@ -105,6 +105,7 @@ function FileReplaceBlock({
   const rightRef = useRef<HTMLDivElement>(null)
   const isSyncing = useRef(false)
   const fileState = useFileContent(path)
+  const notFound = fileState !== null && !fileState.exists
 
   const handleCopy = async (code: string, type: 'old' | 'new'): Promise<void> => {
     try {
@@ -130,49 +131,17 @@ function FileReplaceBlock({
     })
   }, [])
 
-  const renderLines = (code: string): React.JSX.Element => {
-    const lines = code.split('\n')
-    return (
-      <div className="md-file-lines">
-        {lines.map((line, i) => (
-          <div key={i} className="md-file-line">
-            <div className="md-file-line-number">{i + 1}</div>
-            <div className="md-file-line-content">
-              <code>{line}</code>
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (fileState === null) {
-    return (
-      <div className="md-file-block md-file-replace-block">
-        <div className="md-file-header">
-          <FilePathDisplay path={path} />
-        </div>
-      </div>
-    )
-  }
-
-  if (!fileState.exists) {
-    return (
-      <div className="md-file-block">
-        <div className="md-file-header">
-          <FilePathDisplay path={path} />
-          <span className="md-file-status-label error">NOT FOUND</span>
-        </div>
-        <div className="md-file-error">Cannot replace: file does not exist</div>
-      </div>
-    )
-  }
-
   return (
     <div className="md-file-block md-file-replace-block">
       <div className="md-file-header">
-        <FilePathDisplay path={path} />
+        <div className="md-file-header-left">
+          {notFound && <span className="md-file-status-label error">NOT FOUND</span>}
+          <FilePathDisplay path={path} />
+        </div>
       </div>
+      {notFound && (
+        <div className="md-file-error">Cannot replace: file does not exist</div>
+      )}
       <div className="md-file-diff">
         <div className="md-file-diff-side old">
           <div className="md-file-diff-header">
@@ -196,7 +165,7 @@ function FileReplaceBlock({
             className="md-file-code md-file-diff-code"
             onScroll={() => syncScroll('left')}
           >
-            {renderLines(oldCode)}
+            <LinesDisplay code={oldCode} />
           </div>
         </div>
         <div className="md-file-diff-divider" />
@@ -222,7 +191,7 @@ function FileReplaceBlock({
             className="md-file-code md-file-diff-code"
             onScroll={() => syncScroll('right')}
           >
-            {renderLines(newCode)}
+            <LinesDisplay code={newCode} />
           </div>
         </div>
       </div>
@@ -249,7 +218,9 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
     return (
       <div className="md-file-block">
         <div className="md-file-header">
-          <FilePathDisplay path={path} />
+          <div className="md-file-header-left">
+            <FilePathDisplay path={path} />
+          </div>
         </div>
       </div>
     )
@@ -259,8 +230,10 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
     return (
       <div className="md-file-block">
         <div className="md-file-header">
-          <FilePathDisplay path={path} />
-          <span className="md-file-status-label error">ERROR</span>
+          <div className="md-file-header-left">
+            <span className="md-file-status-label error">NOT FOUND</span>
+            <FilePathDisplay path={path} />
+          </div>
         </div>
         <div className="md-file-error">File not found</div>
       </div>
@@ -270,8 +243,10 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
   return (
     <div className="md-file-block">
       <div className="md-file-header">
-        <FilePathDisplay path={path} />
-        <span className="md-file-status-label deleted">DELETED</span>
+        <div className="md-file-header-left">
+          <span className="md-file-status-label deleted">DELETED</span>
+          <FilePathDisplay path={path} />
+        </div>
         <button
           type="button"
           className={`md-file-copy${copied ? ' copied' : ''}`}
@@ -309,21 +284,13 @@ function FileBlock({ path, code }: { path: string; code: string }): React.JSX.El
 
   const isCreated = fileState !== null && !fileState.exists
 
-  if (fileState === null) {
-    return (
-      <div className="md-file-block">
-        <div className="md-file-header">
-          <FilePathDisplay path={path} />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="md-file-block">
       <div className="md-file-header">
-        <FilePathDisplay path={path} />
-        {isCreated && <span className="md-file-status-label created">CREATED</span>}
+        <div className="md-file-header-left">
+          {isCreated && <span className="md-file-status-label created">CREATED</span>}
+          <FilePathDisplay path={path} />
+        </div>
         <button
           type="button"
           className={`md-file-copy${copied ? ' copied' : ''}`}
