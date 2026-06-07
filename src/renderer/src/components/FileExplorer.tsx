@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Folder, File } from 'lucide-react'
 
 interface FileNode {
@@ -136,18 +136,32 @@ function sortTree(nodes: FileNode[]): FileNode[] {
 
 import { FolderOpen, RefreshCw, Folder as FolderBig } from 'lucide-react'
 
-function FileExplorer(): React.JSX.Element {
-  const [workspace, setWorkspace] = useState<string | null>(null)
+function FileExplorer({
+  workspace,
+  onWorkspaceChange
+}: {
+  workspace: string | null
+  onWorkspaceChange: (path: string | null) => void
+}): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
   const [checkedPaths, setCheckedPaths] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (workspace) {
+      window.electron.ipcRenderer.invoke('read-directory', workspace).then((files: FileNode[]) => {
+        setTree(sortTree(files))
+        setCheckedPaths(new Set())
+      })
+    } else {
+      setTree([])
+      setCheckedPaths(new Set())
+    }
+  }, [workspace])
 
   const handleOpenWorkspace = async (): Promise<void> => {
     const path = await window.electron.ipcRenderer.invoke('open-workspace')
     if (path) {
-      setWorkspace(path)
-      const files = await window.electron.ipcRenderer.invoke('read-directory', path)
-      setTree(sortTree(files))
-      setCheckedPaths(new Set())
+      onWorkspaceChange(path)
     }
   }
 

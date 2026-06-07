@@ -2,6 +2,7 @@ import React, {
   useState,
   useRef,
   useCallback,
+  useEffect,
   Children,
   isValidElement,
   type ReactNode
@@ -11,6 +12,7 @@ import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { Play, Check, FileCode2 } from 'lucide-react'
 import { trimSingleNewline, findMatchedBlocks, preprocessFileBlocks } from '../utils/markdownParser'
+import { useWorkspace } from '../WorkspaceContext'
 
 interface MarkdownProps {
   content: string
@@ -29,6 +31,66 @@ function extractText(node: ReactNode): string {
   return ''
 }
 
+function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
+  const segments = path.split(/[/\\]/)
+  return (
+    <span className="md-file-path" title={path}>
+      <FileCode2 size={14} strokeWidth={2} className="md-file-path-icon" />
+      <span className="md-file-path-text">
+        {segments.map((seg, i) => (
+          <span key={i}>
+            {i > 0 && <span className="md-file-path-segment">/</span>}
+            <span className="md-file-path-segment">{seg}</span>
+          </span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+function LinesDisplay({ code }: { code: string }): React.JSX.Element {
+  const lines = code.split('\n')
+  return (
+    <div className="md-file-lines">
+      {lines.map((line, i) => (
+        <div key={i} className="md-file-line">
+          <div className="md-file-line-number">{i + 1}</div>
+          <div className="md-file-line-content">
+            <code>{line}</code>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+interface FileState {
+  exists: boolean
+  content: string | null
+}
+
+function useFileContent(path: string): FileState | null {
+  const { workspace } = useWorkspace()
+  const [fileState, setFileState] = useState<FileState | null>(null)
+
+  useEffect(() => {
+    if (!workspace) {
+      setFileState({ exists: false, content: null })
+      return
+    }
+    let cancelled = false
+    setFileState(null)
+    window.electron.ipcRenderer.invoke('read-file', workspace, path).then((result: FileState) => {
+      if (!cancelled) setFileState(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [workspace, path])
+
+  return fileState
+}
+
 function FileReplaceBlock({
   path,
   oldCode,
@@ -39,10 +101,10 @@ function FileReplaceBlock({
   newCode: string
 }): React.JSX.Element {
   const [copied, setCopied] = useState<'old' | 'new' | null>(null)
-  const segments = path.split(/[/\\]/)
   const leftRef = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
   const isSyncing = useRef(false)
+  const fileState = useFileContent(path)
 
   const handleCopy = async (code: string, type: 'old' | 'new'): Promise<void> => {
     try {
@@ -84,20 +146,32 @@ function FileReplaceBlock({
     )
   }
 
+  if (fileState === null) {
+    return (
+      <div className="md-file-block md-file-replace-block">
+        <div className="md-file-header">
+          <FilePathDisplay path={path} />
+        </div>
+      </div>
+    )
+  }
+
+  if (!fileState.exists) {
+    return (
+      <div className="md-file-block">
+        <div className="md-file-header">
+          <FilePathDisplay path={path} />
+          <span className="md-file-status-label error">NOT FOUND</span>
+        </div>
+        <div className="md-file-error">Cannot replace: file does not exist</div>
+      </div>
+    )
+  }
+
   return (
     <div className="md-file-block md-file-replace-block">
       <div className="md-file-header">
-        <span className="md-file-path" title={path}>
-          <FileCode2 size={14} strokeWidth={2} className="md-file-path-icon" />
-          <span className="md-file-path-text">
-            {segments.map((seg, i) => (
-              <span key={i}>
-                {i > 0 && <span className="md-file-path-segment">/</span>}
-                <span className="md-file-path-segment">{seg}</span>
-              </span>
-            ))}
-          </span>
-        </span>
+        <FilePathDisplay path={path} />
       </div>
       <div className="md-file-diff">
         <div className="md-file-diff-side old">
@@ -157,22 +231,63 @@ function FileReplaceBlock({
 }
 
 function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
-  const segments = path.split(/[/\\]/)
+  const fileState = useFileContent(path)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async (): Promise<void> => {
+    if (!fileState?.content) return
+    try {
+      await navigator.clipboard.writeText(fileState.content)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (fileState === null) {
+    return (
+      <div className="md-file-block">
+        <div className="md-file-header">
+          <FilePathDisplay path={path} />
+        </div>
+      </div>
+    )
+  }
+
+  if (!fileState.exists) {
+    return (
+      <div className="md-file-block">
+        <div className="md-file-header">
+          <FilePathDisplay path={path} />
+          <span className="md-file-status-label error">ERROR</span>
+        </div>
+        <div className="md-file-error">File not found</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="md-file-block md-file-delete-block">
+    <div className="md-file-block">
       <div className="md-file-header">
-        <span className="md-file-path" title={path}>
-          <FileCode2 size={14} strokeWidth={2} className="md-file-path-icon" />
-          <span className="md-file-path-text">
-            {segments.map((seg, i) => (
-              <span key={i}>
-                {i > 0 && <span className="md-file-path-segment">/</span>}
-                <span className="md-file-path-segment">{seg}</span>
-              </span>
-            ))}
-          </span>
-        </span>
-        <span className="md-file-delete-label">Deleted</span>
+        <FilePathDisplay path={path} />
+        <span className="md-file-status-label deleted">DELETED</span>
+        <button
+          type="button"
+          className={`md-file-copy${copied ? ' copied' : ''}`}
+          onClick={handleCopy}
+          title={copied ? 'Copied' : 'Copy content'}
+          aria-label={copied ? 'Copied' : 'Copy content'}
+        >
+          {copied ? (
+            <Check size={16} strokeWidth={2.25} />
+          ) : (
+            <FileCode2 size={16} strokeWidth={2} />
+          )}
+        </button>
+      </div>
+      <div className="md-file-code">
+        <LinesDisplay code={fileState.content || ''} />
       </div>
     </div>
   )
@@ -180,8 +295,7 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
 
 function FileBlock({ path, code }: { path: string; code: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
-  const lines = code.split('\n')
-  const segments = path.split(/[/\\]/)
+  const fileState = useFileContent(path)
 
   const handleCopy = async (): Promise<void> => {
     try {
@@ -193,20 +307,23 @@ function FileBlock({ path, code }: { path: string; code: string }): React.JSX.El
     }
   }
 
+  const isCreated = fileState !== null && !fileState.exists
+
+  if (fileState === null) {
+    return (
+      <div className="md-file-block">
+        <div className="md-file-header">
+          <FilePathDisplay path={path} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="md-file-block">
       <div className="md-file-header">
-        <span className="md-file-path" title={path}>
-          <FileCode2 size={14} strokeWidth={2} className="md-file-path-icon" />
-          <span className="md-file-path-text">
-            {segments.map((seg, i) => (
-              <span key={i}>
-                {i > 0 && <span className="md-file-path-segment">/</span>}
-                <span className="md-file-path-segment">{seg}</span>
-              </span>
-            ))}
-          </span>
-        </span>
+        <FilePathDisplay path={path} />
+        {isCreated && <span className="md-file-status-label created">CREATED</span>}
         <button
           type="button"
           className={`md-file-copy${copied ? ' copied' : ''}`}
@@ -222,16 +339,7 @@ function FileBlock({ path, code }: { path: string; code: string }): React.JSX.El
         </button>
       </div>
       <div className="md-file-code">
-        <div className="md-file-lines">
-          {lines.map((line, i) => (
-            <div key={i} className="md-file-line">
-              <div className="md-file-line-number">{i + 1}</div>
-              <div className="md-file-line-content">
-                <code>{line}</code>
-              </div>
-            </div>
-          ))}
-        </div>
+        <LinesDisplay code={code} />
       </div>
     </div>
   )

@@ -1466,6 +1466,39 @@ body {
   background: rgba(166, 227, 161, 0.14);
 }
 
+.md-file-status-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.md-file-status-label.created {
+  color: var(--ctp-green);
+  background: rgba(166, 227, 161, 0.14);
+}
+
+.md-file-status-label.deleted {
+  color: var(--ctp-red);
+  background: rgba(243, 139, 168, 0.14);
+}
+
+.md-file-status-label.error {
+  color: var(--ctp-peach);
+  background: rgba(250, 179, 135, 0.14);
+}
+
+.md-file-error {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--ctp-peach);
+  background: rgba(250, 179, 135, 0.06);
+}
+
 .md-file-diff-code {
   max-height: 404px;
   padding: 8px 0;

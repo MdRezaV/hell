@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import FileExplorer from './components/FileExplorer'
 import AIChat from './components/AIChat'
 import Versions from './components/Versions'
+import { WorkspaceContext } from './WorkspaceContext'
 
 const MIN_LEFT_WIDTH = 160
 const MAX_LEFT_WIDTH = 520
@@ -9,6 +10,7 @@ const DEFAULT_LEFT_WIDTH = 280
 
 function App(): React.JSX.Element {
   const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
+  const [workspace, setWorkspace] = useState<string | null>(null)
   const isResizing = useRef(false)
   const layoutRef = useRef<HTMLDivElement>(null)
 
@@ -43,22 +45,24 @@ function App(): React.JSX.Element {
   }, [])
 
   return (
-    <div className="ide-layout">
-      <div className="main-content" ref={layoutRef}>
-        <div className="left-pane" style={{ width: `${leftWidth}px`, flexBasis: `${leftWidth}px`, flexGrow: 0, flexShrink: 0 }}>
-          <FileExplorer />
+    <WorkspaceContext.Provider value={{ workspace }}>
+      <div className="ide-layout">
+        <div className="main-content" ref={layoutRef}>
+          <div className="left-pane" style={{ width: `${leftWidth}px`, flexBasis: `${leftWidth}px`, flexGrow: 0, flexShrink: 0 }}>
+            <FileExplorer workspace={workspace} onWorkspaceChange={setWorkspace} />
+          </div>
+          <div className="resize-handle" onMouseDown={startResize} />
+          <div className="right-pane">
+            <AIChat />
+          </div>
         </div>
-        <div className="resize-handle" onMouseDown={startResize} />
-        <div className="right-pane">
-          <AIChat />
+        <div className="statusbar">
+          <span className="statusbar-item">Ready</span>
+          <span className="statusbar-spacer"></span>
+          <Versions />
         </div>
       </div>
-      <div className="statusbar">
-        <span className="statusbar-item">Ready</span>
-        <span className="statusbar-spacer"></span>
-        <Versions />
-      </div>
-    </div>
+    </WorkspaceContext.Provider>
   )
 }
 

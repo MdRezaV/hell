@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
-import { readdirSync } from 'fs'
+import { readdirSync, readFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -59,6 +59,16 @@ app.whenReady().then(() => {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
+  })
+
+  ipcMain.handle('read-file', async (_, workspace: string, relativePath: string) => {
+    try {
+      const fullPath = join(workspace, relativePath)
+      const content = readFileSync(fullPath, 'utf-8')
+      return { exists: true, content }
+    } catch {
+      return { exists: false, content: null }
+    }
   })
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
