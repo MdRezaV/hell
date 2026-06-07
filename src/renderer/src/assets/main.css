@@ -1,0 +1,89 @@
+@import './base.css';
+
+body {
+  overflow: hidden;
+  background: var(--color-background);
+  user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+}
+
+.ide-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.left-pane {
+  width: 250px;
+  min-width: 150px;
+  border-right: 1px solid var(--ev-c-gray-3);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-soft);
+}
+
+.right-pane {
+  flex: 1;
+  background: var(--color-background);
+}
+
+.explorer-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.explorer-empty button {
+  padding: 8px 16px;
+  background: var(--ev-button-alt-bg);
+  color: var(--ev-button-alt-text);
+  border: 1px solid var(--ev-button-alt-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.explorer-empty button:hover {
+  background: var(--ev-button-alt-hover-bg);
+}
+
+.file-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.explorer-header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ev-c-text-2);
+  border-bottom: 1px solid var(--ev-c-gray-3);
+}
+
+.explorer-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.tree-node {
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-node:hover {
+  background: var(--ev-c-gray-3);
+}
