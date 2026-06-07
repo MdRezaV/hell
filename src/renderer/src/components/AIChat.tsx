@@ -540,8 +540,8 @@ function AIChat(): React.JSX.Element {
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="ai-chat-input-bar">
-        <div className="ai-chat-input-wrapper">
+      <div className="ai-chat-input-bar ai-chat-input-bar-floating">
+        <div className="ai-chat-input-wrapper ai-chat-input-floating">
           <textarea
             ref={inputRef}
             className="ai-chat-input"
@@ -552,9 +552,6 @@ function AIChat(): React.JSX.Element {
             rows={1}
             disabled={isLoading}
           />
-          <div className="ai-chat-input-footer">
-            <span />
-          </div>
         </div>
       </div>
     </div>

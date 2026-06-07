@@ -1,7 +1,9 @@
+ 
 import { useState, Children, isValidElement, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Play, Check } from 'lucide-react'
+import remarkBreaks from 'remark-breaks'
+import { Play, Check, Copy } from 'lucide-react'
 
 interface MarkdownProps {
   content: string
@@ -18,6 +20,80 @@ function extractText(node: ReactNode): string {
     return extractText(el.props.children)
   }
   return ''
+}
+
+function preprocessFileBlocks(content: string): string {
+  const fileBlockRegex = /<file\s+path="([^"]+)">\n?([\s\S]*?)\n?<\/file>/g
+
+  return content.replace(fileBlockRegex, (_match, path, code) => {
+    const trimmedCode = code as string
+
+    let maxBackticks = 0
+    let maxTildes = 0
+    const backtickMatch = trimmedCode.match(/`+/g)
+    if (backtickMatch) {
+      maxBackticks = Math.max(...backtickMatch.map((s: string) => s.length))
+    }
+    const tildeMatch = trimmedCode.match(/~+/g)
+    if (tildeMatch) {
+      maxTildes = Math.max(...tildeMatch.map((s: string) => s.length))
+    }
+
+    let fence: string
+    if (maxBackticks < 3) {
+      fence = '```'
+    } else if (maxTildes < 3) {
+      fence = '~~~'
+    } else {
+      fence = '`'.repeat(maxBackticks + 1)
+    }
+
+    return `\n${fence}file:${path}\n${trimmedCode}\n${fence}\n`
+  })
+}
+
+function FileBlock({ path, code }: { path: string; code: string }): React.JSX.Element {
+  const [copied, setCopied] = useState(false)
+  const lines = code.replace(/\n$/, '').split('\n')
+
+  const handleCopy = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* ignore clipboard errors */
+    }
+  }
+
+  return (
+    <div className="md-file-block">
+      <div className="md-file-header">
+        <span className="md-file-path" title={path}>{path}</span>
+        <button
+          type="button"
+          className="md-file-copy"
+          onClick={handleCopy}
+          title={copied ? 'Copied' : 'Copy'}
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+      </div>
+      <div className="md-file-code">
+        <table className="md-file-lines">
+          <tbody>
+            {lines.map((line, i) => (
+              <tr key={i}>
+                <td className="md-file-line-number">{i + 1}</td>
+                <td className="md-file-line-content"><code>{line}</code></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 }
 
 function CommandBlock({ code }: { code: string }): React.JSX.Element {
@@ -81,14 +157,17 @@ interface CodeProps {
 }
 
 function Markdown({ content }: MarkdownProps): React.JSX.Element {
+  const processedContent = preprocessFileBlocks(content)
+
   return (
     <div className="md-content">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           pre({ children, node: _node, ...props }: PreProps) {
             let language = ''
             let codeText = ''
+            let filePath = ''
 
             Children.forEach(children, (child) => {
               if (isValidElement(child)) {
@@ -97,12 +176,21 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
                   children?: ReactNode
                 }
                 if (childProps.className) {
-                  const match = /language-(\w+)/.exec(childProps.className)
-                  if (match) language = match[1]
+                  if (childProps.className.startsWith('language-file:')) {
+                    filePath = childProps.className.slice('language-file:'.length)
+                    language = 'file'
+                  } else {
+                    const match = /language-(\w+)/.exec(childProps.className)
+                    if (match) language = match[1]
+                  }
                 }
                 codeText = extractText(childProps.children).replace(/\n$/, '')
               }
             })
+
+            if (filePath) {
+              return <FileBlock path={filePath} code={codeText} />
+            }
 
             const customRenderer = CUSTOM_BLOCK_RENDERERS[language]
             if (customRenderer) {
@@ -125,7 +213,7 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
           }
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   )
