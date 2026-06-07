@@ -1,5 +1,4 @@
-
-import { useState, useRef, useCallback, Children, isValidElement, type ReactNode } from 'react'
+import React, { useState, useRef, useCallback, Children, isValidElement, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -42,7 +41,7 @@ function preprocessFileBlocks(content: string): string {
   // More flexible regex to match <file> tags with attributes in any order
   const fileTagRegex = /<file\s+([^>]*)>\s*\n?([\s\S]*?)\n?\s*<\/file>/g
 
-  return content.replace(fileTagRegex, (match, attrs, body) => {
+  return content.replace(fileTagRegex, (_match, attrs, body) => {
     const attrString = attrs as string
     const bodyContent = body as string
 
@@ -109,7 +108,7 @@ function FileReplaceBlock({
     })
   }, [])
 
-  const renderLines = (code: string) => {
+  const renderLines = (code: string): React.JSX.Element => {
     const lines = code.replace(/\n$/, '').split('\n')
     return (
       <div className="md-file-lines">
@@ -303,19 +302,6 @@ const CUSTOM_BLOCK_RENDERERS: Record<string, CustomBlockRenderer> = {
   command: (code) => <CommandBlock code={code} />
 }
 
-interface PreProps {
-  children?: ReactNode
-  node?: unknown
-  [key: string]: unknown
-}
-
-interface CodeProps {
-  className?: string
-  children?: ReactNode
-  node?: unknown
-  [key: string]: unknown
-}
-
 function Markdown({ content }: MarkdownProps): React.JSX.Element {
   const processedContent = preprocessFileBlocks(content)
 
@@ -324,7 +310,12 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
-          pre({ children, node: _node, ...props }: PreProps) {
+          pre({
+            children,
+            node: _node,
+            ...props
+          }: React.ComponentPropsWithoutRef<'pre'> & { node?: unknown }): React.JSX.Element {
+            void _node
             let language = ''
             let codeText = ''
             let filePath = ''
@@ -378,7 +369,13 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
               </div>
             )
           },
-          code({ className, children, node: _node, ...props }: CodeProps) {
+          code({
+            className,
+            children,
+            node: _node,
+            ...props
+          }: React.ComponentPropsWithoutRef<'code'> & { node?: unknown }): React.JSX.Element {
+            void _node
             return (
               <code className={className} {...props}>
                 {children}
