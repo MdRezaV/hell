@@ -1,31 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Code2 } from 'lucide-react'
 import FileExplorer from './components/FileExplorer'
+import AIChat from './components/AIChat'
 import Versions from './components/Versions'
 
 const MIN_LEFT_WIDTH = 160
 const MAX_LEFT_WIDTH = 520
 const DEFAULT_LEFT_WIDTH = 280
-
-function WelcomePanel(): React.JSX.Element {
-  return (
-    <div className="welcome-panel panel">
-      <Code2 className="welcome-icon" size={64} strokeWidth={1} />
-      <h2>Welcome</h2>
-      <p>Open a workspace folder to browse and select files using the explorer panel.</p>
-      <div className="welcome-shortcuts">
-        <div className="shortcut-row">
-          <span className="shortcut-label">Open Folder</span>
-          <span className="shortcut-key"><span className="kbd">Ctrl</span><span className="kbd">O</span></span>
-        </div>
-        <div className="shortcut-row">
-          <span className="shortcut-label">Toggle Sidebar</span>
-          <span className="shortcut-key"><span className="kbd">Ctrl</span><span className="kbd">B</span></span>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function App(): React.JSX.Element {
   const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
@@ -70,7 +50,7 @@ function App(): React.JSX.Element {
         </div>
         <div className="resize-handle" onMouseDown={startResize} />
         <div className="right-pane">
-          <WelcomePanel />
+          <AIChat />
         </div>
       </div>
       <div className="statusbar">
