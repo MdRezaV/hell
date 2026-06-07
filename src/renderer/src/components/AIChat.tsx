@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import {
   Send,
   Bot,
-  User,
   Sparkles,
   Loader2,
   MessageSquarePlus,
@@ -188,9 +187,6 @@ function MessageBubble({
 
   return (
     <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-ai'}`}>
-      <div className={`chat-avatar ${isUser ? 'chat-avatar-user' : 'chat-avatar-ai'}`}>
-        {isUser ? <User size={14} /> : <Bot size={14} />}
-      </div>
       <div className="chat-message-body">
         {isEditing ? (
           <>
@@ -288,9 +284,6 @@ function MessageBubble({
 function TypingIndicator(): React.JSX.Element {
   return (
     <div className="chat-message chat-message-ai">
-      <div className="chat-avatar chat-avatar-ai">
-        <Bot size={14} />
-      </div>
       <div className="chat-message-body">
         <div className="chat-bubble chat-bubble-ai">
           <div className="chat-typing">
