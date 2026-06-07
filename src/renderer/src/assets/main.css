@@ -1364,72 +1364,56 @@ body {
 }
 
 .md-file-code {
+  display: flex;
+  flex-direction: row;
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
   font-size: 12px;
   line-height: 1.55;
-  padding: 8px 0;
   max-height: 404px;
   background: var(--color-background-mute);
 }
 
-.md-file-lines {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  font-size: inherit;
-  border-collapse: collapse;
-  margin: 0;
-}
-
-.md-file-line {
-  display: flex;
-  align-items: stretch;
-  transition: background var(--transition-fast);
-}
-
-.md-file-line:hover {
-  background: rgba(137, 180, 250, 0.05);
-}
-
-/* Table-specific overrides for .md-file-lines */
-.md-file-block .md-file-lines tr {
-  background: transparent;
-}
-
-.md-file-block .md-file-lines tr:hover td,
-.md-file-block .md-file-lines tr:hover .md-file-line-number,
-.md-file-block .md-file-lines tr:hover .md-file-line-content {
-  background: rgba(137, 180, 250, 0.05) !important;
-}
-
-.md-file-block .md-file-lines td {
-  padding: 0;
-  border: none;
-  text-align: left;
-  vertical-align: top;
-}
-
-.md-file-line-number {
+.md-file-gutter {
   flex-shrink: 0;
-  width: 48px;
-  min-width: 40px;
-  padding: 1px 12px 1px 20px;
+  padding: 8px 0;
+  margin-right: 8px;
   text-align: right;
-  color: var(--ctp-overlay0);
-  font-size: 11px;
-  font-family: inherit;
-  font-weight: 500;
   user-select: none;
-  white-space: nowrap;
+  background: var(--color-background-mute);
   border-right: 1px solid var(--color-border-subtle);
 }
 
-.md-file-line-content {
+.md-file-gutter .md-file-line-number {
+  display: block;
+  padding: 0 12px;
+  color: var(--ctp-overlay0);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.55;
+  white-space: nowrap;
+}
+
+.md-file-code-scroll {
   flex: 1;
-  padding: 1px 20px 1px 16px;
-  white-space: pre;
   min-width: 0;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.md-file-code-lines {
+  min-width: max-content;
+}
+
+.md-file-line-content {
+  padding: 0 16px 0 12px;
+  white-space: pre;
+  line-height: 1.55;
+}
+
+.md-file-line-content:hover {
+  background: rgba(137, 180, 250, 0.05);
 }
 
 .md-file-line-content code {
@@ -1441,6 +1425,7 @@ body {
   color: var(--color-text);
   font-size: inherit;
   font-family: inherit;
+  line-height: inherit;
 }
 
 /* ── File Replace Block (side-by-side diff) ──────────── */
@@ -1541,19 +1526,80 @@ body {
 }
 
 .md-file-diff-code {
-  max-height: 404px;
-  padding: 8px 0;
   background: transparent;
-  overflow-y: auto;
-  overflow-x: auto;
+}
+
+.md-file-diff-code .md-file-gutter {
+  background: transparent;
 }
 
 .md-file-diff-side.old .md-file-diff-code {
   background: rgba(243, 139, 168, 0.04);
 }
 
+.md-file-diff-side.old .md-file-diff-code .md-file-gutter {
+  background: rgba(243, 139, 168, 0.04);
+  border-right-color: rgba(243, 139, 168, 0.18);
+}
+
 .md-file-diff-side.new .md-file-diff-code {
   background: rgba(166, 227, 161, 0.04);
+}
+
+.md-file-diff-side.new .md-file-diff-code .md-file-gutter {
+  background: rgba(166, 227, 161, 0.04);
+  border-right-color: rgba(166, 227, 161, 0.18);
+}
+
+.md-file-syntax {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  font-size: 12px;
+  line-height: 1.55;
+  min-width: max-content;
+  border: none !important;
+}
+
+.md-file-syntax code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  background: transparent !important;
+  padding: 0 !important;
+  white-space: pre;
+}
+
+.md-command-syntax {
+  margin: 0 !important;
+  padding: 10px 14px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.md-command-syntax code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.md-syntax-block {
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  background: var(--color-background-mute) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: var(--radius-md) !important;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.md-syntax-block code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
 }
 
 /* ── Versions ──────────────────────────────────────────── */

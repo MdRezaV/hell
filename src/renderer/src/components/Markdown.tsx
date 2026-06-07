@@ -10,6 +10,9 @@ import React, {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import hljs from 'highlight.js/lib/common'
 import { Play, Check, FileCode2 } from 'lucide-react'
 import { trimSingleNewline, findMatchedBlocks, preprocessFileBlocks } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
@@ -47,19 +50,43 @@ function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
   )
 }
 
-function LinesDisplay({ code }: { code: string }): React.JSX.Element {
+function LinesDisplay({
+  code,
+  language,
+  onScroll
+}: {
+  code: string
+  language?: string
+  onScroll?: () => void
+}): React.JSX.Element {
   const lines = code.split('\n')
+  const hasSyntax = !!language && language !== 'text'
+
   return (
-    <div className="md-file-lines">
-      {lines.map((line, i) => (
-        <div key={i} className="md-file-line">
-          <div className="md-file-line-number">{i + 1}</div>
-          <div className="md-file-line-content">
-            <code>{line}</code>
+    <>
+      <div className="md-file-gutter">
+        {lines.map((_, i) => (
+          <div key={i} className="md-file-line-number">
+            {i + 1}
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      <div className="md-file-code-scroll" onScroll={onScroll}>
+        {hasSyntax ? (
+          <SyntaxHighlighter language={language} style={oneDark} className="md-file-syntax">
+            {code}
+          </SyntaxHighlighter>
+        ) : (
+          <div className="md-file-code-lines">
+            {lines.map((line, i) => (
+              <div key={i} className="md-file-line-content">
+                <code>{line}</code>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -68,26 +95,36 @@ interface FileState {
   content: string | null
 }
 
+interface FileStateCache {
+  data: FileState
+  path: string
+  workspace: string
+}
+
 function useFileContent(path: string): FileState | null {
   const { workspace } = useWorkspace()
-  const [fileState, setFileState] = useState<FileState | null>(null)
+  const [cache, setCache] = useState<FileStateCache | null>(null)
 
   useEffect(() => {
-    if (!workspace) {
-      setFileState({ exists: false, content: null })
-      return
-    }
+    if (!workspace) return
     let cancelled = false
-    setFileState(null)
     window.electron.ipcRenderer.invoke('read-file', workspace, path).then((result: FileState) => {
-      if (!cancelled) setFileState(result)
+      if (!cancelled) setCache({ data: result, path, workspace })
     })
     return () => {
       cancelled = true
     }
   }, [workspace, path])
 
-  return fileState
+  if (!workspace) {
+    return { exists: false, content: null }
+  }
+
+  if (!cache || cache.path !== path || cache.workspace !== workspace) {
+    return null
+  }
+
+  return cache.data
 }
 
 function FileReplaceBlock({
@@ -123,7 +160,11 @@ function FileReplaceBlock({
     const to = source === 'left' ? rightRef.current : leftRef.current
     if (from && to) {
       to.scrollTop = from.scrollTop
-      to.scrollLeft = from.scrollLeft
+      const fromH = from.querySelector('.md-file-code-scroll')
+      const toH = to.querySelector('.md-file-code-scroll')
+      if (fromH && toH) {
+        toH.scrollLeft = fromH.scrollLeft
+      }
     }
     window.requestAnimationFrame(() => {
       isSyncing.current = false
@@ -161,7 +202,11 @@ function FileReplaceBlock({
             className="md-file-code md-file-diff-code"
             onScroll={() => syncScroll('left')}
           >
-            <LinesDisplay code={oldCode} />
+            <LinesDisplay
+              code={oldCode}
+              language={getLanguageFromPath(path)}
+              onScroll={() => syncScroll('left')}
+            />
           </div>
         </div>
         <div className="md-file-diff-divider" />
@@ -187,7 +232,11 @@ function FileReplaceBlock({
             className="md-file-code md-file-diff-code"
             onScroll={() => syncScroll('right')}
           >
-            <LinesDisplay code={newCode} />
+            <LinesDisplay
+              code={newCode}
+              language={getLanguageFromPath(path)}
+              onScroll={() => syncScroll('right')}
+            />
           </div>
         </div>
       </div>
@@ -259,7 +308,7 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
         </button>
       </div>
       <div className="md-file-code">
-        <LinesDisplay code={fileState.content || ''} />
+        <LinesDisplay code={fileState.content || ''} language={getLanguageFromPath(path)} />
       </div>
     </div>
   )
@@ -303,7 +352,7 @@ function FileBlock({ path, code }: { path: string; code: string }): React.JSX.El
         </button>
       </div>
       <div className="md-file-code">
-        <LinesDisplay code={code} />
+        <LinesDisplay code={code} language={getLanguageFromPath(path)} />
       </div>
     </div>
   )
@@ -345,11 +394,114 @@ function CommandBlock({ code }: { code: string }): React.JSX.Element {
           )}
         </button>
       </div>
-      <pre className="md-command-pre">
-        <code>{code}</code>
-      </pre>
+      <SyntaxHighlighter language="bash" style={oneDark} className="md-command-syntax">
+        {code}
+      </SyntaxHighlighter>
     </div>
   )
+}
+
+function getLanguageFromPath(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  if (!ext) return 'text'
+
+  const languageMap: Record<string, string> = {
+    // JavaScript/TypeScript
+    js: 'javascript',
+    jsx: 'jsx',
+    ts: 'typescript',
+    tsx: 'tsx',
+    mjs: 'javascript',
+    cjs: 'javascript',
+
+    // Web
+    html: 'html',
+    htm: 'html',
+    css: 'css',
+    scss: 'scss',
+    sass: 'sass',
+    less: 'less',
+
+    // Data/Config
+    json: 'json',
+    jsonc: 'json',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'toml',
+    xml: 'xml',
+    svg: 'xml',
+
+    // Python
+    py: 'python',
+    pyw: 'python',
+
+    // Ruby
+    rb: 'ruby',
+
+    // Go
+    go: 'go',
+
+    // Rust
+    rs: 'rust',
+
+    // Java/Kotlin
+    java: 'java',
+    kt: 'kotlin',
+
+    // C/C++
+    c: 'c',
+    cpp: 'cpp',
+    cc: 'cpp',
+    cxx: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
+
+    // C#
+    cs: 'csharp',
+
+    // PHP
+    php: 'php',
+
+    // Shell
+    sh: 'bash',
+    bash: 'bash',
+    zsh: 'bash',
+    fish: 'bash',
+    ps1: 'powershell',
+    bat: 'batch',
+    cmd: 'batch',
+
+    // Markdown
+    md: 'markdown',
+    mdx: 'markdown',
+
+    // SQL
+    sql: 'sql',
+
+    // Docker
+    dockerfile: 'docker',
+
+    // Others
+    lua: 'lua',
+    r: 'r',
+    swift: 'swift',
+    dart: 'dart',
+    scala: 'scala',
+    clj: 'clojure',
+    ex: 'elixir',
+    exs: 'elixir',
+    erl: 'erlang',
+    hs: 'haskell',
+    ml: 'ocaml',
+    fs: 'fsharp',
+    vim: 'vim',
+    tex: 'latex',
+    ini: 'ini',
+    conf: 'ini',
+    env: 'ini'
+  }
+
+  return languageMap[ext] || 'text'
 }
 
 const CUSTOM_BLOCK_RENDERERS: Record<string, CustomBlockRenderer> = {
@@ -366,8 +518,7 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
         components={{
           pre({
             children,
-            node: _node,
-            ...props
+            node: _node
           }: React.ComponentPropsWithoutRef<'pre'> & { node?: unknown }): React.JSX.Element {
             void _node
             let language = ''
@@ -418,10 +569,21 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
               return customRenderer(codeText)
             }
 
+            const resolvedLanguage = language || hljs.highlightAuto(codeText).language || 'text'
+
             return (
               <div className="md-code-block-wrapper">
+                {!language && resolvedLanguage !== 'text' && (
+                  <div className="md-code-lang">{resolvedLanguage}</div>
+                )}
                 {language && <div className="md-code-lang">{language}</div>}
-                <pre {...props}>{children}</pre>
+                <SyntaxHighlighter
+                  language={resolvedLanguage}
+                  style={oneDark}
+                  className="md-syntax-block"
+                >
+                  {codeText}
+                </SyntaxHighlighter>
               </div>
             )
           },
