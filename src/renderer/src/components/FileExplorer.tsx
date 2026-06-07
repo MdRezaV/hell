@@ -118,6 +118,22 @@ function countFiles(nodes: FileNode[]): number {
   return count
 }
 
+function sortTree(nodes: FileNode[]): FileNode[] {
+  return [...nodes]
+    .sort((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === 'directory' ? -1 : 1
+      }
+      return a.name.localeCompare(b.name)
+    })
+    .map(node => {
+      if (node.children) {
+        return { ...node, children: sortTree(node.children) }
+      }
+      return node
+    })
+}
+
 import { FolderOpen, RefreshCw, Folder as FolderBig } from 'lucide-react'
 
 function FileExplorer(): React.JSX.Element {
@@ -130,7 +146,7 @@ function FileExplorer(): React.JSX.Element {
     if (path) {
       setWorkspace(path)
       const files = await window.electron.ipcRenderer.invoke('read-directory', path)
-      setTree(files)
+      setTree(sortTree(files))
       setCheckedPaths(new Set())
     }
   }
@@ -138,7 +154,7 @@ function FileExplorer(): React.JSX.Element {
   const handleRefresh = async (): Promise<void> => {
     if (!workspace) return
     const files = await window.electron.ipcRenderer.invoke('read-directory', workspace)
-    setTree(files)
+    setTree(sortTree(files))
     setCheckedPaths(new Set())
   }
 

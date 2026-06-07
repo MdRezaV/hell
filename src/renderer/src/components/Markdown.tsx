@@ -336,7 +336,10 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
                   children?: ReactNode
                 }
                 if (childProps.className) {
-                  if (childProps.className.startsWith('language-file:')) {
+                  if (childProps.className.startsWith('language-file-replace:')) {
+                    filePath = childProps.className.slice('language-file-replace:'.length)
+                    language = 'file-replace'
+                  } else if (childProps.className.startsWith('language-file:')) {
                     filePath = childProps.className.slice('language-file:'.length)
                     language = 'file'
                   } else {
