@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { Play, Check, FileCode2 } from 'lucide-react'
-import { normalizeBody, findMatchedBlocks, preprocessFileBlocks } from '../utils/markdownParser'
+import { trimSingleNewline, findMatchedBlocks, preprocessFileBlocks } from '../utils/markdownParser'
 
 interface MarkdownProps {
   content: string
@@ -69,7 +69,7 @@ function FileReplaceBlock({
   }, [])
 
   const renderLines = (code: string): React.JSX.Element => {
-    const lines = code.replace(/\n$/, '').split('\n')
+    const lines = code.split('\n')
     return (
       <div className="md-file-lines">
         {lines.map((line, i) => (
@@ -180,7 +180,7 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
 
 function FileBlock({ path, code }: { path: string; code: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
-  const lines = normalizeBody(code).split('\n')
+  const lines = code.split('\n')
   const segments = path.split(/[/\\]/)
 
   const handleCopy = async (): Promise<void> => {
@@ -331,14 +331,14 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
               if (language === 'file-replace') {
                 const { matched: oldBlocks } = findMatchedBlocks(codeText, 'old')
                 const { matched: newBlocks } = findMatchedBlocks(codeText, 'new')
-                const oldCode = oldBlocks.length > 0 ? normalizeBody(oldBlocks[0].body) : ''
-                const newCode = newBlocks.length > 0 ? normalizeBody(newBlocks[0].body) : ''
+                const oldCode = oldBlocks.length > 0 ? trimSingleNewline(oldBlocks[0].body) : ''
+                const newCode = newBlocks.length > 0 ? trimSingleNewline(newBlocks[0].body) : ''
                 return <FileReplaceBlock path={filePath} oldCode={oldCode} newCode={newCode} />
               }
               if (language === 'file-delete') {
                 return <FileDeleteBlock path={filePath} />
               }
-              return <FileBlock path={filePath} code={normalizeBody(codeText)} />
+              return <FileBlock path={filePath} code={codeText} />
             }
 
             const customRenderer = CUSTOM_BLOCK_RENDERERS[language]

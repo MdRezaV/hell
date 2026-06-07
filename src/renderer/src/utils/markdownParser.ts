@@ -30,6 +30,13 @@ export function normalizeBody(text: string): string {
   return text.replace(/^\n+/, '').replace(/\n+$/, '')
 }
 
+export function trimSingleNewline(text: string): string {
+  let result = text
+  if (result.startsWith('\n')) result = result.slice(1)
+  if (result.endsWith('\n')) result = result.slice(0, -1)
+  return result
+}
+
 export function wrapInFence(code: string, lang: string): string {
   let maxBackticks = 0
   let maxTildes = 0
@@ -334,13 +341,13 @@ export function preprocessFileBlocks(content: string): string {
         const { matched: oldBlocks } = findMatchedBlocks(body, 'old')
         const { matched: newBlocks } = findMatchedBlocks(body, 'new')
 
-        const oldCode = oldBlocks.length > 0 ? normalizeBody(oldBlocks[0].body) : ''
-        const newCode = newBlocks.length > 0 ? normalizeBody(newBlocks[0].body) : ''
+        const oldCode = oldBlocks.length > 0 ? trimSingleNewline(oldBlocks[0].body) : ''
+        const newCode = newBlocks.length > 0 ? trimSingleNewline(newBlocks[0].body) : ''
 
         const combined = `<old>\n${oldCode}\n</old>\n<new>\n${newCode}\n</new>`
         replacement = wrapInFence(combined, `file-replace:${path}`)
       } else {
-        replacement = wrapInFence(normalizeBody(block.body), `file:${path}`)
+        replacement = wrapInFence(trimSingleNewline(block.body), `file:${path}`)
       }
 
       result = result.slice(0, block.open.start) + replacement + result.slice(block.close.end)

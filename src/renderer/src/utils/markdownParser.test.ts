@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   normalizeBody,
+  trimSingleNewline,
   wrapInFence,
   isPosInRange,
   findCodeRangesSkippingRanges,
@@ -46,6 +47,56 @@ describe('normalizeBody', () => {
 
   it('handles input with only spaces', () => {
     expect(normalizeBody('   ')).toBe('   ')
+  })
+})
+
+describe('trimSingleNewline', () => {
+  it('returns empty string for empty input', () => {
+    expect(trimSingleNewline('')).toBe('')
+  })
+
+  it('strips a single leading newline', () => {
+    expect(trimSingleNewline('\nhello')).toBe('hello')
+  })
+
+  it('strips a single trailing newline', () => {
+    expect(trimSingleNewline('hello\n')).toBe('hello')
+  })
+
+  it('strips one leading and one trailing newline', () => {
+    expect(trimSingleNewline('\nhello\n')).toBe('hello')
+  })
+
+  it('preserves extra leading newlines beyond the first', () => {
+    expect(trimSingleNewline('\n\nhello\n')).toBe('\nhello')
+  })
+
+  it('preserves extra trailing newlines beyond the last', () => {
+    expect(trimSingleNewline('\nhello\n\n')).toBe('hello\n')
+  })
+
+  it('preserves internal newlines', () => {
+    expect(trimSingleNewline('\na\nb\nc\n')).toBe('a\nb\nc')
+  })
+
+  it('reduces three newlines to one', () => {
+    expect(trimSingleNewline('\n\n\n')).toBe('\n')
+  })
+
+  it('reduces two newlines to empty', () => {
+    expect(trimSingleNewline('\n\n')).toBe('')
+  })
+
+  it('strips single newline to empty', () => {
+    expect(trimSingleNewline('\n')).toBe('')
+  })
+
+  it('returns text unchanged when no leading or trailing newlines', () => {
+    expect(trimSingleNewline('hello')).toBe('hello')
+  })
+
+  it('preserves multiple internal blank lines', () => {
+    expect(trimSingleNewline('\na\n\n\nb\n')).toBe('a\n\n\nb')
   })
 })
 
@@ -931,11 +982,65 @@ const str = "quotes \\" and '"`
     const out = preprocessFileBlocks(input)
     expect(out).toContain('```file:my file.ts')
   })
-
   it('handles self-closing file tag without delete action', () => {
     const input = '<file path="a.ts" />'
     const out = preprocessFileBlocks(input)
     // Self-closing without action="delete" should be left as-is or ignored
     expect(out).not.toContain('file-delete')
+  })
+
+  it('preserves leading blank lines in file content', () => {
+    const input = '<file path="a.ts">\n\nconst x = 1\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:a.ts\n\nconst x = 1\n```')
+  })
+
+  it('preserves trailing blank lines in file content', () => {
+    const input = '<file path="a.ts">\nconst x = 1\n\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:a.ts\nconst x = 1\n\n```')
+  })
+
+  it('preserves multiple leading blank lines in file content', () => {
+    const input = '<file path="a.ts">\n\n\nconst x = 1\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:a.ts\n\n\nconst x = 1\n```')
+  })
+
+  it('preserves leading blank lines in replace old section', () => {
+    const input =
+      '<file path="a.ts" action="replace">\n<old>\n\nimport { foo } from \'bar\'\n</old>\n<new>\nimport { foo } from \'bar\'\n</new>\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain("<old>\n\nimport { foo } from 'bar'\n</old>")
+  })
+
+  it('preserves leading blank lines in replace new section', () => {
+    const input =
+      "<file path=\"a.ts\" action=\"replace\">\n<old>\nimport { foo } from 'bar'\n</old>\n<new>\n\n\nimport { foo } from 'bar'\nimport { baz } from 'qux'\n</new>\n</file>"
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain("<new>\n\n\nimport { foo } from 'bar'\nimport { baz } from 'qux'\n</new>")
+  })
+
+  it('preserves blank lines in both old and new sections of replace', () => {
+    const input = `<file path="a.ts" action="replace">
+<old>
+
+const x = 1
+</old>
+<new>
+
+
+const x = 2
+</new>
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('<old>\n\nconst x = 1\n</old>')
+    expect(out).toContain('<new>\n\n\nconst x = 2\n</new>')
+  })
+
+  it('preserves file with only blank lines', () => {
+    const input = '<file path="empty.txt">\n\n\n</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:empty.txt\n\n\n```')
   })
 })
