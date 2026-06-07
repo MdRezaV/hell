@@ -27,9 +27,6 @@ function WelcomePanel(): React.JSX.Element {
 function App(): React.JSX.Element {
   return (
     <div className="ide-layout">
-      <div className="titlebar">
-        <span className="titlebar-title">Hell</span>
-      </div>
       <div className="main-content">
         <div className="left-pane">
           <FileExplorer />
