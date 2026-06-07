@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  Send,
+  Copy,
   Bot,
   Sparkles,
   Loader2,
@@ -133,21 +133,25 @@ function MessageBubble({
   isLastAssistant,
   isLoading,
   isEditing,
+  isCopied,
   onVariantChange,
   onEdit,
   onRegenerate,
   onStartEdit,
-  onCancelEdit
+  onCancelEdit,
+  onCopy
 }: {
   message: ChatMessage
   isLastAssistant: boolean
   isLoading: boolean
   isEditing: boolean
+  isCopied: boolean
   onVariantChange: (id: string, dir: 'prev' | 'next') => void
   onEdit: (id: string, content: string) => void
   onRegenerate: (id: string) => void
   onStartEdit: (id: string) => void
   onCancelEdit: () => void
+  onCopy: (id: string, content: string) => void
 }): React.JSX.Element {
   const isUser = message.role === 'user'
   const variant = message.variants[message.activeVariant]
@@ -273,6 +277,15 @@ function MessageBubble({
                   <RefreshCw size={12} />
                 </button>
               )}
+              {!isActiveEmpty && (
+                <button
+                  className="chat-action-btn"
+                  onClick={() => onCopy(message.id, variant.content)}
+                  title={isCopied ? 'Copied' : 'Copy'}
+                >
+                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+              )}
             </div>
           </>
         )}
@@ -302,6 +315,7 @@ function AIChat(): React.JSX.Element {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -450,6 +464,19 @@ function AIChat(): React.JSX.Element {
     setInput('')
     setIsLoading(false)
     setEditingId(null)
+    setCopiedId(null)
+  }
+
+  const handleCopy = async (messageId: string, content: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedId(messageId)
+      window.setTimeout(() => {
+        setCopiedId(prev => (prev === messageId ? null : prev))
+      }, 1500)
+    } catch {
+      /* ignore clipboard errors */
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -493,19 +520,7 @@ function AIChat(): React.JSX.Element {
             />
             <div className="ai-chat-input-footer">
               <ModeSelector mode={mode} onChange={setMode} />
-              <button
-                className="ai-chat-send"
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                title="Send message"
-              >
-                <Send size={16} />
-              </button>
             </div>
-          </div>
-          <div className="ai-chat-hint">
-            Press <span className="kbd">Enter</span> to send,{' '}
-            <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
           </div>
         </div>
       </div>
@@ -535,11 +550,13 @@ function AIChat(): React.JSX.Element {
             isLastAssistant={i === lastAssistantIndex}
             isLoading={isLoading}
             isEditing={editingId === msg.id}
+            isCopied={copiedId === msg.id}
             onVariantChange={handleVariantChange}
             onEdit={handleEditSave}
             onRegenerate={handleRegenerate}
             onStartEdit={setEditingId}
             onCancelEdit={() => setEditingId(null)}
+            onCopy={handleCopy}
           />
         ))}
         {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
@@ -561,14 +578,6 @@ function AIChat(): React.JSX.Element {
           />
           <div className="ai-chat-input-footer">
             <span />
-            <button
-              className="ai-chat-send"
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              title="Send message"
-            >
-              <Send size={14} />
-            </button>
           </div>
         </div>
       </div>
