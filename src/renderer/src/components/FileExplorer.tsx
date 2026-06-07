@@ -1,42 +1,11 @@
 import { useState, useCallback } from 'react'
+import { ChevronRight, ChevronDown, Folder, File } from 'lucide-react'
 
 interface FileNode {
   name: string
   path: string
   type: 'file' | 'directory'
   children?: FileNode[]
-}
-
-function ChevronRight(): React.JSX.Element {
-  return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="6 3 11 8 6 13" />
-    </svg>
-  )
-}
-
-function ChevronDown(): React.JSX.Element {
-  return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 8 11 13 6" />
-    </svg>
-  )
-}
-
-function FolderIcon(): React.JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M1 3.5A1.5 1.5 0 012.5 2h2.764a1 1 0 01.707.293l.828.828A1 1 0 007.5 3.5H13.5A1.5 1.5 0 0115 5v7.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9z" />
-    </svg>
-  )
-}
-
-function FileIcon(): React.JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M2 2.5A1.5 1.5 0 013.5 1h5.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 01.439 1.061V13.5A1.5 1.5 0 0111.5 15h-8A1.5 1.5 0 012 13.5v-11z" />
-    </svg>
-  )
 }
 
 type CheckState = 'checked' | 'unchecked' | 'indeterminate'
@@ -119,7 +88,7 @@ function TreeNode({
           />
         </span>
         <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
-          {node.type === 'directory' ? <FolderIcon /> : <FileIcon />}
+          {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
         </span>
         <span className="tree-label">{node.name}</span>
       </div>
@@ -149,23 +118,7 @@ function countFiles(nodes: FileNode[]): number {
   return count
 }
 
-function FolderOpenIcon(): React.JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M1 3.5A1.5 1.5 0 012.5 2h2.764a1 1 0 01.707.293l.828.828A1 1 0 007.5 3.5H13.5A1.5 1.5 0 0115 5v1H5.5a2 2 0 00-1.897 1.355L1.5 13V3.5z" fill="currentColor" opacity="0.6"/>
-      <path d="M1.5 13l2.103-5.645A2 2 0 015.5 6h9a1.5 1.5 0 011.415 2.008l-1.8 5A1.5 1.5 0 0112.7 14H2.5a1 1 0 01-1-1z" fill="currentColor"/>
-    </svg>
-  )
-}
-
-function RefreshIcon(): React.JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13.5 8A5.5 5.5 0 112.55 5.5" />
-      <polyline points="13 2 13.5 5.5 10 6" />
-    </svg>
-  )
-}
+import { FolderOpen, RefreshCw, Folder as FolderBig } from 'lucide-react'
 
 function FileExplorer(): React.JSX.Element {
   const [workspace, setWorkspace] = useState<string | null>(null)
@@ -210,9 +163,7 @@ function FileExplorer(): React.JSX.Element {
   if (!workspace) {
     return (
       <div className="explorer-empty">
-        <svg className="explorer-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-        </svg>
+        <FolderBig className="explorer-empty-icon" size={48} strokeWidth={1.25} />
         <p>No folder opened</p>
         <button onClick={handleOpenWorkspace}>Open Workspace</button>
       </div>
@@ -228,10 +179,10 @@ function FileExplorer(): React.JSX.Element {
         </div>
         <div className="explorer-header-actions">
           <button onClick={handleRefresh} title="Refresh">
-            <RefreshIcon />
+            <RefreshCw size={14} strokeWidth={2} />
           </button>
           <button onClick={handleOpenWorkspace} title="Open Folder">
-            <FolderOpenIcon />
+            <FolderOpen size={14} strokeWidth={2} />
           </button>
         </div>
       </div>
