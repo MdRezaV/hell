@@ -1,10 +1,34 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles, Loader2, MessageSquarePlus } from 'lucide-react'
+import {
+  Send,
+  Bot,
+  User,
+  Sparkles,
+  Loader2,
+  MessageSquarePlus,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  RefreshCw,
+  Check,
+  X
+} from 'lucide-react'
 
-interface ChatMessage {
-  role: 'user' | 'assistant'
+interface MessageVariant {
   content: string
   timestamp: Date
+}
+
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  variants: MessageVariant[]
+  activeVariant: number
+}
+
+let nextId = 0
+function generateId(): string {
+  return `msg-${Date.now()}-${nextId++}`
 }
 
 const DUMMY_RESPONSES: Record<string, string> = {
@@ -39,29 +63,157 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-function MessageBubble({ message }: { message: ChatMessage }): React.JSX.Element {
+function MessageBubble({
+  message,
+  isLastAssistant,
+  isLoading,
+  isEditing,
+  onVariantChange,
+  onEdit,
+  onRegenerate,
+  onStartEdit,
+  onCancelEdit
+}: {
+  message: ChatMessage
+  isLastAssistant: boolean
+  isLoading: boolean
+  isEditing: boolean
+  onVariantChange: (id: string, dir: 'prev' | 'next') => void
+  onEdit: (id: string, content: string) => void
+  onRegenerate: (id: string) => void
+  onStartEdit: (id: string) => void
+  onCancelEdit: () => void
+}): React.JSX.Element {
   const isUser = message.role === 'user'
+  const variant = message.variants[message.activeVariant]
+  const hasVariants = message.variants.length > 1
+  const isActiveEmpty = variant.content === '' && isLoading
+
+  const [editContent, setEditContent] = useState(variant.content)
+  const editRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (isEditing && editRef.current) {
+      editRef.current.focus()
+      editRef.current.style.height = 'auto'
+      editRef.current.style.height = `${editRef.current.scrollHeight}px`
+    }
+  }, [isEditing])
+
+  useEffect(() => {
+    setEditContent(variant.content)
+  }, [variant.content])
+
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      onEdit(message.id, editContent)
+    } else if (e.key === 'Escape') {
+      onCancelEdit()
+    }
+  }
+
+  const handleEditInput = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    setEditContent(e.target.value)
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
 
   return (
     <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-ai'}`}>
       <div className={`chat-avatar ${isUser ? 'chat-avatar-user' : 'chat-avatar-ai'}`}>
         {isUser ? <User size={14} /> : <Bot size={14} />}
       </div>
-      <div className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
-        <div className="chat-bubble-content">
-          {message.content.split('\n').map((line, i) => (
-            <span key={i}>
-              {line.split(/(\*\*[^*]+\*\*)/).map((segment, j) => {
-                if (segment.startsWith('**') && segment.endsWith('**')) {
-                  return <strong key={j}>{segment.slice(2, -2)}</strong>
-                }
-                return segment
-              })}
-              {i < message.content.split('\n').length - 1 && <br />}
-            </span>
-          ))}
-        </div>
-        <div className="chat-timestamp">{formatTime(message.timestamp)}</div>
+      <div className="chat-message-body">
+        {isEditing ? (
+          <>
+            <textarea
+              ref={editRef}
+              className="chat-edit-area"
+              value={editContent}
+              onChange={handleEditInput}
+              onKeyDown={handleEditKeyDown}
+              rows={1}
+            />
+            <div className="chat-edit-actions">
+              <button className="btn-ghost" onClick={onCancelEdit}>
+                <X size={12} /> Cancel
+              </button>
+              <button className="btn-primary" onClick={() => onEdit(message.id, editContent)}>
+                <Check size={12} /> Save
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
+              {isActiveEmpty ? (
+                <div className="chat-typing">
+                  <span className="chat-typing-dot" />
+                  <span className="chat-typing-dot" />
+                  <span className="chat-typing-dot" />
+                </div>
+              ) : (
+                <div className="chat-bubble-content">
+                  {variant.content.split('\n').map((line, i) => (
+                    <span key={i}>
+                      {line.split(/(\*\*[^*]+\*\*)/).map((segment, j) => {
+                        if (segment.startsWith('**') && segment.endsWith('**')) {
+                          return <strong key={j}>{segment.slice(2, -2)}</strong>
+                        }
+                        return segment
+                      })}
+                      {i < variant.content.split('\n').length - 1 && <br />}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="chat-message-actions">
+              <span className="chat-timestamp">{formatTime(variant.timestamp)}</span>
+              {hasVariants && (
+                <div className="chat-variant-nav">
+                  <button
+                    onClick={() => onVariantChange(message.id, 'prev')}
+                    disabled={message.activeVariant === 0 || isLoading}
+                    title="Previous"
+                  >
+                    <ChevronLeft size={12} />
+                  </button>
+                  <span>
+                    {message.activeVariant + 1}/{message.variants.length}
+                  </span>
+                  <button
+                    onClick={() => onVariantChange(message.id, 'next')}
+                    disabled={message.activeVariant === message.variants.length - 1 || isLoading}
+                    title="Next"
+                  >
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              )}
+              {isUser && !isLoading && (
+                <button
+                  className="chat-action-btn"
+                  onClick={() => onStartEdit(message.id)}
+                  title="Edit"
+                >
+                  <Pencil size={12} />
+                </button>
+              )}
+              {!isUser && isLastAssistant && !isLoading && (
+                <button
+                  className="chat-action-btn"
+                  onClick={() => onRegenerate(message.id)}
+                  title="Regenerate"
+                >
+                  <RefreshCw size={12} />
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -73,11 +225,13 @@ function TypingIndicator(): React.JSX.Element {
       <div className="chat-avatar chat-avatar-ai">
         <Bot size={14} />
       </div>
-      <div className="chat-bubble chat-bubble-ai">
-        <div className="chat-typing">
-          <span className="chat-typing-dot" />
-          <span className="chat-typing-dot" />
-          <span className="chat-typing-dot" />
+      <div className="chat-message-body">
+        <div className="chat-bubble chat-bubble-ai">
+          <div className="chat-typing">
+            <span className="chat-typing-dot" />
+            <span className="chat-typing-dot" />
+            <span className="chat-typing-dot" />
+          </div>
         </div>
       </div>
     </div>
@@ -88,6 +242,7 @@ function AIChat(): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -100,6 +255,12 @@ function AIChat(): React.JSX.Element {
   }, [messages, isLoading])
 
   useEffect(() => {
+    if (messages.length === 0) {
+      inputRef.current?.focus()
+    }
+  }, [messages.length])
+
+  useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
@@ -108,9 +269,10 @@ function AIChat(): React.JSX.Element {
     if (!trimmed || isLoading) return
 
     const userMessage: ChatMessage = {
+      id: generateId(),
       role: 'user',
-      content: trimmed,
-      timestamp: new Date()
+      variants: [{ content: trimmed, timestamp: new Date() }],
+      activeVariant: 0
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -120,13 +282,114 @@ function AIChat(): React.JSX.Element {
     await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
 
     const aiMessage: ChatMessage = {
+      id: generateId(),
       role: 'assistant',
-      content: getAIResponse(trimmed),
-      timestamp: new Date()
+      variants: [{ content: getAIResponse(trimmed), timestamp: new Date() }],
+      activeVariant: 0
     }
 
     setMessages(prev => [...prev, aiMessage])
     setIsLoading(false)
+  }
+
+  const handleRegenerate = async (messageId: string): Promise<void> => {
+    if (isLoading) return
+
+    const msgIndex = messages.findIndex(m => m.id === messageId)
+    if (msgIndex === -1) return
+
+    const userMsg = messages
+      .slice(0, msgIndex)
+      .reverse()
+      .find(m => m.role === 'user')
+    if (!userMsg) return
+
+    const userContent = userMsg.variants[userMsg.activeVariant].content
+
+    setMessages(prev => {
+      const updated = [...prev]
+      const msg = { ...updated[msgIndex] }
+      msg.variants = [...msg.variants, { content: '', timestamp: new Date() }]
+      msg.activeVariant = msg.variants.length - 1
+      updated[msgIndex] = msg
+      return updated
+    })
+
+    setIsLoading(true)
+
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
+
+    const newContent = getAIResponse(userContent)
+
+    setMessages(prev => {
+      const updated = [...prev]
+      const idx = updated.findIndex(m => m.id === messageId)
+      if (idx === -1) return prev
+      const msg = { ...updated[idx] }
+      msg.variants = [...msg.variants]
+      msg.variants[msg.activeVariant] = { content: newContent, timestamp: new Date() }
+      updated[idx] = msg
+      return updated
+    })
+
+    setIsLoading(false)
+  }
+
+  const handleEditSave = async (messageId: string, newContent: string): Promise<void> => {
+    const trimmed = newContent.trim()
+    if (!trimmed || isLoading) return
+
+    const msgIndex = messages.findIndex(m => m.id === messageId)
+    if (msgIndex === -1) return
+
+    setMessages(prev => {
+      const updated = prev.slice(0, msgIndex + 1)
+      const msg = { ...updated[msgIndex] }
+      msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
+      msg.activeVariant = msg.variants.length - 1
+      updated[msgIndex] = msg
+      return updated
+    })
+
+    setEditingId(null)
+    setIsLoading(true)
+
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
+
+    const aiMessage: ChatMessage = {
+      id: generateId(),
+      role: 'assistant',
+      variants: [{ content: getAIResponse(trimmed), timestamp: new Date() }],
+      activeVariant: 0
+    }
+
+    setMessages(prev => [...prev, aiMessage])
+    setIsLoading(false)
+  }
+
+  const handleVariantChange = (messageId: string, direction: 'prev' | 'next'): void => {
+    setMessages(prev => {
+      const updated = [...prev]
+      const idx = updated.findIndex(m => m.id === messageId)
+      if (idx === -1) return prev
+      const msg = { ...updated[idx] }
+      if (direction === 'prev' && msg.activeVariant > 0) {
+        msg.activeVariant--
+      } else if (direction === 'next' && msg.activeVariant < msg.variants.length - 1) {
+        msg.activeVariant++
+      } else {
+        return prev
+      }
+      updated[idx] = msg
+      return updated
+    })
+  }
+
+  const handleNewChat = (): void => {
+    setMessages([])
+    setInput('')
+    setIsLoading(false)
+    setEditingId(null)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -143,13 +406,8 @@ function AIChat(): React.JSX.Element {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }
 
-  const handleNewChat = (): void => {
-    setMessages([])
-    setInput('')
-    setIsLoading(false)
-  }
-
   const isChatMode = messages.length > 0
+  const lastAssistantIndex = messages.map(m => m.role).lastIndexOf('assistant')
 
   if (!isChatMode) {
     return (
@@ -183,7 +441,8 @@ function AIChat(): React.JSX.Element {
             </button>
           </div>
           <div className="ai-chat-hint">
-            Press <span className="kbd">Enter</span> to send, <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
+            Press <span className="kbd">Enter</span> to send,{' '}
+            <span className="kbd">Shift</span>+<span className="kbd">Enter</span> for new line
           </div>
         </div>
       </div>
@@ -206,9 +465,22 @@ function AIChat(): React.JSX.Element {
       </div>
       <div className="ai-chat-messages">
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            isLastAssistant={i === lastAssistantIndex}
+            isLoading={isLoading}
+            isEditing={editingId === msg.id}
+            onVariantChange={handleVariantChange}
+            onEdit={handleEditSave}
+            onRegenerate={handleRegenerate}
+            onStartEdit={setEditingId}
+            onCancelEdit={() => setEditingId(null)}
+          />
         ))}
-        {isLoading && <TypingIndicator />}
+        {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+          <TypingIndicator />
+        )}
         <div ref={messagesEndRef} />
       </div>
       <div className="ai-chat-input-bar">
