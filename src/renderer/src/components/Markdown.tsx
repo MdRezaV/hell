@@ -21,8 +21,11 @@ function extractText(node: ReactNode): string {
   return ''
 }
 
-function wrapInFence(code: string, lang: string): string {
-  let maxBackticks = 0
+function normalizeBody(text: string): string {
+  return text.replace(/^\n+/, '').replace(/\n+$/, '')
+}
+
+function wrapInFence(code: string, lang: string): string {  let maxBackticks = 0
   let maxTildes = 0
   const backtickMatch = code.match(/`+/g)
   if (backtickMatch) maxBackticks = Math.max(...backtickMatch.map((s) => s.length))
@@ -353,13 +356,13 @@ function preprocessFileBlocks(content: string): string {
         const { matched: oldBlocks } = findMatchedBlocks(body, 'old')
         const { matched: newBlocks } = findMatchedBlocks(body, 'new')
 
-        const oldCode = oldBlocks.length > 0 ? oldBlocks[0].body : ''
-        const newCode = newBlocks.length > 0 ? newBlocks[0].body : ''
+        const oldCode = oldBlocks.length > 0 ? normalizeBody(oldBlocks[0].body) : ''
+        const newCode = newBlocks.length > 0 ? normalizeBody(newBlocks[0].body) : ''
 
         const combined = `<old>\n${oldCode}\n</old>\n<new>\n${newCode}\n</new>`
         replacement = wrapInFence(combined, `file-replace:${path}`)
       } else {
-        replacement = wrapInFence(block.body, `file:${path}`)
+        replacement = wrapInFence(normalizeBody(block.body), `file:${path}`)
       }
 
       result = result.slice(0, block.open.start) + replacement + result.slice(block.close.end)
@@ -525,7 +528,7 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
 
 function FileBlock({ path, code }: { path: string; code: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
-  const lines = code.replace(/\n$/, '').split('\n')
+  const lines = normalizeBody(code).split('\n')
   const segments = path.split(/[/\\]/)
 
   const handleCopy = async (): Promise<void> => {
@@ -676,14 +679,14 @@ function Markdown({ content }: MarkdownProps): React.JSX.Element {
               if (language === 'file-replace') {
                 const { matched: oldBlocks } = findMatchedBlocks(codeText, 'old')
                 const { matched: newBlocks } = findMatchedBlocks(codeText, 'new')
-                const oldCode = oldBlocks.length > 0 ? oldBlocks[0].body : ''
-                const newCode = newBlocks.length > 0 ? newBlocks[0].body : ''
+                const oldCode = oldBlocks.length > 0 ? normalizeBody(oldBlocks[0].body) : ''
+                const newCode = newBlocks.length > 0 ? normalizeBody(newBlocks[0].body) : ''
                 return <FileReplaceBlock path={filePath} oldCode={oldCode} newCode={newCode} />
               }
               if (language === 'file-delete') {
                 return <FileDeleteBlock path={filePath} />
               }
-              return <FileBlock path={filePath} code={codeText} />
+              return <FileBlock path={filePath} code={normalizeBody(codeText)} />
             }
 
             const customRenderer = CUSTOM_BLOCK_RENDERERS[language]
