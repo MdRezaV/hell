@@ -567,7 +567,7 @@ function AIChat(): React.JSX.Element {
               disabled={!input.trim() || isLoading}
               title="Send message"
             >
-              <Send size={16} />
+              <Send size={14} />
             </button>
           </div>
         </div>

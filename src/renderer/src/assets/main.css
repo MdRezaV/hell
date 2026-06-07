@@ -212,7 +212,6 @@ body {
   justify-content: space-between;
   padding: 0 8px;
   height: 28px;
-  line-height: 1;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-background-mute);
 }
@@ -222,7 +221,6 @@ body {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  line-height: 1;
 }
 
 .explorer-header-title {
@@ -425,8 +423,8 @@ body {
 .ai-chat-input-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 10px 8px 14px;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
   background: var(--color-surface-0);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -439,7 +437,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 6px;
+  padding-top: 4px;
   border-top: 1px solid var(--color-border-subtle);
   gap: 8px;
 }
@@ -598,8 +596,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   flex-shrink: 0;
   background: var(--color-accent);
@@ -655,7 +653,6 @@ body {
   justify-content: space-between;
   padding: 0 12px;
   height: 28px;
-  line-height: 1;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-background-mute);
   flex-shrink: 0;
@@ -702,7 +699,6 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-secondary);
-  line-height: 1;
 }
 
 .ai-chat-header-left svg {
