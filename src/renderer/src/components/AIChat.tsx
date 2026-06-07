@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'
+import { Send, Bot, User, Sparkles, Loader2, MessageSquarePlus } from 'lucide-react'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -143,6 +143,12 @@ function AIChat(): React.JSX.Element {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }
 
+  const handleNewChat = (): void => {
+    setMessages([])
+    setInput('')
+    setIsLoading(false)
+  }
+
   const isChatMode = messages.length > 0
 
   if (!isChatMode) {
@@ -188,21 +194,14 @@ function AIChat(): React.JSX.Element {
     <div className="ai-chat">
       <div className="ai-chat-header">
         <div className="ai-chat-header-left">
-          <Bot size={16} />
+          <Bot size={14} />
           <span>AI Assistant</span>
+          {isLoading && <Loader2 size={12} className="spin" />}
         </div>
-        <div className="ai-chat-header-status">
-          {isLoading ? (
-            <>
-              <Loader2 size={12} className="spin" />
-              <span>Thinking...</span>
-            </>
-          ) : (
-            <>
-              <span className="ai-chat-status-dot" />
-              <span>Ready</span>
-            </>
-          )}
+        <div className="ai-chat-header-actions">
+          <button onClick={handleNewChat} title="New Chat">
+            <MessageSquarePlus size={14} />
+          </button>
         </div>
       </div>
       <div className="ai-chat-messages">
