@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   Copy,
   Bot,
@@ -105,7 +105,69 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-function MessageBubble({
+interface EditMessageProps {
+  initialContent: string
+  messageId: string
+  onEdit: (id: string, content: string) => void
+  onCancelEdit: () => void
+}
+
+function EditMessage({
+  initialContent,
+  messageId,
+  onEdit,
+  onCancelEdit
+}: EditMessageProps): React.JSX.Element {
+  const [editContent, setEditContent] = useState(initialContent)
+  const editRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (editRef.current) {
+      editRef.current.focus()
+      editRef.current.style.height = 'auto'
+      editRef.current.style.height = `${editRef.current.scrollHeight}px`
+    }
+  }, [])
+
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      onEdit(messageId, editContent)
+    } else if (e.key === 'Escape') {
+      onCancelEdit()
+    }
+  }
+
+  const handleEditInput = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    setEditContent(e.target.value)
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
+  return (
+    <>
+      <textarea
+        ref={editRef}
+        className="chat-edit-area"
+        value={editContent}
+        onChange={handleEditInput}
+        onKeyDown={handleEditKeyDown}
+        rows={1}
+      />
+      <div className="chat-edit-actions">
+        <button className="btn-ghost" onClick={onCancelEdit}>
+          <X size={12} /> Cancel
+        </button>
+        <button className="btn-primary" onClick={() => onEdit(messageId, editContent)}>
+          <Check size={12} /> Save
+        </button>
+      </div>
+    </>
+  )
+}
+
+const MessageBubble = memo(function MessageBubble({
   message,
   isLastAssistant,
   isLoading,
@@ -135,59 +197,17 @@ function MessageBubble({
   const hasVariants = message.variants.length > 1
   const isActiveEmpty = variant.content === '' && isLoading
 
-  const [editContent, setEditContent] = useState(variant.content)
-  const editRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (isEditing && editRef.current) {
-      editRef.current.focus()
-      editRef.current.style.height = 'auto'
-      editRef.current.style.height = `${editRef.current.scrollHeight}px`
-    }
-  }, [isEditing])
-
-  useEffect(() => {
-    setEditContent(variant.content)
-  }, [variant.content])
-
-  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      onEdit(message.id, editContent)
-    } else if (e.key === 'Escape') {
-      onCancelEdit()
-    }
-  }
-
-  const handleEditInput = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-    setEditContent(e.target.value)
-    const el = e.target
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }
-
   return (
     <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-ai'}`}>
       <div className="chat-message-body">
         {isEditing ? (
-          <>
-            <textarea
-              ref={editRef}
-              className="chat-edit-area"
-              value={editContent}
-              onChange={handleEditInput}
-              onKeyDown={handleEditKeyDown}
-              rows={1}
-            />
-            <div className="chat-edit-actions">
-              <button className="btn-ghost" onClick={onCancelEdit}>
-                <X size={12} /> Cancel
-              </button>
-              <button className="btn-primary" onClick={() => onEdit(message.id, editContent)}>
-                <Check size={12} /> Save
-              </button>
-            </div>
-          </>
+          <EditMessage
+            key={message.id + '-' + message.activeVariant}
+            initialContent={variant.content}
+            messageId={message.id}
+            onEdit={onEdit}
+            onCancelEdit={onCancelEdit}
+          />
         ) : (
           <>
             <div className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
@@ -268,7 +288,7 @@ function MessageBubble({
       </div>
     </div>
   )
-}
+})
 
 function TypingIndicator(): React.JSX.Element {
   return (
@@ -295,6 +315,17 @@ function AIChat(): React.JSX.Element {
   const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const copyTimeoutRef = useRef<number | null>(null)
+  const messagesRef = useRef(messages)
+  const isLoadingRef = useRef(isLoading)
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading
+  }, [isLoading])
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -314,6 +345,14 @@ function AIChat(): React.JSX.Element {
     inputRef.current?.focus()
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleSend = async (): Promise<void> => {
     const trimmed = input.trim()
     if (!trimmed || isLoading) return
@@ -327,6 +366,9 @@ function AIChat(): React.JSX.Element {
 
     setMessages(prev => [...prev, userMessage])
     setInput('')
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
     setIsLoading(true)
 
     await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
@@ -342,13 +384,14 @@ function AIChat(): React.JSX.Element {
     setIsLoading(false)
   }
 
-  const handleRegenerate = async (messageId: string): Promise<void> => {
-    if (isLoading) return
+  const handleRegenerate = useCallback(async (messageId: string): Promise<void> => {
+    if (isLoadingRef.current) return
 
-    const msgIndex = messages.findIndex(m => m.id === messageId)
+    const currentMessages = messagesRef.current
+    const msgIndex = currentMessages.findIndex(m => m.id === messageId)
     if (msgIndex === -1) return
 
-    const userMsg = messages
+    const userMsg = currentMessages
       .slice(0, msgIndex)
       .reverse()
       .find(m => m.role === 'user')
@@ -358,10 +401,12 @@ function AIChat(): React.JSX.Element {
 
     setMessages(prev => {
       const updated = [...prev]
-      const msg = { ...updated[msgIndex] }
+      const idx = updated.findIndex(m => m.id === messageId)
+      if (idx === -1) return prev
+      const msg = { ...updated[idx] }
       msg.variants = [...msg.variants, { content: '', timestamp: new Date() }]
       msg.activeVariant = msg.variants.length - 1
-      updated[msgIndex] = msg
+      updated[idx] = msg
       return updated
     })
 
@@ -383,21 +428,24 @@ function AIChat(): React.JSX.Element {
     })
 
     setIsLoading(false)
-  }
+  }, [])
 
-  const handleEditSave = async (messageId: string, newContent: string): Promise<void> => {
+  const handleEditSave = useCallback(async (messageId: string, newContent: string): Promise<void> => {
     const trimmed = newContent.trim()
-    if (!trimmed || isLoading) return
+    if (!trimmed || isLoadingRef.current) return
 
-    const msgIndex = messages.findIndex(m => m.id === messageId)
+    const currentMessages = messagesRef.current
+    const msgIndex = currentMessages.findIndex(m => m.id === messageId)
     if (msgIndex === -1) return
 
     setMessages(prev => {
-      const updated = prev.slice(0, msgIndex + 1)
-      const msg = { ...updated[msgIndex] }
+      const idx = prev.findIndex(m => m.id === messageId)
+      if (idx === -1) return prev
+      const updated = prev.slice(0, idx + 1)
+      const msg = { ...updated[idx] }
       msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
       msg.activeVariant = msg.variants.length - 1
-      updated[msgIndex] = msg
+      updated[idx] = msg
       return updated
     })
 
@@ -415,9 +463,9 @@ function AIChat(): React.JSX.Element {
 
     setMessages(prev => [...prev, aiMessage])
     setIsLoading(false)
-  }
+  }, [])
 
-  const handleVariantChange = (messageId: string, direction: 'prev' | 'next'): void => {
+  const handleVariantChange = useCallback((messageId: string, direction: 'prev' | 'next'): void => {
     setMessages(prev => {
       const updated = [...prev]
       const idx = updated.findIndex(m => m.id === messageId)
@@ -433,27 +481,39 @@ function AIChat(): React.JSX.Element {
       updated[idx] = msg
       return updated
     })
-  }
+  }, [])
 
-  const handleNewChat = (): void => {
+  const handleNewChat = useCallback((): void => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = null
+    }
     setMessages([])
     setInput('')
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
     setIsLoading(false)
     setEditingId(null)
     setCopiedId(null)
-  }
+  }, [])
 
-  const handleCopy = async (messageId: string, content: string): Promise<void> => {
+  const handleCopy = useCallback(async (messageId: string, content: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(content)
       setCopiedId(messageId)
-      window.setTimeout(() => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => {
         setCopiedId(prev => (prev === messageId ? null : prev))
       }, 1500)
     } catch {
       /* ignore clipboard errors */
     }
-  }
+  }, [])
+
+  const handleCancelEdit = useCallback(() => setEditingId(null), [])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -470,7 +530,13 @@ function AIChat(): React.JSX.Element {
   }
 
   const isChatMode = messages.length > 0
-  const lastAssistantIndex = messages.map(m => m.role).lastIndexOf('assistant')
+  let lastAssistantIndex = -1
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'assistant') {
+      lastAssistantIndex = i
+      break
+    }
+  }
 
   if (!isChatMode) {
     return (
@@ -531,7 +597,7 @@ function AIChat(): React.JSX.Element {
             onEdit={handleEditSave}
             onRegenerate={handleRegenerate}
             onStartEdit={setEditingId}
-            onCancelEdit={() => setEditingId(null)}
+            onCancelEdit={handleCancelEdit}
             onCopy={handleCopy}
           />
         ))}

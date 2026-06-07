@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo, memo } from 'react'
 import { ChevronRight, ChevronDown, Folder, File } from 'lucide-react'
 
 interface FileNode {
@@ -41,7 +41,7 @@ function getAllPaths(node: FileNode): string[] {
   return paths
 }
 
-function TreeNode({
+const TreeNode = memo(function TreeNode({
   node,
   level,
   checkedPaths,
@@ -107,7 +107,7 @@ function TreeNode({
       )}
     </div>
   )
-}
+})
 
 function countFiles(nodes: FileNode[]): number {
   let count = 0
@@ -116,6 +116,17 @@ function countFiles(nodes: FileNode[]): number {
     if (node.children) count += countFiles(node.children)
   }
   return count
+}
+
+function findNodeByPath(nodes: FileNode[], path: string): FileNode | null {
+  for (const node of nodes) {
+    if (node.path === path) return node
+    if (node.children) {
+      const found = findNodeByPath(node.children, path)
+      if (found) return found
+    }
+  }
+  return null
 }
 
 function sortTree(nodes: FileNode[]): FileNode[] {
@@ -147,15 +158,21 @@ function FileExplorer({
   const [checkedPaths, setCheckedPaths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    let cancelled = false
     if (workspace) {
       window.electron.ipcRenderer.invoke('read-directory', workspace).then((files: FileNode[]) => {
-        setTree(sortTree(files))
-        setCheckedPaths(new Set())
+        if (!cancelled) {
+          setTree(sortTree(files))
+          setCheckedPaths(new Set())
+        }
       })
     } else {
-      setTree([])
-      setCheckedPaths(new Set())
+      queueMicrotask(() => {
+        setTree([])
+        setCheckedPaths(new Set())
+      })
     }
+    return () => { cancelled = true }
   }, [workspace])
 
   const handleOpenWorkspace = async (): Promise<void> => {
@@ -187,8 +204,14 @@ function FileExplorer({
     })
   }, [])
 
-  const fileCount = countFiles(tree)
-  const checkedCount = checkedPaths.size
+  const fileCount = useMemo(() => countFiles(tree), [tree])
+  const checkedCount = useMemo(() => {
+    let count = 0
+    checkedPaths.forEach(p => {
+      if (findNodeByPath(tree, p)?.type === 'file') count++
+    })
+    return count
+  }, [tree, checkedPaths])
 
   if (!workspace) {
     return (

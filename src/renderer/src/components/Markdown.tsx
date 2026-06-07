@@ -236,12 +236,24 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
   const isSyncing = useRef(false)
   const fileState = useFileContent(path)
   const notFound = fileState !== null && !fileState.exists
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleCopy = async (code: string, type: 'old' | 'new'): Promise<void> => {
     try {
       await navigator.clipboard.writeText(code)
       setCopied(type)
-      window.setTimeout(() => setCopied(null), 1500)
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(null), 1500)
     } catch {
       /* ignore */
     }
@@ -264,6 +276,9 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
       isSyncing.current = false
     })
   }, [])
+
+  const handleLeftScroll = useCallback(() => syncScroll('left'), [syncScroll])
+  const handleRightScroll = useCallback(() => syncScroll('right'), [syncScroll])
 
   return (
     <div className="md-file-block md-file-replace-block">
@@ -294,12 +309,11 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
           <div
             ref={leftRef}
             className="md-file-code md-file-diff-code"
-            onScroll={() => syncScroll('left')}
           >
             <LinesDisplay
               code={oldCode}
               language={getLanguageFromPath(path)}
-              onScroll={() => syncScroll('left')}
+              onScroll={handleLeftScroll}
             />
           </div>
         </div>
@@ -324,12 +338,11 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
           <div
             ref={rightRef}
             className="md-file-code md-file-diff-code"
-            onScroll={() => syncScroll('right')}
           >
             <LinesDisplay
               code={newCode}
               language={getLanguageFromPath(path)}
-              onScroll={() => syncScroll('right')}
+              onScroll={handleRightScroll}
             />
           </div>
         </div>
@@ -345,13 +358,25 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
 }): React.JSX.Element {
   const fileState = useFileContent(path)
   const [copied, setCopied] = useState(false)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleCopy = async (): Promise<void> => {
     if (!fileState?.content) return
     try {
       await navigator.clipboard.writeText(fileState.content)
       setCopied(true)
-      window.setTimeout(() => setCopied(false), 1500)
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500)
     } catch {
       /* ignore */
     }
@@ -374,12 +399,13 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
       <div className="md-file-block">
         <div className="md-file-header">
           <div className="md-file-header-left">
-            <span className="md-file-status-label deleted">DELETED</span>
             <span className="md-file-status-label error">NOT FOUND</span>
             <FilePathDisplay path={path} />
           </div>
         </div>
-        <div className="md-file-error">File not found</div>
+        <div className="md-file-error">
+          File not found — may already be deleted or the path is incorrect
+        </div>
       </div>
     )
   }
@@ -421,12 +447,24 @@ const FileBlock = memo(function FileBlock({
 }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
   const fileState = useFileContent(path)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleCopy = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(code)
       setCopied(true)
-      window.setTimeout(() => setCopied(false), 1500)
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500)
     } catch {
       /* ignore clipboard errors */
     }
@@ -464,12 +502,24 @@ const FileBlock = memo(function FileBlock({
 
 const CommandBlock = memo(function CommandBlock({ code }: { code: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleRun = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(code)
       setCopied(true)
-      window.setTimeout(() => setCopied(false), 1500)
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500)
     } catch {
       /* ignore clipboard errors */
     }
