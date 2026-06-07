@@ -35,7 +35,6 @@ function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
   const segments = path.split(/[/\\]/)
   return (
     <span className="md-file-path" title={path}>
-      <FileCode2 size={14} strokeWidth={2} className="md-file-path-icon" />
       <span className="md-file-path-text">
         {segments.map((seg, i) => (
           <span key={i}>
@@ -139,19 +138,16 @@ function FileReplaceBlock({
           <FilePathDisplay path={path} />
         </div>
       </div>
-      {notFound && (
-        <div className="md-file-error">Cannot replace: file does not exist</div>
-      )}
       <div className="md-file-diff">
         <div className="md-file-diff-side old">
           <div className="md-file-diff-header">
-            <span className="md-file-replace-label old">Removed</span>
+            <span className="md-file-replace-label old">OLD</span>
             <button
               type="button"
               className={`md-file-copy${copied === 'old' ? ' copied' : ''}`}
               onClick={() => handleCopy(oldCode, 'old')}
-              title={copied === 'old' ? 'Copied' : 'Copy removed code'}
-              aria-label={copied === 'old' ? 'Copied' : 'Copy removed code'}
+              title={copied === 'old' ? 'Copied' : 'Copy old code'}
+              aria-label={copied === 'old' ? 'Copied' : 'Copy old code'}
             >
               {copied === 'old' ? (
                 <Check size={16} strokeWidth={2.25} />
@@ -171,13 +167,13 @@ function FileReplaceBlock({
         <div className="md-file-diff-divider" />
         <div className="md-file-diff-side new">
           <div className="md-file-diff-header">
-            <span className="md-file-replace-label new">Added</span>
+            <span className="md-file-replace-label new">New</span>
             <button
               type="button"
               className={`md-file-copy${copied === 'new' ? ' copied' : ''}`}
               onClick={() => handleCopy(newCode, 'new')}
-              title={copied === 'new' ? 'Copied' : 'Copy added code'}
-              aria-label={copied === 'new' ? 'Copied' : 'Copy added code'}
+              title={copied === 'new' ? 'Copied' : 'Copy new code'}
+              aria-label={copied === 'new' ? 'Copied' : 'Copy new code'}
             >
               {copied === 'new' ? (
                 <Check size={16} strokeWidth={2.25} />
@@ -231,6 +227,7 @@ function FileDeleteBlock({ path }: { path: string }): React.JSX.Element {
       <div className="md-file-block">
         <div className="md-file-header">
           <div className="md-file-header-left">
+            <span className="md-file-status-label deleted">DELETED</span>
             <span className="md-file-status-label error">NOT FOUND</span>
             <FilePathDisplay path={path} />
           </div>
