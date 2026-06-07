@@ -251,4 +251,263 @@ describe('preprocessFileBlocks', () => {
     expect(out).toContain('```file:a')
     expect(out).toContain('```file:b')
   })
+
+  it('handles JSON content in file block', () => {
+    const input = `<file path="config.json">
+{
+  "theme": "dark",
+  "language": "en"
+}
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:config.json')
+    expect(out).toContain('"theme": "dark"')
+    expect(out).toContain('"language": "en"')
+  })
+
+  it('handles HTML replace with old and new content', () => {
+    const input = `<file path="index.html" action="replace">
+<old>
+  <title>My Appliction</title>
+</old>
+<new>
+  <title>My Application</title>
+</new>
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-replace:index.html')
+    expect(out).toContain('<old>')
+    expect(out).toContain('<title>My Appliction</title>')
+    expect(out).toContain('</old>')
+    expect(out).toContain('<new>')
+    expect(out).toContain('<title>My Application</title>')
+    expect(out).toContain('</new>')
+  })
+
+  it('handles multiple consecutive replace operations', () => {
+    const input = `<file path="js/app.js" action="replace">
+<old>
+import { init } from './core';
+</old>
+<new>
+import { init } from './core';
+import { helper } from './utils';
+</new>
+</file>
+
+<file path="css/style.css" action="replace">
+<old>
+/* Deprecated layout styles
+   .old-container { width: 100%; }
+*/
+</old>
+<new>
+</new>
+</file>
+
+<file path="css/style.css">
+content here
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-replace:js/app.js')
+    expect(out).toContain("import { init } from './core';")
+    expect(out).toContain("import { helper } from './utils';")
+    expect(out).toContain('```file-replace:css/style.css')
+    expect(out).toContain('/* Deprecated layout styles')
+    expect(out).toContain('```file:css/style.css')
+    expect(out).toContain('content here')
+  })
+
+  it('ignores file tags with empty path attribute', () => {
+    const input = `<file path="">
+some content
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:')
+    expect(out).toContain('some content')
+  })
+
+  it('ignores nested file tags inside outer file block', () => {
+    const input = `<file path="outer.css">
+outer content
+<file path="inner.css">
+inner content
+</file>
+more outer
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:outer.css')
+    expect(out).toContain('outer content')
+    expect(out).toContain('<file path="inner.css">')
+    expect(out).toContain('inner content')
+    expect(out).toContain('</file>')
+    expect(out).toContain('more outer')
+  })
+
+  it('preserves code fences inside file blocks as content', () => {
+    const input = `<file path="example.md">
+Here is some code:
+\`\`\`js
+const x = 1;
+\`\`\`
+</file>`
+    const out = preprocessFileBlocks(input)
+    // Body contains ```, so wrapInFence must use ~~~ to avoid ambiguity
+    expect(out).toMatch(/~~~file:example\.md/)
+    expect(out).toContain('Here is some code:')
+    expect(out).toContain('```js')
+    expect(out).toContain('const x = 1;')
+    expect(out).toMatch(/~~~\n/)
+  })
+
+  it('handles multiple code fences inside file block', () => {
+    const input = `<file path="multi.md">
+First block:
+\`\`\`
+code1
+\`\`\`
+
+Second block:
+\`\`\`
+code2
+\`\`\`
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toMatch(/~~~file:multi\.md/)
+    expect(out).toContain('First block:')
+    expect(out).toContain('```')
+    expect(out).toContain('code1')
+    expect(out).toContain('Second block:')
+    expect(out).toContain('code2')
+  })
+
+  it('handles replace with nested tags and code fences in old/new sections', () => {
+    const input = `<file path="complex.css" action="replace">
+<old>
+<old>
+<file>
+<file path="">
+</old>
+\`\`\`
+</old>
+<new>
+<new>
+\`\`\`
+</new>
+</new>
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toMatch(/~~~file-replace:complex\.css/)
+    // The outer <old>...</old> body is captured; inner duplicate <old> tags
+    // remain as literal text inside the body.
+    expect(out).toContain('<old>')
+    expect(out).toContain('<file>')
+    expect(out).toContain('<file path="">')
+    expect(out).toContain('</old>')
+    expect(out).toContain('<new>')
+    expect(out).toContain('</new>')
+  })
+
+  it('ignores file block wrapped in code fence', () => {
+    const input = `\`\`\`
+<file path="ignored.css">
+\`\`\`
+\`\`\`
+</file>
+\`\`\``
+    const out = preprocessFileBlocks(input)
+    expect(out).toBe(input)
+  })
+
+  it('ignores file block in inline code', () => {
+    const input = '`<file path="inline.css">content</file>`'
+    const out = preprocessFileBlocks(input)
+    expect(out).toBe(input)
+  })
+
+  it('handles delete operation', () => {
+    const input = `<file path="css/style.css" action="delete" />`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-delete:css/style.css')
+    expect(out).not.toContain('<file')
+  })
+
+  it('handles mixed operations in sequence', () => {
+    const input = `Some text before
+
+<file path="new.js">
+const newFile = true;
+</file>
+
+Middle text
+
+<file path="modify.js" action="replace">
+<old>
+const old = 1;
+</old>
+<new>
+const new = 2;
+</new>
+</file>
+
+<file path="remove.js" action="delete" />
+
+End text`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('Some text before')
+    expect(out).toContain('```file:new.js')
+    expect(out).toContain('const newFile = true;')
+    expect(out).toContain('Middle text')
+    expect(out).toContain('```file-replace:modify.js')
+    expect(out).toContain('const old = 1;')
+    expect(out).toContain('const new = 2;')
+    expect(out).toContain('```file-delete:remove.js')
+    expect(out).toContain('End text')
+  })
+
+  it('handles empty old section in replace', () => {
+    const input = `<file path="add.css" action="replace">
+<old>
+</old>
+<new>
+.new-class { color: red; }
+</new>
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-replace:add.css')
+    expect(out).toContain('<old>')
+    expect(out).toContain('</old>')
+    expect(out).toContain('<new>')
+    expect(out).toContain('.new-class { color: red; }')
+    expect(out).toContain('</new>')
+  })
+
+  it('handles empty new section in replace', () => {
+    const input = `<file path="remove.css" action="replace">
+<old>
+.old-class { color: blue; }
+</old>
+<new>
+</new>
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file-replace:remove.css')
+    expect(out).toContain('<old>')
+    expect(out).toContain('.old-class { color: blue; }')
+    expect(out).toContain('</old>')
+    expect(out).toContain('<new>')
+    expect(out).toContain('</new>')
+  })
+
+  it('preserves special characters in file content', () => {
+    const specialContent = `const regex = /test/;
+const template = \`\${var}\`;
+const str = "quotes \\" and '"`
+    const input = `<file path="special.js">\n${specialContent}\n</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```file:special.js')
+    expect(out).toContain('const regex = /test/;')
+    expect(out).toContain('const template = `${var}`;')
+    expect(out).toContain('const str = "quotes \\" and \'"')
+  })
 })
