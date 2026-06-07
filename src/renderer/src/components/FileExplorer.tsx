@@ -109,26 +109,6 @@ const TreeNode = memo(function TreeNode({
   )
 })
 
-function countFiles(nodes: FileNode[]): number {
-  let count = 0
-  for (const node of nodes) {
-    if (node.type === 'file') count++
-    if (node.children) count += countFiles(node.children)
-  }
-  return count
-}
-
-function findNodeByPath(nodes: FileNode[], path: string): FileNode | null {
-  for (const node of nodes) {
-    if (node.path === path) return node
-    if (node.children) {
-      const found = findNodeByPath(node.children, path)
-      if (found) return found
-    }
-  }
-  return null
-}
-
 function sortTree(nodes: FileNode[]): FileNode[] {
   return [...nodes]
     .sort((a, b) => {
@@ -193,25 +173,38 @@ function FileExplorer({
     setCheckedPaths(prev => {
       const next = new Set(prev)
       const paths = getAllPaths(node)
-      
+
       if (checked) {
         paths.forEach(p => next.add(p))
       } else {
         paths.forEach(p => next.delete(p))
       }
-      
+
       return next
     })
   }, [])
 
-  const fileCount = useMemo(() => countFiles(tree), [tree])
+  const filePathSet = useMemo(() => {
+    const paths = new Set<string>()
+    const collect = (nodes: FileNode[]): void => {
+      for (const node of nodes) {
+        if (node.type === 'file') paths.add(node.path)
+        if (node.children) collect(node.children)
+      }
+    }
+    collect(tree)
+    return paths
+  }, [tree])
+
+  const fileCount = useMemo(() => filePathSet.size, [filePathSet])
+
   const checkedCount = useMemo(() => {
     let count = 0
     checkedPaths.forEach(p => {
-      if (findNodeByPath(tree, p)?.type === 'file') count++
+      if (filePathSet.has(p)) count++
     })
     return count
-  }, [tree, checkedPaths])
+  }, [filePathSet, checkedPaths])
 
   if (!workspace) {
     return (

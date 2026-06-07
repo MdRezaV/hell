@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import {
   Copy,
   Bot,
@@ -14,6 +14,8 @@ import {
   X
 } from 'lucide-react'
 import Markdown from './Markdown'
+import { useClickOutside } from '../hooks/useClickOutside'
+import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
 
 interface MessageVariant {
   content: string
@@ -44,21 +46,7 @@ function ModeSelector({
   onChange: (mode: ChatMode) => void
 }): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+  const ref = useClickOutside<HTMLDivElement>(() => setIsOpen(false), isOpen)
 
   return (
     <div className={`ai-chat-input-mode ${isOpen ? 'open' : ''}`} ref={ref}>
@@ -120,12 +108,12 @@ function EditMessage({
 }: EditMessageProps): React.JSX.Element {
   const [editContent, setEditContent] = useState(initialContent)
   const editRef = useRef<HTMLTextAreaElement>(null)
+  const resizeTextarea = useAutoResizeTextarea()
 
   useEffect(() => {
     if (editRef.current) {
       editRef.current.focus()
-      editRef.current.style.height = 'auto'
-      editRef.current.style.height = `${editRef.current.scrollHeight}px`
+      resizeTextarea(editRef.current)
     }
   }, [])
 
@@ -140,9 +128,7 @@ function EditMessage({
 
   const handleEditInput = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     setEditContent(e.target.value)
-    const el = e.target
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
+    resizeTextarea(e.target)
   }
 
   return (
@@ -318,6 +304,7 @@ function AIChat(): React.JSX.Element {
   const copyTimeoutRef = useRef<number | null>(null)
   const messagesRef = useRef(messages)
   const isLoadingRef = useRef(isLoading)
+  const resizeTextarea = useAutoResizeTextarea()
 
   useEffect(() => {
     messagesRef.current = messages
@@ -524,19 +511,16 @@ function AIChat(): React.JSX.Element {
 
   const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     setInput(e.target.value)
-    const el = e.target
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
+    resizeTextarea(e.target)
   }
 
   const isChatMode = messages.length > 0
-  let lastAssistantIndex = -1
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === 'assistant') {
-      lastAssistantIndex = i
-      break
+  const lastAssistantIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return i
     }
-  }
+    return -1
+  }, [messages])
 
   if (!isChatMode) {
     return (

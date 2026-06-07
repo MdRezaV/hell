@@ -3,6 +3,7 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useMemo,
   memo,
   Children,
   isValidElement,
@@ -14,6 +15,8 @@ import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
+import { useScrollSync } from '../hooks/useScrollSync'
 
 // Register only commonly used languages (PrismLight requires explicit registration).
 // This avoids loading the full Prism bundle (~300 languages) and dramatically
@@ -230,55 +233,19 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
   oldCode: string
   newCode: string
 }): React.JSX.Element {
-  const [copied, setCopied] = useState<'old' | 'new' | null>(null)
-  const leftRef = useRef<HTMLDivElement>(null)
-  const rightRef = useRef<HTMLDivElement>(null)
-  const isSyncing = useRef(false)
+  const { copied: copiedOld, copy: copyOld } = useCopyToClipboard()
+  const { copied: copiedNew, copy: copyNew } = useCopyToClipboard()
+  const { leftRef, rightRef, handleLeftScroll, handleRightScroll } = useScrollSync()
   const fileState = useFileContent(path)
   const notFound = fileState !== null && !fileState.exists
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-    }
-  }, [])
+  const handleCopyOld = useCallback(async (): Promise<void> => {
+    await copyOld(oldCode)
+  }, [copyOld, oldCode])
 
-  const handleCopy = async (code: string, type: 'old' | 'new'): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(code)
-      setCopied(type)
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-      copyTimeoutRef.current = window.setTimeout(() => setCopied(null), 1500)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const syncScroll = useCallback((source: 'left' | 'right') => {
-    if (isSyncing.current) return
-    isSyncing.current = true
-    const from = source === 'left' ? leftRef.current : rightRef.current
-    const to = source === 'left' ? rightRef.current : leftRef.current
-    if (from && to) {
-      to.scrollTop = from.scrollTop
-      const fromH = from.querySelector('.md-file-code-scroll')
-      const toH = to.querySelector('.md-file-code-scroll')
-      if (fromH && toH) {
-        toH.scrollLeft = fromH.scrollLeft
-      }
-    }
-    window.requestAnimationFrame(() => {
-      isSyncing.current = false
-    })
-  }, [])
-
-  const handleLeftScroll = useCallback(() => syncScroll('left'), [syncScroll])
-  const handleRightScroll = useCallback(() => syncScroll('right'), [syncScroll])
+  const handleCopyNew = useCallback(async (): Promise<void> => {
+    await copyNew(newCode)
+  }, [copyNew, newCode])
 
   return (
     <div className="md-file-block md-file-replace-block">
@@ -294,12 +261,12 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
             <span className="md-file-replace-label old">OLD</span>
             <button
               type="button"
-              className={`md-file-copy${copied === 'old' ? ' copied' : ''}`}
-              onClick={() => handleCopy(oldCode, 'old')}
-              title={copied === 'old' ? 'Copied' : 'Copy old code'}
-              aria-label={copied === 'old' ? 'Copied' : 'Copy old code'}
+              className={`md-file-copy${copiedOld ? ' copied' : ''}`}
+              onClick={handleCopyOld}
+              title={copiedOld ? 'Copied' : 'Copy old code'}
+              aria-label={copiedOld ? 'Copied' : 'Copy old code'}
             >
-              {copied === 'old' ? (
+              {copiedOld ? (
                 <Check size={16} strokeWidth={2.25} />
               ) : (
                 <FileCode2 size={16} strokeWidth={2} />
@@ -323,12 +290,12 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
             <span className="md-file-replace-label new">New</span>
             <button
               type="button"
-              className={`md-file-copy${copied === 'new' ? ' copied' : ''}`}
-              onClick={() => handleCopy(newCode, 'new')}
-              title={copied === 'new' ? 'Copied' : 'Copy new code'}
-              aria-label={copied === 'new' ? 'Copied' : 'Copy new code'}
+              className={`md-file-copy${copiedNew ? ' copied' : ''}`}
+              onClick={handleCopyNew}
+              title={copiedNew ? 'Copied' : 'Copy new code'}
+              aria-label={copiedNew ? 'Copied' : 'Copy new code'}
             >
-              {copied === 'new' ? (
+              {copiedNew ? (
                 <Check size={16} strokeWidth={2.25} />
               ) : (
                 <FileCode2 size={16} strokeWidth={2} />
@@ -357,30 +324,12 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
   path: string
 }): React.JSX.Element {
   const fileState = useFileContent(path)
-  const [copied, setCopied] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { copied, copy } = useCopyToClipboard()
 
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleCopy = async (): Promise<void> => {
+  const handleCopy = useCallback(async (): Promise<void> => {
     if (!fileState?.content) return
-    try {
-      await navigator.clipboard.writeText(fileState.content)
-      setCopied(true)
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* ignore */
-    }
-  }
+    await copy(fileState.content)
+  }, [copy, fileState?.content])
 
   if (fileState === null) {
     return (
@@ -445,30 +394,12 @@ const FileBlock = memo(function FileBlock({
   path: string
   code: string
 }): React.JSX.Element {
-  const [copied, setCopied] = useState(false)
+  const { copied, copy } = useCopyToClipboard()
   const fileState = useFileContent(path)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleCopy = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(code)
-      setCopied(true)
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* ignore clipboard errors */
-    }
-  }
+  const handleCopy = useCallback(async (): Promise<void> => {
+    await copy(code)
+  }, [copy, code])
 
   const isCreated = fileState !== null && !fileState.exists
 
@@ -501,29 +432,11 @@ const FileBlock = memo(function FileBlock({
 })
 
 const CommandBlock = memo(function CommandBlock({ code }: { code: string }): React.JSX.Element {
-  const [copied, setCopied] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { copied, copy } = useCopyToClipboard()
 
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleRun = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(code)
-      setCopied(true)
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* ignore clipboard errors */
-    }
-  }
+  const handleRun = useCallback(async (): Promise<void> => {
+    await copy(code)
+  }, [copy, code])
 
   return (
     <div className="md-command-block">
@@ -576,7 +489,12 @@ const GenericCodeBlock = memo(function GenericCodeBlock({
   )
 })
 
+const languageFromPathCache = new Map<string, string>()
+
 function getLanguageFromPath(filePath: string): string {
+  const cached = languageFromPathCache.get(filePath)
+  if (cached !== undefined) return cached
+
   const ext = filePath.split('.').pop()?.toLowerCase()
   if (!ext) return 'text'
 
@@ -645,7 +563,9 @@ function getLanguageFromPath(filePath: string): string {
     env: 'ini'
   }
 
-  return languageMap[ext] || 'text'
+  const result = languageMap[ext] || 'text'
+  languageFromPathCache.set(filePath, result)
+  return result
 }
 
 const CUSTOM_BLOCK_RENDERERS: Record<string, CustomBlockRenderer> = {
