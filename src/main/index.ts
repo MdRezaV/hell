@@ -1,6 +1,16 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, relative } from 'path'
-import { readdirSync, readFileSync, openSync, readSync, closeSync, existsSync } from 'fs'
+import { join, relative, dirname } from 'path'
+import {
+  readdirSync,
+  readFileSync,
+  openSync,
+  readSync,
+  closeSync,
+  existsSync,
+  writeFileSync,
+  unlinkSync,
+  mkdirSync
+} from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import ignore, { type Ignore } from 'ignore'
 import icon from '../../resources/icon.png?asset'
@@ -134,6 +144,30 @@ app.whenReady().then(() => {
       return { exists: true, content }
     } catch {
       return { exists: false, content: null }
+    }
+  })
+
+  ipcMain.handle(
+    'write-file',
+    async (_, workspace: string, relativePath: string, content: string) => {
+      try {
+        const fullPath = join(workspace, relativePath)
+        mkdirSync(dirname(fullPath), { recursive: true })
+        writeFileSync(fullPath, content, 'utf-8')
+        return { success: true }
+      } catch (e: unknown) {
+        return { success: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    }
+  )
+
+  ipcMain.handle('delete-file', async (_, workspace: string, relativePath: string) => {
+    try {
+      const fullPath = join(workspace, relativePath)
+      unlinkSync(fullPath)
+      return { success: true }
+    } catch (e: unknown) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })
 

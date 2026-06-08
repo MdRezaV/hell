@@ -914,6 +914,10 @@
     @apply flex items-center gap-2 min-w-0;
   }
 
+  .md-file-header-actions {
+    @apply flex items-center gap-1.5 flex-shrink-0;
+  }
+
   .md-file-path {
     @apply inline-flex items-center gap-1.5 min-w-0 text-[12px] font-semibold text-ctp-blue overflow-hidden text-ellipsis whitespace-nowrap tracking-wide;
   }
@@ -940,6 +944,18 @@
 
   .md-file-copy.copied {
     @apply text-ctp-green;
+  }
+
+  .md-file-apply {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover flex-shrink-0;
+  }
+
+  .md-file-apply.applied {
+    @apply bg-success border-success cursor-default;
+  }
+
+  .md-file-apply.error {
+    @apply bg-error border-error cursor-default;
   }
 
   .md-file-code {

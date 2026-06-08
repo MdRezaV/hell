@@ -220,7 +220,10 @@ const MessageBubble = memo(function MessageBubble({
                 </div>
               ) : (
                 <div className="chat-bubble-content">
-                  <Markdown content={variant.content} />
+                  <Markdown
+                    key={`${message.id}-${message.activeVariant}`}
+                    content={variant.content}
+                  />
                 </div>
               )}
             </div>

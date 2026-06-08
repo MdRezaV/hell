@@ -91,7 +91,7 @@ SyntaxHighlighter.registerLanguage('docker', docker)
 SyntaxHighlighter.registerLanguage('dockerfile', docker)
 
 import hljs from 'highlight.js/lib/common'
-import { Play, Check, Copy } from 'lucide-react'
+import { Play, Check, Copy, X } from 'lucide-react'
 import { trimSingleNewline, findMatchedBlocks, getActiveParser } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
 
@@ -258,7 +258,11 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
   const { copied: copiedNew, copy: copyNew } = useCopyToClipboard()
   const { leftRef, rightRef, handleLeftScroll, handleRightScroll } = useScrollSync()
   const fileState = useFileContent(path)
-  const notFound = fileState !== null && !fileState.exists
+  const { workspace } = useWorkspace()
+  const notFound =
+    fileState !== null &&
+    (!fileState.exists || fileState.content === null || !fileState.content.includes(oldCode))
+  const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
   const handleCopyOld = useCallback(async (): Promise<void> => {
     await copyOld(oldCode)
@@ -268,6 +272,32 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
     await copyNew(newCode)
   }, [copyNew, newCode])
 
+  const handleApply = useCallback(async (): Promise<void> => {
+    if (!workspace) return
+    const fileResult: FileState = await window.electron.ipcRenderer.invoke(
+      'read-file',
+      workspace,
+      path
+    )
+    if (!fileResult.exists || fileResult.content === null) {
+      setApplyState('error')
+      return
+    }
+    const content = fileResult.content
+    if (!content.includes(oldCode)) {
+      setApplyState('error')
+      return
+    }
+    const newContent = content.replace(oldCode, newCode)
+    const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
+      'write-file',
+      workspace,
+      path,
+      newContent
+    )
+    setApplyState(result.success ? 'applied' : 'error')
+  }, [workspace, path, oldCode, newCode])
+
   return (
     <div className="md-file-block md-file-replace-block">
       <div className="md-file-header">
@@ -275,17 +305,45 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
           {notFound && <span className="md-file-status-label error">NOT FOUND</span>}
           <FilePathDisplay path={path} />
         </div>
+        <div className="md-file-header-actions">
+          <button
+            type="button"
+            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            onClick={handleApply}
+            title={
+              applyState === 'applied'
+                ? 'Applied'
+                : applyState === 'error'
+                  ? 'Failed to apply'
+                  : 'Apply changes'
+            }
+          >
+            {applyState === 'applied' ? (
+              <>
+                <Check size={12} />
+                <span>Applied</span>
+              </>
+            ) : applyState === 'error' ? (
+              <>
+                <X size={12} />
+                <span>Error</span>
+              </>
+            ) : (
+              <span>Apply</span>
+            )}
+          </button>
+        </div>
       </div>
       <div className="md-file-diff">
         <div className="md-file-diff-side old">
           <div className="md-file-diff-header">
-            <span className="md-file-replace-label old">OLD</span>
+            <span className="md-file-replace-label old">SEARCH</span>
             <button
               type="button"
               className={`md-file-copy${copiedOld ? ' copied' : ''}`}
               onClick={handleCopyOld}
-              title={copiedOld ? 'Copied' : 'Copy old code'}
-              aria-label={copiedOld ? 'Copied' : 'Copy old code'}
+              title={copiedOld ? 'Copied' : 'Copy search code'}
+              aria-label={copiedOld ? 'Copied' : 'Copy search code'}
             >
               {copiedOld ? (
                 <Check size={14} strokeWidth={2.25} />
@@ -294,10 +352,7 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
               )}
             </button>
           </div>
-          <div
-            ref={leftRef}
-            className="md-file-code md-file-diff-code"
-          >
+          <div ref={leftRef} className="md-file-code md-file-diff-code">
             <LinesDisplay
               code={oldCode}
               language={getLanguageFromPath(path)}
@@ -308,13 +363,13 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
         <div className="md-file-diff-divider" />
         <div className="md-file-diff-side new">
           <div className="md-file-diff-header">
-            <span className="md-file-replace-label new">New</span>
+            <span className="md-file-replace-label new">REPLACE</span>
             <button
               type="button"
               className={`md-file-copy${copiedNew ? ' copied' : ''}`}
               onClick={handleCopyNew}
-              title={copiedNew ? 'Copied' : 'Copy new code'}
-              aria-label={copiedNew ? 'Copied' : 'Copy new code'}
+              title={copiedNew ? 'Copied' : 'Copy replace code'}
+              aria-label={copiedNew ? 'Copied' : 'Copy replace code'}
             >
               {copiedNew ? (
                 <Check size={14} strokeWidth={2.25} />
@@ -323,10 +378,7 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
               )}
             </button>
           </div>
-          <div
-            ref={rightRef}
-            className="md-file-code md-file-diff-code"
-          >
+          <div ref={rightRef} className="md-file-code md-file-diff-code">
             <LinesDisplay
               code={newCode}
               language={getLanguageFromPath(path)}
@@ -346,11 +398,23 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
 }): React.JSX.Element {
   const fileState = useFileContent(path)
   const { copied, copy } = useCopyToClipboard()
+  const { workspace } = useWorkspace()
+  const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
   const handleCopy = useCallback(async (): Promise<void> => {
     if (!fileState?.content) return
     await copy(fileState.content)
   }, [copy, fileState])
+
+  const handleApply = useCallback(async (): Promise<void> => {
+    if (!workspace) return
+    const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
+      'delete-file',
+      workspace,
+      path
+    )
+    setApplyState(result.success ? 'applied' : 'error')
+  }, [workspace, path])
 
   if (fileState === null) {
     return (
@@ -387,19 +451,43 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
           <span className="md-file-status-label deleted">DELETED</span>
           <FilePathDisplay path={path} />
         </div>
-        <button
-          type="button"
-          className={`md-file-copy${copied ? ' copied' : ''}`}
-          onClick={handleCopy}
-          title={copied ? 'Copied' : 'Copy content'}
-          aria-label={copied ? 'Copied' : 'Copy content'}
-        >
-          {copied ? (
-            <Check size={14} strokeWidth={2.25} />
-          ) : (
-            <Copy size={14} strokeWidth={2} />
-          )}
-        </button>
+        <div className="md-file-header-actions">
+          <button
+            type="button"
+            className={`md-file-copy${copied ? ' copied' : ''}`}
+            onClick={handleCopy}
+            title={copied ? 'Copied' : 'Copy content'}
+            aria-label={copied ? 'Copied' : 'Copy content'}
+          >
+            {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+          </button>
+          <button
+            type="button"
+            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            onClick={handleApply}
+            title={
+              applyState === 'applied'
+                ? 'Applied'
+                : applyState === 'error'
+                  ? 'Failed to apply'
+                  : 'Apply changes'
+            }
+          >
+            {applyState === 'applied' ? (
+              <>
+                <Check size={12} />
+                <span>Applied</span>
+              </>
+            ) : applyState === 'error' ? (
+              <>
+                <X size={12} />
+                <span>Error</span>
+              </>
+            ) : (
+              <span>Apply</span>
+            )}
+          </button>
+        </div>
       </div>
       <div className="md-file-code">
         <LinesDisplay code={fileState.content || ''} language={getLanguageFromPath(path)} />
@@ -417,10 +505,23 @@ const FileBlock = memo(function FileBlock({
 }): React.JSX.Element {
   const { copied, copy } = useCopyToClipboard()
   const fileState = useFileContent(path)
+  const { workspace } = useWorkspace()
+  const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
   const handleCopy = useCallback(async (): Promise<void> => {
     await copy(code)
   }, [copy, code])
+
+  const handleApply = useCallback(async (): Promise<void> => {
+    if (!workspace) return
+    const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
+      'write-file',
+      workspace,
+      path,
+      code
+    )
+    setApplyState(result.success ? 'applied' : 'error')
+  }, [workspace, path, code])
 
   const isCreated = fileState !== null && !fileState.exists
 
@@ -431,19 +532,43 @@ const FileBlock = memo(function FileBlock({
           {isCreated && <span className="md-file-status-label created">CREATED</span>}
           <FilePathDisplay path={path} />
         </div>
-        <button
-          type="button"
-          className={`md-file-copy${copied ? ' copied' : ''}`}
-          onClick={handleCopy}
-          title={copied ? 'Copied' : 'Copy code'}
-          aria-label={copied ? 'Copied' : 'Copy code'}
-        >
-          {copied ? (
-            <Check size={14} strokeWidth={2.25} />
-          ) : (
-            <Copy size={14} strokeWidth={2} />
-          )}
-        </button>
+        <div className="md-file-header-actions">
+          <button
+            type="button"
+            className={`md-file-copy${copied ? ' copied' : ''}`}
+            onClick={handleCopy}
+            title={copied ? 'Copied' : 'Copy code'}
+            aria-label={copied ? 'Copied' : 'Copy code'}
+          >
+            {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+          </button>
+          <button
+            type="button"
+            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            onClick={handleApply}
+            title={
+              applyState === 'applied'
+                ? 'Applied'
+                : applyState === 'error'
+                  ? 'Failed to apply'
+                  : 'Apply changes'
+            }
+          >
+            {applyState === 'applied' ? (
+              <>
+                <Check size={12} />
+                <span>Applied</span>
+              </>
+            ) : applyState === 'error' ? (
+              <>
+                <X size={12} />
+                <span>Error</span>
+              </>
+            ) : (
+              <span>Apply</span>
+            )}
+          </button>
+        </div>
       </div>
       <div className="md-file-code">
         <LinesDisplay code={code} language={getLanguageFromPath(path)} />
