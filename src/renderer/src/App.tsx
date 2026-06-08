@@ -46,19 +46,25 @@ function App(): React.JSX.Element {
 
   return (
     <WorkspaceContext.Provider value={{ workspace }}>
-      <div className="ide-layout">
-        <div className="main-content" ref={layoutRef}>
-          <div className="left-pane" style={{ width: `${leftWidth}px`, flexBasis: `${leftWidth}px`, flexGrow: 0, flexShrink: 0 }}>
+      <div className="flex flex-col w-full h-full">
+        <div className="flex flex-1 overflow-hidden" ref={layoutRef}>
+          <div
+            className="min-w-[160px] max-w-[520px] border-r border-border bg-background-soft flex flex-col"
+            style={{ width: `${leftWidth}px`, flexBasis: `${leftWidth}px`, flexGrow: 0, flexShrink: 0 }}
+          >
             <FileExplorer workspace={workspace} onWorkspaceChange={setWorkspace} />
           </div>
-          <div className="resize-handle" onMouseDown={startResize} />
-          <div className="right-pane">
+          <div
+            className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
+            onMouseDown={startResize}
+          />
+          <div className="flex-1 bg-background flex overflow-hidden min-w-0">
             <AIChat />
           </div>
         </div>
-        <div className="statusbar">
-          <span className="statusbar-item">Ready</span>
-          <span className="statusbar-spacer"></span>
+        <div className="flex items-center h-5 m-0 px-2.5 bg-accent flex-shrink-0 gap-3 leading-none">
+          <span className="text-[11px] font-medium text-accent-text opacity-85 leading-none">Ready</span>
+          <span className="flex-1"></span>
           <Versions />
         </div>
       </div>
