@@ -46,7 +46,7 @@ import ruby from 'react-syntax-highlighter/dist/esm/languages/prism/ruby'
 import docker from 'react-syntax-highlighter/dist/esm/languages/prism/docker'
 import hljs from 'highlight.js/lib/common'
 import { Check, Copy, Play, X } from 'lucide-react'
-import { getActiveParser, parseReplaceBlock } from '../utils/markdownParser'
+import { getActiveParser, normalizeLineEndings, parseReplaceBlock } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
 
 SyntaxHighlighter.registerLanguage('javascript', javascript)
@@ -176,7 +176,8 @@ const LinesDisplay = memo(function LinesDisplay({
   language?: string
   onScroll?: () => void
 }): React.JSX.Element {
-  const lines = code.split('\n')
+  const normalizedCode = normalizeLineEndings(code)
+  const lines = normalizedCode.split('\n')
   const hasSyntax = !!language && language !== 'text'
   const gutterRef = useRef<HTMLDivElement>(null)
   const codeRef = useRef<HTMLDivElement>(null)
@@ -213,7 +214,7 @@ const LinesDisplay = memo(function LinesDisplay({
       <div className="md-file-code-scroll" onScroll={handleCodeScroll} ref={codeRef}>
         {hasSyntax ? (
           <SyntaxHighlighter language={language} style={oneDark} className="md-file-syntax">
-            {code}
+            {normalizedCode}
           </SyntaxHighlighter>
         ) : (
           <div className="md-file-code-lines">
@@ -379,12 +380,14 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
       setApplyState('error')
       return
     }
-    const content = fileResult.content
-    if (!content.includes(oldCode)) {
+    const content = normalizeLineEndings(fileResult.content)
+    const normalizedOldCode = normalizeLineEndings(oldCode)
+    const normalizedNewCode = normalizeLineEndings(newCode)
+    if (!content.includes(normalizedOldCode)) {
       setApplyState('error')
       return
     }
-    const newContent = content.replace(oldCode, newCode)
+    const newContent = content.replace(normalizedOldCode, normalizedNewCode)
     const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
       'write-file',
       workspace,

@@ -164,14 +164,21 @@ export interface FileContext {
   content: string
 }
 
+function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n?/g, '\n')
+}
+
 function formatContext(files: FileContext[], dirStructure?: string): string {
   let result = ''
   if (dirStructure) {
-    result += `<directory_structure>\n${dirStructure}</directory_structure>\n`
+    result += `<directory_structure>\n${normalizeLineEndings(dirStructure)}</directory_structure>\n`
   }
   if (files.length > 0) {
     result += files
-      .map((f) => `<file path="${f.path}">\n<![CDATA[\n${f.content}\n]]>\n</file>`)
+      .map(
+        (f) =>
+          `<file path="${f.path}">\n<![CDATA[\n${normalizeLineEndings(f.content)}\n]]>\n</file>`
+      )
       .join('\n')
   }
   return result

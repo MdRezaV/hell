@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   getActiveParser,
   listParsers,
+  normalizeLineEndings,
   parseReplaceBlock,
   preprocess,
   setActiveParser,
@@ -646,5 +647,72 @@ describe('parser registry', () => {
 
   it('throws when trying to select removed xml parser', () => {
     expect(() => setActiveParser('xml')).toThrow('Unknown parser: xml')
+  })
+})
+
+describe('normalizeLineEndings', () => {
+  it('converts \\r\\n to \\n', () => {
+    expect(normalizeLineEndings('a\r\nb\r\nc')).toBe('a\nb\nc')
+  })
+
+  it('converts standalone \\r to \\n', () => {
+    expect(normalizeLineEndings('a\rb\rc')).toBe('a\nb\nc')
+  })
+
+  it('leaves \\n unchanged', () => {
+    expect(normalizeLineEndings('a\nb\nc')).toBe('a\nb\nc')
+  })
+
+  it('handles empty string', () => {
+    expect(normalizeLineEndings('')).toBe('')
+  })
+
+  it('handles mixed line endings', () => {
+    expect(normalizeLineEndings('a\r\nb\rc\nd')).toBe('a\nb\nc\nd')
+  })
+})
+
+describe('preprocess — Windows line endings', () => {
+  it('handles FILE block with \\r\\n', () => {
+    const input = '--- FILE a.ts ---\r\nconst x = 1\r\n======='
+    const out = preprocess(input)
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('const x = 1')
+  })
+
+  it('handles EDIT block with \\r\\n', () => {
+    const input =
+      '--- EDIT a.ts ---\r\n<<<<<<< SEARCH\r\nold\r\n=======\r\nnew\r\n>>>>>>> REPLACE'
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old')
+    expect(out).toContain('new')
+  })
+
+  it('handles DELETE with \\r\\n', () => {
+    const input = '--- DELETE a.ts ---\r\n'
+    const out = preprocess(input)
+    expect(out).toContain('```file-delete:a.ts')
+  })
+
+  it('handles MOVE with \\r\\n', () => {
+    const input = '--- MOVE a.ts -> b.ts ---\r\n'
+    const out = preprocess(input)
+    expect(out).toContain('```file-move:a.ts->b.ts')
+  })
+
+  it('handles COMMIT with \\r\\n', () => {
+    const input = 'COMMIT: fix bug\r\n'
+    const out = preprocess(input)
+    expect(out).toContain('```commit')
+    expect(out).toContain('fix bug')
+  })
+})
+
+describe('parseReplaceBlock — Windows line endings', () => {
+  it('parses SEARCH/REPLACE with \\r\\n', () => {
+    const code = '<<<<<<< SEARCH\r\nold\r\n=======\r\nnew\r\n>>>>>>> REPLACE'
+    const result = parseReplaceBlock(code)
+    expect(result).toEqual({ oldCode: 'old', newCode: 'new' })
   })
 })

@@ -1,3 +1,7 @@
+export function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n?/g, '\n')
+}
+
 export function wrapInFence(code: string, lang: string): string {
   let maxBackticks = 0
   let maxTildes = 0
@@ -27,7 +31,7 @@ export function wrapInFence(code: string, lang: string): string {
  * content rather than separators.
  */
 export function parseReplaceBlock(code: string): { oldCode: string; newCode: string } | null {
-  const lines = code.split('\n')
+  const lines = normalizeLineEndings(code).split('\n')
   if (lines.length === 0) return null
 
   const searchOpen = /^(<+)\s+SEARCH\s*$/.exec(lines[0])
@@ -94,7 +98,7 @@ function isCodeFenceClose(line: string, fenceChar: string, fenceLen: number): bo
  *   COMMIT: msg             -> ```commit\nmsg\n```
  */
 export function preprocess(content: string): string {
-  const lines = content.split('\n')
+  const lines = normalizeLineEndings(content).split('\n')
   const result: string[] = []
   let i = 0
   let inFence = false
