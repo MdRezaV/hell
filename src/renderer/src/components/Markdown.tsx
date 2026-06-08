@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState
 } from 'react'
@@ -1016,8 +1017,46 @@ const markdownComponents: Components = {
 }
 
 const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.Element {
+  const [showMarkdown, setShowMarkdown] = useState(false)
   const deferredContent = useDeferredValue(content)
-  const processedContent = getActiveParser().preprocess(deferredContent)
+
+  useEffect(() => {
+    let id: number
+    if (typeof requestIdleCallback !== 'undefined') {
+      id = requestIdleCallback(() => setShowMarkdown(true))
+    } else {
+      id = window.setTimeout(() => setShowMarkdown(true), 1)
+    }
+    return () => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        cancelIdleCallback(id)
+      } else {
+        clearTimeout(id)
+      }
+    }
+  }, [])
+
+  const processedContent = useMemo(
+    () => getActiveParser().preprocess(deferredContent),
+    [deferredContent]
+  )
+
+  if (!showMarkdown) {
+    return (
+      <div className="md-content">
+        <pre
+          style={{
+            margin: 0,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            fontFamily: 'inherit'
+          }}
+        >
+          {content}
+        </pre>
+      </div>
+    )
+  }
 
   return (
     <div className="md-content">
