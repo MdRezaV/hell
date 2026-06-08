@@ -11,7 +11,7 @@ import {
   Copy,
   Bot,
   Sparkles,
-  MessageSquarePlus,
+  Plus,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -278,7 +278,14 @@ export interface AIChatHandle {
   pasteAsAssistant(): Promise<boolean>
 }
 
-const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.JSX.Element {
+interface AIChatProps {
+  onNewChat?: () => void
+}
+
+const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
+  { onNewChat },
+  ref
+): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -316,9 +323,8 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     }
   }, [])
 
-  useImperativeHandle(
-    ref,
-    () => ({
+  useImperativeHandle(ref, () => {
+    return {
       async copyByIndex(index?: number, files: string[] = []): Promise<boolean> {
         let currentMessages = messages
 
@@ -388,9 +394,8 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
           return false
         }
       }
-    }),
-    [input, messages]
-  )
+    }
+  }, [input, messages])
 
   const handleSend = (): void => {
     const trimmed = input.trim()
@@ -461,7 +466,8 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     setEditingId(null)
     setCopiedId(null)
     setIsAwaitingResponse(false)
-  }, [])
+    onNewChat?.()
+  }, [onNewChat])
 
   const handleCopy = useCallback(async (messageId: string, content: string): Promise<void> => {
     try {
@@ -534,7 +540,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
         </div>
         <div className="ai-chat-header-actions">
           <button onClick={handleNewChat} title="New Chat">
-            <MessageSquarePlus size={14} />
+            <Plus size={14} />
           </button>
         </div>
       </div>

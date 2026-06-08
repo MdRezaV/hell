@@ -50,12 +50,13 @@ function App(): React.JSX.Element {
   const handleCopy = useCallback(async (): Promise<void> => {
     const pendingFiles: string[] = []
     fileStates.forEach((state, path) => {
-      if (state === 'PND' && filePaths.has(path)) {
+      if ((state === 'PND' || state === 'INQ') && filePaths.has(path)) {
         pendingFiles.push(path)
       }
     })
 
-    await chatRef.current?.copyByIndex(undefined, pendingFiles)
+    const success = await chatRef.current?.copyByIndex(undefined, pendingFiles)
+    if (!success) return
 
     setFileStates((prev) => {
       const next = new Map(prev)
@@ -64,12 +65,25 @@ function App(): React.JSX.Element {
         if (state === 'PND') {
           snapshot.add(path)
           next.set(path, 'INQ')
+        } else if (state === 'INQ') {
+          snapshot.add(path)
         }
       })
       copySnapshotRef.current = snapshot
       return next
     })
   }, [fileStates, filePaths])
+
+  const handleNewChat = useCallback((): void => {
+    setFileStates((prev) => {
+      const next = new Map<string, FileTag>()
+      prev.forEach((_, path) => {
+        next.set(path, 'PND')
+      })
+      return next
+    })
+    copySnapshotRef.current = new Set()
+  }, [])
 
   const handlePaste = useCallback(async (): Promise<void> => {
     await chatRef.current?.pasteAsAssistant()
@@ -144,7 +158,7 @@ function App(): React.JSX.Element {
             onMouseDown={startResize}
           />
           <div className="flex-1 bg-background flex overflow-hidden min-w-0">
-            <AIChat ref={chatRef} />
+            <AIChat ref={chatRef} onNewChat={handleNewChat} />
           </div>
         </div>
         <StatusBar onCopy={handleCopy} onPaste={handlePaste} />
