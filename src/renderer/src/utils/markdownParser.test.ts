@@ -9,6 +9,7 @@ import {
   matchOpenClose,
   findMatchedBlocks,
   preprocessFileBlocks,
+  preprocessCommitBlocks,
   type CodeRange
 } from './markdownParser'
 
@@ -1042,5 +1043,80 @@ const x = 2
     const input = '<file path="empty.txt">\n\n\n</file>'
     const out = preprocessFileBlocks(input)
     expect(out).toContain('```file:empty.txt\n\n\n```')
+  })
+})
+
+describe('preprocessCommitBlocks', () => {
+  it('converts a commit block into a fenced code block with commit lang', () => {
+    const input = '<commit>fix: bug</commit>'
+    const out = preprocessCommitBlocks(input)
+    expect(out).toContain('```commit')
+    expect(out).toContain('fix: bug')
+  })
+
+  it('preserves inner file tags as text', () => {
+    const input = '<commit>some <file path="a.ts">content</file> inside</commit>'
+    const out = preprocessCommitBlocks(input)
+    // The fenced block should contain the literal <file> tag
+    expect(out).toContain('```commit')
+    expect(out).toContain('<file path="a.ts">content</file>')
+    expect(out).not.toContain('```file')
+  })
+
+  it('ignores commit tags inside existing code fences', () => {
+    const input = '```\n<commit>ignored</commit>\n```\n<commit>real</commit>'
+    const out = preprocessCommitBlocks(input)
+    expect(out).toContain('<commit>ignored</commit>') // untouched
+    expect(out).toContain('```commit')
+    expect(out).toContain('real')
+  })
+
+  it('handles multi-line commit messages', () => {
+    const input = '<commit>\nfeat: add stuff\n\nBREAKING CHANGE: ...\n</commit>'
+    const out = preprocessCommitBlocks(input)
+    expect(out).toContain('```commit')
+    expect(out).toContain('feat: add stuff')
+    expect(out).toContain('BREAKING CHANGE: ...')
+  })
+
+  it('handles multiple commit blocks', () => {
+    const input = '<commit>a</commit> <commit>b</commit>'
+    const out = preprocessCommitBlocks(input)
+    expect(out).toMatch(/```commit\na\n```/)
+    expect(out).toMatch(/```commit\nb\n```/)
+  })
+
+  it('does not affect text without commit tags', () => {
+    const input = 'plain text'
+    expect(preprocessCommitBlocks(input)).toBe(input)
+  })
+
+  it('handles empty commit body', () => {
+    const input = '<commit></commit>'
+    const out = preprocessCommitBlocks(input)
+    expect(out).toContain('```commit\n\n```')
+  })
+})
+
+describe('preprocessFileBlocks with commits', () => {
+  it('processes commits before files so that file tags inside commits are ignored', () => {
+    const input =
+      '<commit>fixes <file path="a.ts">code</file></commit>\n<file path="b.ts">good</file>'
+    const out = preprocessFileBlocks(input)
+    // The commit should become a fenced commit block containing the literal <file> tag
+    expect(out).toContain('```commit')
+    expect(out).toContain('<file path="a.ts">code</file>')
+    // The outer file block should still be processed
+    expect(out).toContain('```file:b.ts')
+    expect(out).toContain('good')
+  })
+
+  it('processes file blocks even when commits are present', () => {
+    const input = '<commit>v1.0.0</commit>\n<file path="CHANGELOG.md"># Changelog</file>'
+    const out = preprocessFileBlocks(input)
+    expect(out).toContain('```commit')
+    expect(out).toContain('v1.0.0')
+    expect(out).toContain('```file:CHANGELOG.md')
+    expect(out).toContain('# Changelog')
   })
 })

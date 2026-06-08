@@ -299,8 +299,26 @@ type PreprocessOp =
   | { kind: 'regular'; block: MatchedBlock }
   | { kind: 'delete'; start: number; end: number; attrs: string }
 
+export function preprocessCommitBlocks(content: string): string {
+  const { matched: commitBlocks } = findMatchedBlocks(content, 'commit')
+  // Process in reverse order so positions remain valid
+  const sorted = [...commitBlocks].sort((a, b) => b.open.start - a.open.start)
+  let result = content
+  for (const block of sorted) {
+    const body = block.body
+    const replacement = wrapInFence(body, 'commit')
+    result = result.slice(0, block.open.start) + replacement + result.slice(block.close.end)
+  }
+  return result
+}
+
 export function preprocessFileBlocks(content: string): string {
-  const { matched: fileBlocks, selfClosing: selfClosingFiles } = findMatchedBlocks(content, 'file')
+  // First process commit blocks so that inner file tags become plain text inside a fence
+  const withCommits = preprocessCommitBlocks(content)
+  const { matched: fileBlocks, selfClosing: selfClosingFiles } = findMatchedBlocks(
+    withCommits,
+    'file'
+  )
 
   const ops: PreprocessOp[] = fileBlocks.map((b) => ({ kind: 'regular', block: b }))
 
@@ -308,7 +326,7 @@ export function preprocessFileBlocks(content: string): string {
     start: b.open.start,
     end: b.close.end
   }))
-  const topLevelCode = findCodeRangesSkippingRanges(content, regularRanges)
+  const topLevelCode = findCodeRangesSkippingRanges(withCommits, regularRanges)
 
   for (const sc of selfClosingFiles) {
     if (fileBlocks.some((fb) => sc.start >= fb.open.start && sc.end <= fb.close.end)) continue
@@ -324,7 +342,7 @@ export function preprocessFileBlocks(content: string): string {
     return bStart - aStart
   })
 
-  let result = content
+  let result = withCommits
   for (const op of ops) {
     if (op.kind === 'regular') {
       const block = op.block

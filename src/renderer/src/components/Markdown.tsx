@@ -91,7 +91,7 @@ SyntaxHighlighter.registerLanguage('docker', docker)
 SyntaxHighlighter.registerLanguage('dockerfile', docker)
 
 import hljs from 'highlight.js/lib/common'
-import { Play, Check, FileCode2 } from 'lucide-react'
+import { Play, Check, Copy } from 'lucide-react'
 import { trimSingleNewline, findMatchedBlocks, preprocessFileBlocks } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
 
@@ -288,9 +288,9 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
               aria-label={copiedOld ? 'Copied' : 'Copy old code'}
             >
               {copiedOld ? (
-                <Check size={16} strokeWidth={2.25} />
+                <Check size={14} strokeWidth={2.25} />
               ) : (
-                <FileCode2 size={16} strokeWidth={2} />
+                <Copy size={14} strokeWidth={2} />
               )}
             </button>
           </div>
@@ -317,9 +317,9 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
               aria-label={copiedNew ? 'Copied' : 'Copy new code'}
             >
               {copiedNew ? (
-                <Check size={16} strokeWidth={2.25} />
+                <Check size={14} strokeWidth={2.25} />
               ) : (
-                <FileCode2 size={16} strokeWidth={2} />
+                <Copy size={14} strokeWidth={2} />
               )}
             </button>
           </div>
@@ -395,9 +395,9 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
           aria-label={copied ? 'Copied' : 'Copy content'}
         >
           {copied ? (
-            <Check size={16} strokeWidth={2.25} />
+            <Check size={14} strokeWidth={2.25} />
           ) : (
-            <FileCode2 size={16} strokeWidth={2} />
+            <Copy size={14} strokeWidth={2} />
           )}
         </button>
       </div>
@@ -439,9 +439,9 @@ const FileBlock = memo(function FileBlock({
           aria-label={copied ? 'Copied' : 'Copy code'}
         >
           {copied ? (
-            <Check size={16} strokeWidth={2.25} />
+            <Check size={14} strokeWidth={2.25} />
           ) : (
-            <FileCode2 size={16} strokeWidth={2} />
+            <Copy size={14} strokeWidth={2} />
           )}
         </button>
       </div>
@@ -589,8 +589,33 @@ function getLanguageFromPath(filePath: string): string {
   return result
 }
 
+const CommitBlock = memo(function CommitBlock({ code }: { code: string }): React.JSX.Element {
+  const { copied, copy } = useCopyToClipboard()
+  const handleCopy = useCallback(async (): Promise<void> => {
+    await copy(code)
+  }, [copy, code])
+
+  return (
+    <div className="md-commit-block">
+      <span className="md-commit-text" title={code}>
+        {code}
+      </span>
+      <button
+        type="button"
+        className="md-commit-copy"
+        onClick={handleCopy}
+        title={copied ? 'Copied' : 'Copy commit message'}
+        aria-label={copied ? 'Copied' : 'Copy commit message'}
+      >
+        {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+      </button>
+    </div>
+  )
+})
+
 const CUSTOM_BLOCK_RENDERERS: Record<string, CustomBlockRenderer> = {
-  command: (code) => <CommandBlock code={code} />
+  command: (code) => <CommandBlock code={code} />,
+  commit: (code) => <CommitBlock code={code} />
 }
 
 // Defined at module scope so React does not unmount/remount code blocks on every
