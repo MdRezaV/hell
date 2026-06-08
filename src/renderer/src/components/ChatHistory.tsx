@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { MessageSquare, Plus, Trash2, Clock } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { MessageSquare, Plus, Trash2, Clock, Search, ChevronDown, X } from 'lucide-react'
 
 export interface ChatSession {
   id: string
@@ -17,11 +17,46 @@ interface ChatHistoryProps {
   refreshKey: number
 }
 
-function formatDate(ts: number): string {
+const GROUP_ORDER = ['Today', 'Yesterday', 'Previous 7 Days', 'Previous 30 Days', 'Older']
+
+function formatItemTime(ts: number): string {
   const d = new Date(ts)
-  return (
-    d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  )
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = new Date(todayStart.getTime() - 86400000)
+
+  if (d >= todayStart) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  if (d >= yesterdayStart) {
+    return 'Yesterday'
+  }
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = new Date(todayStart.getTime() - 86400000)
+  const weekAgo = new Date(todayStart.getTime() - 7 * 86400000)
+  const monthAgo = new Date(todayStart.getTime() - 30 * 86400000)
+
+  const groups = new Map<string, ChatSession[]>()
+
+  for (const s of sessions) {
+    const d = new Date(s.updated_at)
+    let key: string
+    if (d >= todayStart) key = 'Today'
+    else if (d >= yesterdayStart) key = 'Yesterday'
+    else if (d >= weekAgo) key = 'Previous 7 Days'
+    else if (d >= monthAgo) key = 'Previous 30 Days'
+    else key = 'Older'
+
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(s)
+  }
+
+  return groups
 }
 
 export default function ChatHistory({
@@ -32,6 +67,8 @@ export default function ChatHistory({
   refreshKey
 }: ChatHistoryProps): React.JSX.Element {
   const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [search, setSearch] = useState('')
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const loadSessions = useCallback(async () => {
     const result: ChatSession[] = await window.electron.ipcRenderer.invoke(
@@ -57,6 +94,23 @@ export default function ChatHistory({
     [activeChatId, onNewChat, loadSessions]
   )
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return sessions
+    const q = search.toLowerCase()
+    return sessions.filter((s) => s.title.toLowerCase().includes(q))
+  }, [sessions, search])
+
+  const grouped = useMemo(() => groupByTime(filtered), [filtered])
+
+  const toggleGroup = useCallback((key: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
   return (
     <div className="chat-history">
       <div className="chat-history-header">
@@ -65,33 +119,81 @@ export default function ChatHistory({
           <Plus size={14} />
         </button>
       </div>
+      <div className="chat-history-search">
+        <Search size={13} className="chat-history-search-icon" />
+        <input
+          type="text"
+          placeholder="Search chats..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="chat-history-search-input"
+        />
+        {search && (
+          <button
+            className="chat-history-search-clear"
+            onClick={() => setSearch('')}
+            title="Clear"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
       <div className="chat-history-list">
-        {sessions.length === 0 && (
+        {filtered.length === 0 && (
           <div className="chat-history-empty">
-            <Clock size={24} strokeWidth={1.5} className="opacity-50" />
-            <p>No chat history</p>
+            {search ? (
+              <Search size={24} strokeWidth={1.5} />
+            ) : (
+              <Clock size={24} strokeWidth={1.5} />
+            )}
+            <p>{search ? 'No matching chats' : 'No chat history'}</p>
           </div>
         )}
-        {sessions.map((session) => (
-          <div
-            key={session.id}
-            className={`chat-history-item ${activeChatId === session.id ? 'active' : ''}`}
-            onClick={() => onSelectChat(session.id)}
-          >
-            <MessageSquare size={14} className="chat-history-icon" />
-            <div className="chat-history-item-content">
-              <span className="chat-history-item-title">{session.title || 'New Chat'}</span>
-              <span className="chat-history-item-date">{formatDate(session.updated_at)}</span>
+        {GROUP_ORDER.map((groupKey) => {
+          const items = grouped.get(groupKey)
+          if (!items || items.length === 0) return null
+          const collapsed = collapsedGroups.has(groupKey)
+          return (
+            <div key={groupKey} className="chat-history-group">
+              <div className="chat-history-group-header" onClick={() => toggleGroup(groupKey)}>
+                <ChevronDown
+                  size={12}
+                  className={`chat-history-group-chevron ${collapsed ? 'collapsed' : ''}`}
+                />
+                <span className="chat-history-group-title">{groupKey}</span>
+                <span className="chat-history-group-count">{items.length}</span>
+              </div>
+              {!collapsed && (
+                <div className="chat-history-group-items">
+                  {items.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`chat-history-item ${activeChatId === session.id ? 'active' : ''}`}
+                      onClick={() => onSelectChat(session.id)}
+                    >
+                      <MessageSquare size={13} className="chat-history-icon" />
+                      <div className="chat-history-item-content">
+                        <span className="chat-history-item-title">
+                          {session.title || 'New Chat'}
+                        </span>
+                        <span className="chat-history-item-date">
+                          {formatItemTime(session.updated_at)}
+                        </span>
+                      </div>
+                      <button
+                        className="chat-history-delete"
+                        onClick={(e) => handleDelete(e, session.id)}
+                        title="Delete"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <button
-              className="chat-history-delete"
-              onClick={(e) => handleDelete(e, session.id)}
-              title="Delete"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
