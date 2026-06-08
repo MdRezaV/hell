@@ -1,8 +1,59 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
-import { readdirSync, readFileSync } from 'fs'
+import { join, relative } from 'path'
+import { readdirSync, readFileSync, openSync, readSync, closeSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import ignore, { type Ignore } from 'ignore'
 import icon from '../../resources/icon.png?asset'
+
+interface IgnoreRule {
+  dir: string
+  ig: Ignore
+}
+
+function isBinaryFile(filePath: string): boolean {
+  try {
+    const fd = openSync(filePath, 'r')
+    const buffer = Buffer.alloc(8192)
+    const bytesRead = readSync(fd, buffer, 0, 8192, 0)
+    closeSync(fd)
+    for (let i = 0; i < bytesRead; i++) {
+      if (buffer[i] === 0) return true
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+function loadIgnoreRules(dir: string, parentRules: IgnoreRule[], isRoot: boolean): IgnoreRule[] {
+  const rules = [...parentRules]
+  const patterns: string[] = []
+  if (isRoot) {
+    patterns.push('.git')
+  }
+  for (const ignoreFile of ['.gitignore', '.hellignore']) {
+    try {
+      const content = readFileSync(join(dir, ignoreFile), 'utf-8')
+      patterns.push(content)
+    } catch {
+      // ignore file doesn't exist
+    }
+  }
+  if (patterns.length > 0) {
+    rules.push({ dir, ig: ignore().add(patterns.join('\n')) })
+  }
+  return rules
+}
+
+function isEntryIgnored(entryPath: string, isDirectory: boolean, rules: IgnoreRule[]): boolean {
+  for (const rule of rules) {
+    const rel = relative(rule.dir, entryPath).replace(/\\/g, '/')
+    if (rel.startsWith('..')) continue
+    const testPath = isDirectory ? `${rel}/` : rel
+    if (rule.ig.ignores(testPath)) return true
+  }
+  return false
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -72,30 +123,37 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
-    const readDir = (path: string): any[] => {
+    const readDir = (path: string, parentRules: IgnoreRule[], isRoot: boolean): unknown[] => {
+      const currentRules = loadIgnoreRules(path, parentRules, isRoot)
       try {
         const entries = readdirSync(path, { withFileTypes: true })
-        return entries.map(entry => {
-          const fullPath = join(path, entry.name)
-          if (entry.isDirectory()) {
+        return entries
+          .filter((entry) => {
+            const fullPath = join(path, entry.name)
+            return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
+          })
+          .map((entry) => {
+            const fullPath = join(path, entry.name)
+            if (entry.isDirectory()) {
+              return {
+                name: entry.name,
+                path: fullPath,
+                type: 'directory',
+                children: readDir(fullPath, currentRules, false)
+              }
+            }
             return {
               name: entry.name,
               path: fullPath,
-              type: 'directory',
-              children: readDir(fullPath)
+              type: 'file',
+              isBinary: isBinaryFile(fullPath)
             }
-          }
-          return {
-            name: entry.name,
-            path: fullPath,
-            type: 'file'
-          }
-        })
+          })
       } catch {
         return []
       }
     }
-    return readDir(dirPath)
+    return readDir(dirPath, [], true)
   })
 
   createWindow()

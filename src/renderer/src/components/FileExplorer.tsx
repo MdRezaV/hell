@@ -22,24 +22,27 @@ interface FileNode {
   path: string
   type: 'file' | 'directory'
   children?: FileNode[]
+  isBinary?: boolean
 }
 
 type CheckState = 'checked' | 'unchecked' | 'indeterminate'
 
 function getCheckState(node: FileNode, fileStates: Map<string, FileTag>): CheckState {
-  if (node.type === 'file' || !node.children || node.children.length === 0) {
-    return fileStates.has(node.path) ? 'checked' : 'unchecked'
+  const selectablePaths = getLeafPaths(node)
+  if (selectablePaths.length === 0) return 'unchecked'
+  let checkedCount = 0
+  for (const p of selectablePaths) {
+    if (fileStates.has(p)) checkedCount++
   }
-  const childStates = node.children.map((child) => getCheckState(child, fileStates))
-  const hasChecked = childStates.some((s) => s === 'checked' || s === 'indeterminate')
-  const allChecked = childStates.every((s) => s === 'checked')
-  if (allChecked) return 'checked'
-  if (hasChecked) return 'indeterminate'
-  return 'unchecked'
+  if (checkedCount === 0) return 'unchecked'
+  if (checkedCount === selectablePaths.length) return 'checked'
+  return 'indeterminate'
 }
 
 function getLeafPaths(node: FileNode): string[] {
-  if (node.type === 'file') return [node.path]
+  if (node.type === 'file') {
+    return node.isBinary ? [] : [node.path]
+  }
   if (!node.children || node.children.length === 0) return []
   const paths: string[] = []
   node.children.forEach((child) => paths.push(...getLeafPaths(child)))
@@ -87,9 +90,14 @@ const TreeNode = memo(function TreeNode({
   const checkState = getCheckState(node, fileStates)
   const tags = getNodeTags(node, fileStates)
 
+  const selectablePaths = getLeafPaths(node)
+  const isDisabled = selectablePaths.length === 0
+
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     e.stopPropagation()
-    onToggle(getLeafPaths(node), e.target.checked)
+    const paths = getLeafPaths(node)
+    if (paths.length === 0) return
+    onToggle(paths, e.target.checked)
   }
 
   const handleCheckboxClick = (e: React.MouseEvent): void => {
@@ -110,6 +118,7 @@ const TreeNode = memo(function TreeNode({
           <input
             type="checkbox"
             checked={checkState === 'checked'}
+            disabled={isDisabled}
             ref={(el) => {
               if (el) {
                 el.indeterminate = checkState === 'indeterminate'
@@ -121,7 +130,20 @@ const TreeNode = memo(function TreeNode({
         <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
           {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
         </span>
-        <span className="tree-label">{node.name}</span>
+        <span
+          className="tree-label"
+          style={node.type === 'file' && node.isBinary ? { opacity: 0.5 } : undefined}
+        >
+          {node.name}
+        </span>
+        {node.type === 'file' && node.isBinary && (
+          <span
+            className="tree-tag"
+            style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
+          >
+            BIN
+          </span>
+        )}
         {tags.map((tag) => (
           <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
             {node.type === 'file' ? tag : TAG_CHARS[tag]}
