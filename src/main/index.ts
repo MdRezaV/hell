@@ -15,6 +15,7 @@ import {
   clearFileStates,
   setDirExpanded
 } from './database'
+import { startWatching, stopWatching } from './watcher'
 
 interface IgnoreRule {
   dir: string
@@ -156,12 +157,9 @@ app.whenReady().then(() => {
     }
   )
 
-  ipcMain.handle(
-    'db:remove-file-state',
-    async (_, workspacePath: string, absolutePath: string) => {
-      removeFileState(workspacePath, absolutePath)
-    }
-  )
+  ipcMain.handle('db:remove-file-state', async (_, workspacePath: string, absolutePath: string) => {
+    removeFileState(workspacePath, absolutePath)
+  })
 
   ipcMain.handle('db:clear-file-states', async (_, workspacePath: string) => {
     clearFileStates(workspacePath)
@@ -173,6 +171,19 @@ app.whenReady().then(() => {
       setDirExpanded(workspacePath, absolutePath, expanded)
     }
   )
+
+  ipcMain.handle('workspace:watch', async (event, workspacePath: string | null) => {
+    if (!workspacePath) {
+      stopWatching()
+      return
+    }
+    const win = BrowserWindow.fromWebContents(event.sender)
+    startWatching(workspacePath, () => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('workspace:changed')
+      }
+    })
+  })
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
     const readDir = (path: string, parentRules: IgnoreRule[], isRoot: boolean): unknown[] => {
@@ -218,6 +229,7 @@ app.whenReady().then(() => {
 })
 
 app.on('before-quit', () => {
+  stopWatching()
   closeDatabase()
 })
 

@@ -230,23 +230,33 @@ function FileExplorer({
   const [tree, setTree] = useState<FileNode[]>([])
 
   useEffect(() => {
-    let cancelled = false
-    if (workspace) {
-      window.electron.ipcRenderer.invoke('read-directory', workspace).then((files: FileNode[]) => {
-        if (!cancelled) {
-          const sorted = sortTree(files)
-          setTree(sorted)
-          onFilePathsChange(collectFilePaths(sorted))
-        }
-      })
-    } else {
+    if (!workspace) {
       queueMicrotask(() => {
         setTree([])
         onFilePathsChange(new Set())
       })
+      return
     }
+
+    let cancelled = false
+
+    const refresh = (): void => {
+      window.electron.ipcRenderer.invoke('read-directory', workspace).then((files: FileNode[]) => {
+        if (cancelled) return
+        const sorted = sortTree(files)
+        setTree(sorted)
+        onFilePathsChange(collectFilePaths(sorted))
+      })
+    }
+
+    refresh()
+
+    const handleChange = (): void => refresh()
+    window.electron.ipcRenderer.on('workspace:changed', handleChange)
+
     return () => {
       cancelled = true
+      window.electron.ipcRenderer.removeListener('workspace:changed', handleChange)
     }
   }, [workspace, onFilePathsChange])
 

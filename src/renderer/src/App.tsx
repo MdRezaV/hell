@@ -46,6 +46,7 @@ function App(): React.JSX.Element {
       setWorkspace(path)
       setFilePaths(new Set())
       copySnapshotRef.current = new Set()
+      await window.electron.ipcRenderer.invoke('workspace:watch', path)
       if (path) {
         await window.electron.ipcRenderer.invoke('db:touch-workspace', path)
         if (restore) {
