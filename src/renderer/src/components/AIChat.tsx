@@ -22,7 +22,7 @@ import {
 import Markdown from './Markdown'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
-import { buildPrompt } from '../utils/PromptEngine'
+import { buildPrompt, type FileContext } from '../utils/PromptEngine'
 
 interface MessageVariant {
   content: string
@@ -274,7 +274,7 @@ const MessageBubble = memo(function MessageBubble({
 })
 
 export interface AIChatHandle {
-  copyByIndex(index?: number, files?: string[]): Promise<boolean>
+  copyByIndex(index?: number, files?: FileContext[]): Promise<boolean>
   pasteAsAssistant(): Promise<boolean>
 }
 
@@ -325,7 +325,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   useImperativeHandle(ref, () => {
     return {
-      async copyByIndex(index?: number, files: string[] = []): Promise<boolean> {
+      async copyByIndex(index?: number, files: FileContext[] = []): Promise<boolean> {
         let currentMessages = messages
 
         const userMessages = currentMessages.filter((m) => m.role === 'user')

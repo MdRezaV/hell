@@ -48,12 +48,30 @@ function App(): React.JSX.Element {
   }, [])
 
   const handleCopy = useCallback(async (): Promise<void> => {
-    const pendingFiles: string[] = []
-    fileStates.forEach((state, path) => {
-      if ((state === 'PND' || state === 'INQ') && filePaths.has(path)) {
-        pendingFiles.push(path)
+    if (!workspace) return
+
+    const pendingFilesPromises = Array.from(fileStates.entries()).map(
+      async ([absolutePath, state]) => {
+        if ((state === 'PND' || state === 'INQ') && filePaths.has(absolutePath)) {
+          let relativePath = absolutePath
+          if (relativePath.startsWith(workspace)) {
+            relativePath = relativePath.substring(workspace.length)
+            if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+              relativePath = relativePath.substring(1)
+            }
+          }
+          const res: { exists: boolean; content: string | null } =
+            await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
+          if (res.exists && res.content !== null) {
+            return { path: relativePath, content: res.content }
+          }
+        }
+        return null
       }
-    })
+    )
+
+    const results = await Promise.all(pendingFilesPromises)
+    const pendingFiles = results.filter((f): f is { path: string; content: string } => f !== null)
 
     const success = await chatRef.current?.copyByIndex(undefined, pendingFiles)
     if (!success) return
@@ -72,7 +90,7 @@ function App(): React.JSX.Element {
       copySnapshotRef.current = snapshot
       return next
     })
-  }, [fileStates, filePaths])
+  }, [fileStates, filePaths, workspace])
 
   const handleNewChat = useCallback((): void => {
     setFileStates((prev) => {
