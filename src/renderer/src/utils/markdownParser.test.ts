@@ -1368,6 +1368,61 @@ describe('preprocessDiffFormat', () => {
       expect(out).toContain('```js\nold\n```')
       expect(out).toContain('```js\nnew\n```')
     })
+
+    it('handles ======= inside SEARCH content when markers are longer', () => {
+      // 8-char openers; 7-char ======= is safe as SEARCH content.
+      // Separator must also be 8 chars (========) to match opener length.
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<<< SEARCH\nconst x = "======="\n========\nconst x = "new"\n>>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('<old>\nconst x = "======="\n</old>')
+      expect(out).toContain('<new>\nconst x = "new"\n</new>')
+    })
+
+    it('handles ======= inside REPLACE content when markers are longer', () => {
+      // 8-char openers; 7-char ======= in REPLACE is safe content.
+      // The 8-char ======== right after SEARCH content is the separator.
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<<< SEARCH\noriginal\n========\nconst y = "======="\nconst z = "======="\nreplaced\n>>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('<old>\noriginal\n</old>')
+      expect(out).toContain('<new>\nconst y = "======="\nconst z = "======="\nreplaced\n</new>')
+    })
+
+    it('still works with default 7-character markers', () => {
+      const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('<old>\nold\n</old>')
+      expect(out).toContain('<new>\nnew\n</new>')
+    })
+
+    it('treats shorter ======= as content when markers are 8+', () => {
+      // 8-char openers: 7-char ======= is content; 8-char ======== is separator.
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<<< SEARCH\n=======\nsome text\n========\nnew content\n>>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('<old>\n=======\nsome text\n</old>')
+      expect(out).toContain('<new>\nnew content\n</new>')
+    })
+
+    it('requires separator length to match opening marker length', () => {
+      // 7-char openers; 6-char ====== is SEARCH content, 7-char ======= is separator.
+      const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\n======\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('<old>\n======\n</old>')
+      expect(out).toContain('<new>\nnew\n</new>')
+    })
+
+    it('rejects longer separator than opener', () => {
+      // 7-char openers; 8-char ======== does NOT act as separator — it is SEARCH content.
+      // The following 7-char ======= is the actual separator.
+      const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\n========\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('<old>\n========\n</old>')
+      expect(out).toContain('<new>\nnew\n</new>')
+    })
   })
 
   describe('COMMIT blocks', () => {
@@ -1454,8 +1509,7 @@ describe('preprocessDiffFormat', () => {
     })
 
     it('handles code fence between markers', () => {
-      const input =
-        '```js\nconst x = 1\n```\n--- FILE a.ts ---\ncode\n```\nmore code\n```'
+      const input = '```js\nconst x = 1\n```\n--- FILE a.ts ---\ncode\n```\nmore code\n```'
       const out = preprocessDiffFormat(input)
       expect(out).toContain('```js')
       expect(out).toContain('~~~file:a.ts')

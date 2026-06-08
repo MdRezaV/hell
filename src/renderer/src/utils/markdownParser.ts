@@ -450,16 +450,20 @@ export function preprocessDiffFormat(content: string): string {
         if (/^--- (FILE|EDIT) .+ ---$/.test(lines[i])) break
         if (/^COMMIT: .+$/.test(lines[i])) break
 
-        if (lines[i] === '<<<<<<< SEARCH') {
+        const searchOpen = /^(<+)\s+SEARCH\s*$/.exec(lines[i])
+        if (searchOpen) {
+          const markerLen = searchOpen[1].length
+          const sepRe = new RegExp(`^={${markerLen}}\\s*$`)
+          const closeRe = new RegExp(`^>{${markerLen}}\\s+REPLACE\\s*$`)
           i++
           const searchLines: string[] = []
-          while (i < lines.length && lines[i] !== '=======') {
+          while (i < lines.length && !sepRe.test(lines[i])) {
             searchLines.push(lines[i])
             i++
           }
           if (i < lines.length) i++
           const replaceLines: string[] = []
-          while (i < lines.length && lines[i] !== '>>>>>>> REPLACE') {
+          while (i < lines.length && !closeRe.test(lines[i])) {
             replaceLines.push(lines[i])
             i++
           }
