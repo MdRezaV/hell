@@ -24,7 +24,9 @@ import {
   removeFileState,
   clearFileStates,
   setDirExpanded,
-  pruneWorkspaceState
+  pruneWorkspaceState,
+  getIncludeDirStructure,
+  setIncludeDirStructure
 } from './database'
 import { startWatching, stopWatching } from './watcher'
 
@@ -284,6 +286,17 @@ app.whenReady().then(() => {
     'db:prune-workspace-state',
     async (_, workspacePath: string, validFilePaths: string[], validDirPaths: string[]) => {
       pruneWorkspaceState(workspacePath, validFilePaths, validDirPaths)
+    }
+  )
+
+  ipcMain.handle('db:get-include-dir-structure', async (_, workspacePath: string) => {
+    return getIncludeDirStructure(workspacePath)
+  })
+
+  ipcMain.handle(
+    'db:set-include-dir-structure',
+    async (_, workspacePath: string, value: boolean) => {
+      setIncludeDirStructure(workspacePath, value)
     }
   )
 

@@ -21,7 +21,7 @@ function App(): React.JSX.Element {
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
-  const [includeDirStructure, setIncludeDirStructure] = useState(false)
+  const [includeDirStructure, setIncludeDirStructure] = useState(true)
   const [dirStructureAddedAtIndex, setDirStructureAddedAtIndex] = useState<number | null>(null)
   const copySnapshotRef = useRef<Set<string>>(new Set())
   const isResizing = useRef(false)
@@ -31,9 +31,16 @@ function App(): React.JSX.Element {
   const loadWorkspaceState = useCallback(async (path: string): Promise<void> => {
     const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
       await window.electron.ipcRenderer.invoke('db:get-workspace-state', path)
+    const includeDir = (await window.electron.ipcRenderer.invoke(
+      'db:get-include-dir-structure',
+      path
+    )) as boolean
+    setIncludeDirStructure(includeDir)
     const fsMap = new Map<string, FileTag>()
-    for (const [rel, tag] of state.fileStates) {
-      fsMap.set(joinWithWorkspace(path, rel), tag as FileTag)
+    for (const [rel] of state.fileStates) {
+      const abs = joinWithWorkspace(path, rel)
+      fsMap.set(abs, 'PND')
+      window.electron.ipcRenderer.invoke('db:set-file-state', path, abs, 'PND')
     }
     const expSet = new Set<string>()
     for (const rel of state.expandedDirs) {
@@ -41,6 +48,7 @@ function App(): React.JSX.Element {
     }
     setFileStates(fsMap)
     setExpandedDirs(expSet)
+    setDirStructureAddedAtIndex(null)
   }, [])
 
   const handleWorkspaceChange = useCallback(
@@ -290,7 +298,16 @@ function App(): React.JSX.Element {
               onClearSelections={handleClearSelections}
               onFilePathsChange={handleFilePathsChange}
               includeDirStructure={includeDirStructure}
-              onIncludeDirStructureChange={setIncludeDirStructure}
+              onIncludeDirStructureChange={(value) => {
+                setIncludeDirStructure(value)
+                if (workspace) {
+                  window.electron.ipcRenderer.invoke(
+                    'db:set-include-dir-structure',
+                    workspace,
+                    value
+                  )
+                }
+              }}
             />
           </div>
           <div

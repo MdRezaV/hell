@@ -76,6 +76,26 @@ export function initDatabase(): void {
       path
     ) ON DELETE CASCADE
       );
+    CREATE TABLE IF NOT EXISTS workspace_settings
+    (
+      workspace_path
+      TEXT
+      PRIMARY
+      KEY,
+      include_dir_structure
+      INTEGER
+      NOT
+      NULL
+      DEFAULT
+      1,
+      FOREIGN KEY
+    (
+      workspace_path
+    ) REFERENCES workspaces
+    (
+      path
+    ) ON DELETE CASCADE
+      );
   `)
 }
 
@@ -193,6 +213,22 @@ export function setDirExpanded(
       rel
     )
   }
+}
+
+export function getIncludeDirStructure(workspacePath: string): boolean {
+  const d = getDb()
+  const row = d
+    .prepare('SELECT include_dir_structure FROM workspace_settings WHERE workspace_path = ?')
+    .get(workspacePath) as { include_dir_structure: number } | undefined
+  return row ? row.include_dir_structure === 1 : true
+}
+
+export function setIncludeDirStructure(workspacePath: string, value: boolean): void {
+  const d = getDb()
+  d.prepare(
+    `INSERT INTO workspace_settings (workspace_path, include_dir_structure) VALUES (?, ?)
+     ON CONFLICT(workspace_path) DO UPDATE SET include_dir_structure = excluded.include_dir_structure`
+  ).run(workspacePath, value ? 1 : 0)
 }
 
 export function pruneWorkspaceState(
