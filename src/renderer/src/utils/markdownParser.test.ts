@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   normalizeBody,
   trimSingleNewline,
@@ -10,6 +10,10 @@ import {
   findMatchedBlocks,
   preprocessFileBlocks,
   preprocessCommitBlocks,
+  preprocessDiffFormat,
+  getActiveParser,
+  setActiveParser,
+  listParsers,
   type CodeRange
 } from './markdownParser'
 
@@ -1147,5 +1151,358 @@ describe('preprocessFileBlocks with commits', () => {
     expect(out).toContain('v1.0.0')
     expect(out).toContain('```file:CHANGELOG.md')
     expect(out).toContain('# Changelog')
+  })
+})
+
+describe('preprocessDiffFormat', () => {
+  describe('FILE blocks', () => {
+    it('converts --- FILE --- to a fenced file block', () => {
+      const input = '--- FILE a.ts ---\nconst x = 1'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1')
+    })
+
+    it('handles multi-line content', () => {
+      const input = '--- FILE a.ts ---\nconst x = 1\nconst y = 2\nconst z = 3'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1\nconst y = 2\nconst z = 3')
+    })
+
+    it('preserves blank lines in content', () => {
+      const input = '--- FILE a.ts ---\nconst x = 1\n\nconst y = 2'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('const x = 1\n\nconst y = 2')
+    })
+
+    it('handles empty FILE content when next marker follows immediately', () => {
+      const input = '--- FILE a.ts ---\n--- FILE b.ts ---\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('```file:b.ts')
+      expect(out).toContain('code')
+    })
+
+    it('captures content until the next FILE or EDIT marker', () => {
+      const input =
+        '--- FILE a.ts ---\ncode\n--- EDIT b.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('code')
+      expect(out).toContain('```file-replace:b.ts')
+    })
+
+    it('ignores FILE marker inside a code fence', () => {
+      const input = '```\n--- FILE a.ts ---\ncode\n```\n'
+      const out = preprocessDiffFormat(input)
+      expect(out).toBe(input)
+    })
+
+    it('ignores FILE marker inside a tilde code fence', () => {
+      const input = '~~~\n--- FILE a.ts ---\ncode\n~~~\n'
+      const out = preprocessDiffFormat(input)
+      expect(out).toBe(input)
+    })
+
+    it('handles FILE path with spaces', () => {
+      const input = '--- FILE my file.ts ---\ncontent'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:my file.ts')
+    })
+
+    it('handles FILE path with special characters', () => {
+      const input = '--- FILE src/@types/index.d.ts ---\ncontent'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:src/@types/index.d.ts')
+    })
+
+    it('handles multiple consecutive FILE blocks', () => {
+      const input = '--- FILE a.ts ---\ncodeA\n--- FILE b.ts ---\ncodeB'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('codeA')
+      expect(out).toContain('```file:b.ts')
+      expect(out).toContain('codeB')
+    })
+
+    it('uses tildes when FILE content contains triple backticks', () => {
+      const input = '--- FILE example.md ---\nHere is code:\n```js\nconst x = 1\n```'
+      const out = preprocessDiffFormat(input)
+      expect(out).toMatch(/~~~file:example\.md/)
+      expect(out).toContain('```js')
+      expect(out).toContain('const x = 1')
+    })
+
+    it('preserves text before FILE block', () => {
+      const input = 'Some description\n\n--- FILE a.ts ---\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('Some description')
+      expect(out).toContain('```file:a.ts')
+    })
+
+    it('does not match FILE marker with leading whitespace', () => {
+      const input = '  --- FILE a.ts ---\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).not.toContain('```file:')
+    })
+
+    it('does not match FILE marker without closing ---', () => {
+      const input = '--- FILE a.ts\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).not.toContain('```file:')
+    })
+  })
+
+  describe('EDIT blocks', () => {
+    it('converts --- EDIT --- with SEARCH/REPLACE to file-replace block', () => {
+      const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('<old>\nold\n</old>')
+      expect(out).toContain('<new>\nnew\n</new>')
+    })
+
+    it('handles empty REPLACE (delete)', () => {
+      const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold code\n=======\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('<old>\nold code\n</old>')
+      expect(out).toContain('<new>\n\n</new>')
+    })
+
+    it('handles empty SEARCH (insert)', () => {
+      const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\n=======\nnew code\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('<old>\n\n</old>')
+      expect(out).toContain('<new>\nnew code\n</new>')
+    })
+
+    it('handles multi-line SEARCH and REPLACE', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nline1\nline2\nline3\n=======\nnew1\nnew2\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('<old>\nline1\nline2\nline3\n</old>')
+      expect(out).toContain('<new>\nnew1\nnew2\n</new>')
+    })
+
+    it('produces multiple file-replace blocks for multiple SEARCH/REPLACE pairs', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold1\n=======\nnew1\n>>>>>>> REPLACE\n<<<<<<< SEARCH\nold2\n=======\nnew2\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      const matches = out.match(/```file-replace:a\.ts/g)
+      expect(matches?.length).toBe(2)
+      expect(out).toContain('old1')
+      expect(out).toContain('new1')
+      expect(out).toContain('old2')
+      expect(out).toContain('new2')
+    })
+
+    it('ignores EDIT marker inside a code fence', () => {
+      const input =
+        '```\n--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n```\n'
+      const out = preprocessDiffFormat(input)
+      expect(out).toBe(input)
+    })
+
+    it('EDIT block ends at next FILE marker', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n--- FILE b.ts ---\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('```file:b.ts')
+    })
+
+    it('EDIT block ends at next EDIT marker', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n--- EDIT b.ts ---\n<<<<<<< SEARCH\nx\n=======\ny\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('```file-replace:b.ts')
+    })
+
+    it('EDIT block ends at COMMIT line', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\nCOMMIT: done'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('```commit')
+      expect(out).toContain('done')
+    })
+
+    it('skips non-SEARCH text before the first SEARCH in an EDIT block', () => {
+      const input =
+        '--- EDIT a.ts ---\nSome description\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('<old>\nold\n</old>')
+    })
+
+    it('stops EDIT block when non-blank non-SEARCH text follows a pair', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n\nSome trailing text'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('Some trailing text')
+    })
+
+    it('produces no output for EDIT with no SEARCH/REPLACE', () => {
+      const input = '--- EDIT a.ts ---\nJust a note\n--- FILE b.ts ---\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).not.toContain('file-replace')
+      expect(out).toContain('```file:b.ts')
+    })
+
+    it('handles EDIT path with special characters', () => {
+      const input =
+        '--- EDIT src/components/App.tsx ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:src/components/App.tsx')
+    })
+
+    it('captures code fences inside SEARCH/REPLACE content', () => {
+      const input =
+        '--- EDIT a.md ---\n<<<<<<< SEARCH\n```js\nold\n```\n=======\n```js\nnew\n```\n>>>>>>> REPLACE'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```js\nold\n```')
+      expect(out).toContain('```js\nnew\n```')
+    })
+  })
+
+  describe('COMMIT blocks', () => {
+    it('converts COMMIT: to a commit fenced block', () => {
+      const input = 'COMMIT: fix: bug in parser'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```commit')
+      expect(out).toContain('fix: bug in parser')
+    })
+
+    it('ignores COMMIT: inside a code fence', () => {
+      const input = '```\nCOMMIT: ignored\n```\n'
+      const out = preprocessDiffFormat(input)
+      expect(out).toBe(input)
+    })
+
+    it('does not match COMMIT: without a space after colon', () => {
+      const input = 'COMMIT:no space'
+      const out = preprocessDiffFormat(input)
+      expect(out).not.toContain('```commit')
+    })
+
+    it('does not match COMMIT: with leading whitespace', () => {
+      const input = '  COMMIT: indented'
+      const out = preprocessDiffFormat(input)
+      expect(out).not.toContain('```commit')
+    })
+
+    it('handles multiple COMMIT lines', () => {
+      const input = 'COMMIT: first\nSome text\nCOMMIT: second'
+      const out = preprocessDiffFormat(input)
+      const matches = out.match(/```commit/g)
+      expect(matches?.length).toBe(2)
+    })
+  })
+
+  describe('mixed operations', () => {
+    it('handles FILE, EDIT, and COMMIT together', () => {
+      const input =
+        'Some intro\n\n--- FILE new.ts ---\nexport const x = 1\n--- EDIT existing.ts ---\n<<<<<<< SEARCH\nconst old = true\n=======\nconst old = false\n>>>>>>> REPLACE\n\nCOMMIT: Update files'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('Some intro')
+      expect(out).toContain('```file:new.ts')
+      expect(out).toContain('export const x = 1')
+      expect(out).toContain('```file-replace:existing.ts')
+      expect(out).toContain('```commit')
+      expect(out).toContain('Update files')
+    })
+
+    it('preserves text without any markers', () => {
+      const input = 'Just plain text\nNo markers here'
+      expect(preprocessDiffFormat(input)).toBe(input)
+    })
+
+    it('preserves empty input', () => {
+      expect(preprocessDiffFormat('')).toBe('')
+    })
+
+    it('does not process XML <file> tags', () => {
+      const input = '<file path="a.ts">code</file>'
+      expect(preprocessDiffFormat(input)).toBe(input)
+    })
+
+    it('does not process XML <commit> tags', () => {
+      const input = '<commit>message</commit>'
+      expect(preprocessDiffFormat(input)).toBe(input)
+    })
+
+    it('handles FILE block followed by text and COMMIT', () => {
+      const input = '--- FILE a.ts ---\ncode\n\nCOMMIT: done'
+      const out = preprocessDiffFormat(input)
+      // COMMIT line is consumed as FILE content since no FILE/EDIT marker ends it
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('code')
+      expect(out).toContain('COMMIT: done')
+    })
+
+    it('handles EDIT block followed by FILE block', () => {
+      const input =
+        '--- EDIT a.ts ---\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n\n--- FILE b.ts ---\ncode'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('```file:b.ts')
+    })
+
+    it('handles code fence between markers', () => {
+      const input =
+        '```js\nconst x = 1\n```\n--- FILE a.ts ---\ncode\n```\nmore code\n```'
+      const out = preprocessDiffFormat(input)
+      expect(out).toContain('```js')
+      expect(out).toContain('~~~file:a.ts')
+    })
+  })
+})
+
+describe('parser registry', () => {
+  beforeEach(() => {
+    setActiveParser('xml')
+  })
+
+  it('defaults to the xml parser', () => {
+    expect(getActiveParser().id).toBe('xml')
+  })
+
+  it('lists both available parsers', () => {
+    const all = listParsers()
+    const ids = all.map((p) => p.id)
+    expect(ids).toContain('xml')
+    expect(ids).toContain('diff')
+    expect(all.length).toBe(2)
+  })
+
+  it('xml parser preprocesses with XML tags', () => {
+    const parser = getActiveParser()
+    expect(parser.name).toBe('XML Tags')
+    const out = parser.preprocess('<file path="a.ts">code</file>')
+    expect(out).toContain('```file:a.ts')
+  })
+
+  it('can switch to diff parser', () => {
+    setActiveParser('diff')
+    const parser = getActiveParser()
+    expect(parser.id).toBe('diff')
+    expect(parser.name).toBe('Search/Replace')
+    const out = parser.preprocess('--- FILE a.ts ---\ncode')
+    expect(out).toContain('```file:a.ts')
+  })
+
+  it('can switch back to xml parser', () => {
+    setActiveParser('diff')
+    setActiveParser('xml')
+    expect(getActiveParser().id).toBe('xml')
+  })
+
+  it('throws on unknown parser id', () => {
+    expect(() => setActiveParser('unknown')).toThrow('Unknown parser: unknown')
   })
 })

@@ -92,7 +92,7 @@ SyntaxHighlighter.registerLanguage('dockerfile', docker)
 
 import hljs from 'highlight.js/lib/common'
 import { Play, Check, Copy } from 'lucide-react'
-import { trimSingleNewline, findMatchedBlocks, preprocessFileBlocks } from '../utils/markdownParser'
+import { trimSingleNewline, findMatchedBlocks, getActiveParser } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
 
 interface MarkdownProps {
@@ -709,7 +709,7 @@ const markdownComponents: Components = {
 }
 
 const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.Element {
-  const processedContent = preprocessFileBlocks(content)
+  const processedContent = getActiveParser().preprocess(content)
 
   return (
     <div className="md-content">

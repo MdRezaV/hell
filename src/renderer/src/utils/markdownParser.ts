@@ -389,3 +389,145 @@ export function preprocessFileBlocks(content: string): string {
 
   return result
 }
+
+export function preprocessDiffFormat(content: string): string {
+  const lines = content.split('\n')
+  const result: string[] = []
+  let i = 0
+  let inFence = false
+  let fenceChar = ''
+  let fenceLen = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    if (!inFence) {
+      const fenceMatch = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
+      if (fenceMatch) {
+        inFence = true
+        fenceChar = fenceMatch[2][0]
+        fenceLen = fenceMatch[2].length
+        result.push(line)
+        i++
+        continue
+      }
+    } else {
+      const closingRe =
+        fenceChar === '`'
+          ? new RegExp(`^\\s{0,3}\`{${fenceLen},}\\s*$`)
+          : new RegExp(`^\\s{0,3}~{${fenceLen},}\\s*$`)
+      if (closingRe.test(line)) {
+        inFence = false
+      }
+      result.push(line)
+      i++
+      continue
+    }
+
+    const fileMatch = /^--- FILE (.+) ---$/.exec(line)
+    if (fileMatch) {
+      const path = fileMatch[1].trim()
+      i++
+      const contentLines: string[] = []
+      while (i < lines.length) {
+        if (/^--- (FILE|EDIT) .+ ---$/.test(lines[i])) break
+        contentLines.push(lines[i])
+        i++
+      }
+      const code = contentLines.join('\n')
+      const fenced = wrapInFence(code, `file:${path}`)
+      result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+      continue
+    }
+
+    const editMatch = /^--- EDIT (.+) ---$/.exec(line)
+    if (editMatch) {
+      const path = editMatch[1].trim()
+      i++
+      const pairs: Array<{ old: string; new: string }> = []
+
+      while (i < lines.length) {
+        if (/^--- (FILE|EDIT) .+ ---$/.test(lines[i])) break
+        if (/^COMMIT: .+$/.test(lines[i])) break
+
+        if (lines[i] === '<<<<<<< SEARCH') {
+          i++
+          const searchLines: string[] = []
+          while (i < lines.length && lines[i] !== '=======') {
+            searchLines.push(lines[i])
+            i++
+          }
+          if (i < lines.length) i++
+          const replaceLines: string[] = []
+          while (i < lines.length && lines[i] !== '>>>>>>> REPLACE') {
+            replaceLines.push(lines[i])
+            i++
+          }
+          if (i < lines.length) i++
+          pairs.push({ old: searchLines.join('\n'), new: replaceLines.join('\n') })
+        } else {
+          if (lines[i].trim() !== '' && pairs.length > 0) break
+          i++
+        }
+      }
+
+      for (const pair of pairs) {
+        const combined = `<old>\n${pair.old}\n</old>\n<new>\n${pair.new}\n</new>`
+        const fenced = wrapInFence(combined, `file-replace:${path}`)
+        result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+      }
+      continue
+    }
+
+    const commitMatch = /^COMMIT: (.+)$/.exec(line)
+    if (commitMatch) {
+      const message = commitMatch[1]
+      const fenced = wrapInFence(message, 'commit')
+      result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+      i++
+      continue
+    }
+
+    result.push(line)
+    i++
+  }
+
+  return result.join('\n')
+}
+
+export interface MarkdownParser {
+  id: string
+  name: string
+  preprocess: (content: string) => string
+}
+
+export const xmlParser: MarkdownParser = {
+  id: 'xml',
+  name: 'XML Tags',
+  preprocess: preprocessFileBlocks
+}
+
+export const diffParser: MarkdownParser = {
+  id: 'diff',
+  name: 'Search/Replace',
+  preprocess: preprocessDiffFormat
+}
+
+const parsers = new Map<string, MarkdownParser>()
+let activeParserId = 'diff'
+
+parsers.set(xmlParser.id, xmlParser)
+parsers.set(diffParser.id, diffParser)
+
+export function getActiveParser(): MarkdownParser {
+  return parsers.get(activeParserId)!
+}
+
+export function setActiveParser(id: string): void {
+  if (!parsers.has(id)) throw new Error(`Unknown parser: ${id}`)
+  activeParserId = id
+}
+
+export function listParsers(): MarkdownParser[] {
+  return Array.from(parsers.values())
+}
