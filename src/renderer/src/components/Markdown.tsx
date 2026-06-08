@@ -660,7 +660,11 @@ const markdownComponents: Components = {
     if (filePath) {
       if (language === 'file-replace') {
         const { matched: oldBlocks } = findMatchedBlocks(codeText, 'old')
-        const { matched: newBlocks } = findMatchedBlocks(codeText, 'new')
+        const oldBlockRanges = oldBlocks.map((b) => ({
+          start: b.open.start,
+          end: b.close.end
+        }))
+        const { matched: newBlocks } = findMatchedBlocks(codeText, 'new', oldBlockRanges)
         const oldCode = oldBlocks.length > 0 ? trimSingleNewline(oldBlocks[0].body) : ''
         const newCode = newBlocks.length > 0 ? trimSingleNewline(newBlocks[0].body) : ''
         return <FileReplaceBlock path={filePath} oldCode={oldCode} newCode={newCode} />

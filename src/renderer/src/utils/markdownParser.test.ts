@@ -809,8 +809,37 @@ code2
     expect(out).toContain('<file>')
     expect(out).toContain('<file path="">')
     expect(out).toContain('</old>')
-    expect(out).toContain('<new>')
-    expect(out).toContain('</new>')
+    // The new section must also be detected (not swallowed by unclosed fence in old)
+    expect(out).toContain('<new>\n<new>')
+    expect(out).toContain('</new>\n</new>')
+  })
+
+  it('detects new section when old section contains unclosed code fence', () => {
+    const input = `<file path="css/style.css" action="replace">
+<old>
+<old>
+<file>
+<file path="">
+</old>
+\`\`\` # comment
+</old>
+<new>
+<new>
+\`\`\` # comment
+</new>
+</new>
+</file>`
+    const out = preprocessFileBlocks(input)
+    expect(out).toMatch(/~~~file-replace:css\/style\.css/)
+    // Old section should contain the nested decoy tags and code fence
+    expect(out).toContain('<old>')
+    expect(out).toContain('<file>')
+    expect(out).toContain('<file path="">')
+    expect(out).toContain('</old>')
+    expect(out).toContain('``` # comment')
+    // New section must be detected (not swallowed by unclosed fence from old section)
+    expect(out).toContain('<new>\n<new>')
+    expect(out).toContain('</new>\n</new>')
   })
 
   it('ignores file block wrapped in code fence', () => {

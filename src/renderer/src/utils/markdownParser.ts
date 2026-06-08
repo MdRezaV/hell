@@ -255,7 +255,11 @@ export function matchOpenClose(
   return matched
 }
 
-export function findMatchedBlocks(text: string, tagName: string): FindBlocksResult {
+export function findMatchedBlocks(
+  text: string,
+  tagName: string,
+  extraSkipRanges?: CodeRange[]
+): FindBlocksResult {
   const { opens: allOpens, closes: allCloses } = findTagsInText(text, tagName, [])
   const selfClosing = allOpens.filter((o) => o.selfClosing)
   let activeOpens = allOpens.filter((o) => !o.selfClosing)
@@ -271,7 +275,8 @@ export function findMatchedBlocks(text: string, tagName: string): FindBlocksResu
       end: m.close.end
     }))
 
-    const codeRegions = findCodeRangesSkippingRanges(text, blockRanges)
+    const allSkipRanges = extraSkipRanges ? [...blockRanges, ...extraSkipRanges] : blockRanges
+    const codeRegions = findCodeRangesSkippingRanges(text, allSkipRanges)
 
     const removedOpens = new Set<number>()
     const removedCloses = new Set<number>()
@@ -357,7 +362,12 @@ export function preprocessFileBlocks(content: string): string {
       if (isReplace) {
         const body = block.body
         const { matched: oldBlocks } = findMatchedBlocks(body, 'old')
-        const { matched: newBlocks } = findMatchedBlocks(body, 'new')
+
+        const oldBlockRanges = oldBlocks.map((b) => ({
+          start: b.open.start,
+          end: b.close.end
+        }))
+        const { matched: newBlocks } = findMatchedBlocks(body, 'new', oldBlockRanges)
 
         const oldCode = oldBlocks.length > 0 ? trimSingleNewline(oldBlocks[0].body) : ''
         const newCode = newBlocks.length > 0 ? trimSingleNewline(newBlocks[0].body) : ''
