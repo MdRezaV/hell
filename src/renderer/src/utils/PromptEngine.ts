@@ -186,8 +186,8 @@ export function buildPrompt(
   if (index === 0) {
     return `${SYSTEM_PROMPT_INITIAL_START}\n${contextSection}\n${SYSTEM_PROMPT_INITIAL_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_INITIAL_END}`
   }
-  if (index % 5 == 0) {
+  //if (index % 1 == 0) {
     return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}\n${SYSTEM_REMINDER_OUTPUT_FORMAT}`
-  }
-  return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}`
+  //}
+  //return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}`
 }

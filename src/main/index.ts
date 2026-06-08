@@ -42,7 +42,21 @@ interface IgnoreRule {
   ig: Ignore
 }
 
+const TEXT_EXTENSIONS = new Set([
+  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'jsonc', 'yaml', 'yml',
+  'html', 'htm', 'css', 'scss', 'less', 'sass', 'md', 'mdx', 'txt',
+  'xml', 'svg', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'cc', 'cxx',
+  'h', 'hpp', 'cs', 'php', 'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat',
+  'cmd', 'sql', 'toml', 'ini', 'conf', 'env', 'gitignore', 'editorconfig',
+  'lua', 'r', 'swift', 'dart', 'scala', 'clj', 'erl', 'ex', 'exs',
+  'hs', 'ml', 'fs', 'vim', 'tex', 'vue', 'svelte', 'graphql', 'gql',
+  'prisma', 'proto', 'lock', 'mod', 'sum'
+])
+
 function isBinaryFile(filePath: string): boolean {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  if (ext && TEXT_EXTENSIONS.has(ext)) return false
+
   try {
     const fd = openSync(filePath, 'r')
     const buffer = Buffer.alloc(8192)

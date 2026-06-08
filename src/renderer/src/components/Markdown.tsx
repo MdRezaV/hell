@@ -4,6 +4,7 @@ import React, {
   memo,
   type ReactNode,
   useCallback,
+  useDeferredValue,
   useEffect,
   useRef,
   useState
@@ -968,7 +969,8 @@ const markdownComponents: Components = {
 }
 
 const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.Element {
-  const processedContent = getActiveParser().preprocess(content)
+  const deferredContent = useDeferredValue(content)
+  const processedContent = getActiveParser().preprocess(deferredContent)
 
   return (
     <div className="md-content">
