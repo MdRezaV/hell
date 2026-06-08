@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Clock, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react'
 
 export interface ChatSession {
@@ -59,7 +59,7 @@ function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
   return groups
 }
 
-export default function ChatHistory({
+export default memo(function ChatHistory({
   workspace,
   activeChatId,
   onSelectChat,
@@ -199,4 +199,4 @@ export default function ChatHistory({
       </div>
     </div>
   )
-}
+})

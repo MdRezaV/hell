@@ -296,7 +296,14 @@ function FileExplorer({
 
     refresh()
 
-    const handleChange = (): void => refresh()
+    let lastRefresh = 0
+    const MIN_REFRESH_MS = 300
+    const handleChange = (): void => {
+      const now = Date.now()
+      if (now - lastRefresh < MIN_REFRESH_MS) return
+      lastRefresh = now
+      refresh()
+    }
     window.electron.ipcRenderer.on('workspace:changed', handleChange)
 
     return () => {
@@ -394,4 +401,4 @@ function FileExplorer({
   )
 }
 
-export default FileExplorer
+export default memo(FileExplorer)

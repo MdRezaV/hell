@@ -123,17 +123,31 @@ function detectLanguage(code: string): string {
 function extractText(node: ReactNode): string {
   if (typeof node === 'string') return node
   if (typeof node === 'number') return String(node)
-  if (Array.isArray(node)) {
-    let result = ''
-    for (let i = 0; i < node.length; i++) {
-      result += extractText(node[i])
+  if (!node || typeof node !== 'object') return ''
+
+  const stack: ReactNode[] = [node]
+  const parts: string[] = []
+
+  while (stack.length > 0) {
+    const current = stack.pop()
+    if (current == null) continue
+    if (typeof current === 'string') {
+      parts.push(current)
+    } else if (typeof current === 'number') {
+      parts.push(String(current))
+    } else if (Array.isArray(current)) {
+      for (let i = current.length - 1; i >= 0; i--) {
+        stack.push(current[i])
+      }
+    } else if (typeof current === 'object' && 'props' in current) {
+      const props = (current as { props?: { children?: ReactNode } }).props
+      if (props?.children != null) {
+        stack.push(props.children)
+      }
     }
-    return result
   }
-  if (node && typeof node === 'object' && 'props' in node) {
-    return extractText((node as { props: { children?: ReactNode } }).props.children)
-  }
-  return ''
+
+  return parts.join('')
 }
 
 function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
@@ -226,8 +240,43 @@ interface FileStateCache {
 }
 
 const FILE_CACHE_MAX = 256
+const IPC_CONCURRENCY_LIMIT = 4
 
 const fileContentCache = new Map<string, Promise<FileState>>()
+
+let ipcInFlight = 0
+const ipcQueue: Array<() => void> = []
+
+function processIpcQueue(): void {
+  while (ipcQueue.length > 0 && ipcInFlight < IPC_CONCURRENCY_LIMIT) {
+    ipcQueue.shift()!()
+  }
+}
+
+function ipcThrottle<T>(fn: () => Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const run = (): void => {
+      ipcInFlight++
+      fn().then(
+        (result) => {
+          ipcInFlight--
+          resolve(result)
+          processIpcQueue()
+        },
+        (err) => {
+          ipcInFlight--
+          reject(err)
+          processIpcQueue()
+        }
+      )
+    }
+    if (ipcInFlight < IPC_CONCURRENCY_LIMIT) {
+      run()
+    } else {
+      ipcQueue.push(run)
+    }
+  })
+}
 
 function invalidateFileContentCache(workspace: string, path: string): void {
   fileContentCache.delete(`${workspace}::${path}`)
@@ -262,11 +311,9 @@ function useFileContent(path: string): FileState | null {
         if (!cancelled) setCache({ data: result, path, workspace })
       })
     } else {
-      const promise = window.electron.ipcRenderer.invoke(
-        'read-file',
-        workspace,
-        path
-      ) as Promise<FileState>
+      const promise = ipcThrottle(
+        () => window.electron.ipcRenderer.invoke('read-file', workspace, path) as Promise<FileState>
+      )
       if (fileContentCache.size >= FILE_CACHE_MAX) {
         const firstKey = fileContentCache.keys().next().value
         if (firstKey !== undefined) fileContentCache.delete(firstKey)

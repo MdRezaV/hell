@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { memo } from 'react'
 
 interface StatusBarProps {
   onCopy: () => void
   onPaste: () => void
 }
 
-function StatusBar({ onCopy, onPaste }: StatusBarProps): React.JSX.Element {
+const StatusBar = memo(function StatusBar({ onCopy, onPaste }: StatusBarProps): React.JSX.Element {
   return (
     <div className="statusbar">
       <span className="statusbar-item">Ready</span>
@@ -26,6 +26,6 @@ function StatusBar({ onCopy, onPaste }: StatusBarProps): React.JSX.Element {
       </div>
     </div>
   )
-}
+})
 
 export default StatusBar

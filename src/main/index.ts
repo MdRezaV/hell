@@ -1,16 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { dirname, join, relative } from 'path'
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  readSync,
-  unlinkSync,
-  writeFileSync
-} from 'fs'
+import { existsSync, mkdirSync, promises as fsp, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import ignore, { type Ignore } from 'ignore'
 import icon from '../../resources/icon.png?asset'
@@ -43,35 +33,117 @@ interface IgnoreRule {
 }
 
 const TEXT_EXTENSIONS = new Set([
-  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'jsonc', 'yaml', 'yml',
-  'html', 'htm', 'css', 'scss', 'less', 'sass', 'md', 'mdx', 'txt',
-  'xml', 'svg', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'cc', 'cxx',
-  'h', 'hpp', 'cs', 'php', 'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat',
-  'cmd', 'sql', 'toml', 'ini', 'conf', 'env', 'gitignore', 'editorconfig',
-  'lua', 'r', 'swift', 'dart', 'scala', 'clj', 'erl', 'ex', 'exs',
-  'hs', 'ml', 'fs', 'vim', 'tex', 'vue', 'svelte', 'graphql', 'gql',
-  'prisma', 'proto', 'lock', 'mod', 'sum'
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'mjs',
+  'cjs',
+  'json',
+  'jsonc',
+  'yaml',
+  'yml',
+  'html',
+  'htm',
+  'css',
+  'scss',
+  'less',
+  'sass',
+  'md',
+  'mdx',
+  'txt',
+  'xml',
+  'svg',
+  'py',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'c',
+  'cpp',
+  'cc',
+  'cxx',
+  'h',
+  'hpp',
+  'cs',
+  'php',
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'ps1',
+  'bat',
+  'cmd',
+  'sql',
+  'toml',
+  'ini',
+  'conf',
+  'env',
+  'gitignore',
+  'editorconfig',
+  'lua',
+  'r',
+  'swift',
+  'dart',
+  'scala',
+  'clj',
+  'erl',
+  'ex',
+  'exs',
+  'hs',
+  'ml',
+  'fs',
+  'vim',
+  'tex',
+  'vue',
+  'svelte',
+  'graphql',
+  'gql',
+  'prisma',
+  'proto',
+  'lock',
+  'mod',
+  'sum'
 ])
 
-function isBinaryFile(filePath: string): boolean {
+const binaryCheckCache = new Map<string, boolean>()
+const BINARY_CACHE_MAX = 1024
+
+async function isBinaryFile(filePath: string): Promise<boolean> {
   const ext = filePath.split('.').pop()?.toLowerCase()
   if (ext && TEXT_EXTENSIONS.has(ext)) return false
 
+  const cached = binaryCheckCache.get(filePath)
+  if (cached !== undefined) return cached
+
   try {
-    const fd = openSync(filePath, 'r')
+    const fd = await fsp.open(filePath, 'r')
     const buffer = Buffer.alloc(8192)
-    const bytesRead = readSync(fd, buffer, 0, 8192, 0)
-    closeSync(fd)
+    const { bytesRead } = await fd.read(buffer, 0, 8192, 0)
+    await fd.close()
+    let isBin = false
     for (let i = 0; i < bytesRead; i++) {
-      if (buffer[i] === 0) return true
+      if (buffer[i] === 0) {
+        isBin = true
+        break
+      }
     }
-    return false
+    if (binaryCheckCache.size >= BINARY_CACHE_MAX) {
+      const firstKey = binaryCheckCache.keys().next().value
+      if (firstKey !== undefined) binaryCheckCache.delete(firstKey)
+    }
+    binaryCheckCache.set(filePath, isBin)
+    return isBin
   } catch {
     return false
   }
 }
 
-function loadIgnoreRules(dir: string, parentRules: IgnoreRule[], isRoot: boolean): IgnoreRule[] {
+async function loadIgnoreRules(
+  dir: string,
+  parentRules: IgnoreRule[],
+  isRoot: boolean
+): Promise<IgnoreRule[]> {
   const rules = [...parentRules]
   const patterns: string[] = []
   if (isRoot) {
@@ -79,7 +151,7 @@ function loadIgnoreRules(dir: string, parentRules: IgnoreRule[], isRoot: boolean
   }
   for (const ignoreFile of ['.gitignore', '.hellignore']) {
     try {
-      const content = readFileSync(join(dir, ignoreFile), 'utf-8')
+      const content = await fsp.readFile(join(dir, ignoreFile), 'utf-8')
       patterns.push(content)
     } catch {
       // ignore file doesn't exist
@@ -109,32 +181,41 @@ interface FileNode {
   isBinary?: boolean
 }
 
-function readDirTree(path: string, parentRules: IgnoreRule[], isRoot: boolean): FileNode[] {
-  const currentRules = loadIgnoreRules(path, parentRules, isRoot)
+async function readDirTree(
+  path: string,
+  parentRules: IgnoreRule[],
+  isRoot: boolean
+): Promise<FileNode[]> {
+  const currentRules = await loadIgnoreRules(path, parentRules, isRoot)
   try {
-    const entries = readdirSync(path, { withFileTypes: true })
-    return entries
-      .filter((entry) => {
-        const fullPath = join(path, entry.name)
-        return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
-      })
-      .map((entry) => {
-        const fullPath = join(path, entry.name)
-        if (entry.isDirectory()) {
-          return {
-            name: entry.name,
-            path: fullPath,
-            type: 'directory' as const,
-            children: readDirTree(fullPath, currentRules, false)
-          }
-        }
-        return {
+    const entries = await fsp.readdir(path, { withFileTypes: true })
+    const filtered = entries.filter((entry) => {
+      const fullPath = join(path, entry.name)
+      return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
+    })
+
+    const results: FileNode[] = []
+    for (const entry of filtered) {
+      const fullPath = join(path, entry.name)
+      if (entry.isDirectory()) {
+        const children = await readDirTree(fullPath, currentRules, false)
+        results.push({
+          name: entry.name,
+          path: fullPath,
+          type: 'directory' as const,
+          children
+        })
+      } else {
+        const bin = await isBinaryFile(fullPath)
+        results.push({
           name: entry.name,
           path: fullPath,
           type: 'file' as const,
-          isBinary: isBinaryFile(fullPath)
-        }
-      })
+          isBinary: bin
+        })
+      }
+    }
+    return results
   } catch {
     return []
   }
@@ -362,11 +443,11 @@ app.whenReady().then(() => {
   )
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
-    return readDirTree(dirPath, [], true)
+    return await readDirTree(dirPath, [], true)
   })
 
   ipcMain.handle('read-directory-tree', async (_, dirPath: string) => {
-    const nodes = readDirTree(dirPath, [], true)
+    const nodes = await readDirTree(dirPath, [], true)
     const dirName = dirPath.split(/[/\\]/).pop() || dirPath
     return formatTreeText(dirName, nodes)
   })
