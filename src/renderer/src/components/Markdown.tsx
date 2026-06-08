@@ -3,7 +3,6 @@ import React, {
   useRef,
   useCallback,
   useEffect,
-  useMemo,
   memo,
   Children,
   isValidElement,
@@ -158,17 +157,39 @@ const LinesDisplay = memo(function LinesDisplay({
 }): React.JSX.Element {
   const lines = code.split('\n')
   const hasSyntax = !!language && language !== 'text'
+  const gutterRef = useRef<HTMLDivElement>(null)
+  const codeRef = useRef<HTMLDivElement>(null)
+  const syncing = useRef(false)
+
+  const handleCodeScroll = useCallback(() => {
+    if (syncing.current) return
+    syncing.current = true
+    if (gutterRef.current && codeRef.current) {
+      gutterRef.current.scrollTop = codeRef.current.scrollTop
+    }
+    syncing.current = false
+    onScroll?.()
+  }, [onScroll])
+
+  const handleGutterScroll = useCallback(() => {
+    if (syncing.current) return
+    syncing.current = true
+    if (gutterRef.current && codeRef.current) {
+      codeRef.current.scrollTop = gutterRef.current.scrollTop
+    }
+    syncing.current = false
+  }, [])
 
   return (
     <>
-      <div className="md-file-gutter">
+      <div className="md-file-gutter" ref={gutterRef} onScroll={handleGutterScroll}>
         {lines.map((_, i) => (
           <div key={i} className="md-file-line-number">
             {i + 1}
           </div>
         ))}
       </div>
-      <div className="md-file-code-scroll" onScroll={onScroll}>
+      <div className="md-file-code-scroll" onScroll={handleCodeScroll} ref={codeRef}>
         {hasSyntax ? (
           <SyntaxHighlighter language={language} style={oneDark} className="md-file-syntax">
             {code}
@@ -329,7 +350,7 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
   const handleCopy = useCallback(async (): Promise<void> => {
     if (!fileState?.content) return
     await copy(fileState.content)
-  }, [copy, fileState?.content])
+  }, [copy, fileState])
 
   if (fileState === null) {
     return (

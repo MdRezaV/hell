@@ -375,6 +375,7 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100%;
+  min-width: 0;
   background: var(--color-background);
 }
 
@@ -383,10 +384,12 @@ body {
   justify-content: center;
   gap: 32px;
   padding: 24px;
+  min-width: 0;
 }
 
 .ai-chat-welcome-content {
   text-align: center;
+  min-width: 0;
 }
 
 .ai-chat-welcome-icon {
@@ -426,6 +429,7 @@ body {
   background: transparent;
   width: 100%;
   max-width: 560px;
+  min-width: 0;
   padding: 0;
 }
 
@@ -437,6 +441,7 @@ body {
   background: var(--color-surface-0);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  min-width: 0;
   transition:
     border-color var(--transition-normal),
     box-shadow var(--transition-normal);
@@ -785,11 +790,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .chat-message {
   display: flex;
-  max-width: 850px;
+  max-width: 80%;
+  min-width: 0;
   animation: fadeIn 0.2s ease;
 }
 
@@ -801,6 +808,12 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 1080px) {
+  .chat-message {
+    max-width: 100%;
   }
 }
 
@@ -820,6 +833,7 @@ body {
   line-height: 1.6;
   min-width: 0;
   width: 100%;
+  overflow: hidden;
 }
 
 .chat-bubble-user {
@@ -1002,6 +1016,8 @@ body {
   color: var(--color-text);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .md-content > *:first-child {
@@ -1095,6 +1111,8 @@ body {
 
 .md-code-block-wrapper {
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .md-code-lang {
@@ -1114,6 +1132,7 @@ body {
 
 .md-code-block-wrapper pre {
   margin: 0;
+  min-width: 0;
 }
 
 .md-command-block {
@@ -1122,6 +1141,7 @@ body {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+  min-width: 0;
   transition: border-color var(--transition-normal);
 }
 
@@ -1270,6 +1290,7 @@ body {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+  min-width: 0;
   transition: border-color var(--transition-normal);
 }
 
@@ -1370,6 +1391,7 @@ body {
   font-size: 12px;
   line-height: 1.55;
   max-height: 404px;
+  min-width: 0;
   background: var(--color-background-mute);
 }
 
@@ -1409,6 +1431,10 @@ body {
   padding: 8px 0;
 }
 
+.md-file-code-scroll pre {
+  min-width: 0;
+}
+
 .md-file-code-lines {
   min-width: max-content;
 }
@@ -1438,6 +1464,7 @@ body {
 /* ── File Replace Block (side-by-side diff) ──────────── */
 .md-file-replace-block {
   width: 100%;
+  min-width: 0;
 }
 
 .md-file-diff {
@@ -1445,6 +1472,7 @@ body {
   flex-direction: row;
   background: var(--color-background-mute);
   width: 100%;
+  min-width: 0;
 }
 
 .md-file-diff-side {
@@ -1629,6 +1657,14 @@ body {
   color: var(--color-accent-text);
   opacity: 0.85;
   line-height: 1;
+}
+
+.md-content > *,
+.md-content pre,
+.md-content code,
+.md-content table,
+.md-content blockquote {
+  min-width: 0;
 }
 
 .md-content > *
