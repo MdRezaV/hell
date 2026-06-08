@@ -21,6 +21,8 @@ function App(): React.JSX.Element {
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
+  const [includeDirStructure, setIncludeDirStructure] = useState(false)
+  const [dirStructureAddedAtIndex, setDirStructureAddedAtIndex] = useState<number | null>(null)
   const copySnapshotRef = useRef<Set<string>>(new Set())
   const isResizing = useRef(false)
   const layoutRef = useRef<HTMLDivElement>(null)
@@ -149,11 +151,11 @@ function App(): React.JSX.Element {
               relativePath = relativePath.substring(1)
             }
           }
-          const res: { exists: boolean; content: string | null } =
+          const res: { exists: boolean; error: boolean; content: string | null } =
             await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
-          if (res.exists && res.content !== null) {
-            return { path: relativePath, content: res.content }
-          }
+          if (!res.exists) return null
+          if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
+          if (res.content !== null) return { path: relativePath, content: res.content }
         }
         return null
       }
@@ -162,7 +164,18 @@ function App(): React.JSX.Element {
     const results = await Promise.all(pendingFilesPromises)
     const pendingFiles = results.filter((f): f is { path: string; content: string } => f !== null)
 
-    const success = await chatRef.current?.copyByIndex(undefined, pendingFiles)
+    const currentIndex = chatRef.current?.getResolvedUserIndex() ?? 0
+    let dirStructure: string | undefined
+    if (includeDirStructure) {
+      if (dirStructureAddedAtIndex === null || dirStructureAddedAtIndex === currentIndex) {
+        dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
+        if (dirStructureAddedAtIndex === null) {
+          setDirStructureAddedAtIndex(currentIndex)
+        }
+      }
+    }
+
+    const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
     if (!success) return
 
     setFileStates((prev) => {
@@ -182,7 +195,7 @@ function App(): React.JSX.Element {
       copySnapshotRef.current = snapshot
       return next
     })
-  }, [fileStates, filePaths, workspace])
+  }, [fileStates, filePaths, workspace, includeDirStructure, dirStructureAddedAtIndex])
 
   const handleNewChat = useCallback((): void => {
     setFileStates((prev) => {
@@ -196,6 +209,7 @@ function App(): React.JSX.Element {
       return next
     })
     copySnapshotRef.current = new Set()
+    setDirStructureAddedAtIndex(null)
   }, [workspace])
 
   const handlePaste = useCallback(async (): Promise<void> => {
@@ -275,6 +289,8 @@ function App(): React.JSX.Element {
               onToggleExpand={handleToggleExpand}
               onClearSelections={handleClearSelections}
               onFilePathsChange={handleFilePathsChange}
+              includeDirStructure={includeDirStructure}
+              onIncludeDirStructureChange={setIncludeDirStructure}
             />
           </div>
           <div

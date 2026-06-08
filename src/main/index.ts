@@ -78,6 +78,63 @@ function isEntryIgnored(entryPath: string, isDirectory: boolean, rules: IgnoreRu
   return false
 }
 
+interface FileNode {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  children?: FileNode[]
+  isBinary?: boolean
+}
+
+function readDirTree(path: string, parentRules: IgnoreRule[], isRoot: boolean): FileNode[] {
+  const currentRules = loadIgnoreRules(path, parentRules, isRoot)
+  try {
+    const entries = readdirSync(path, { withFileTypes: true })
+    return entries
+      .filter((entry) => {
+        const fullPath = join(path, entry.name)
+        return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
+      })
+      .map((entry) => {
+        const fullPath = join(path, entry.name)
+        if (entry.isDirectory()) {
+          return {
+            name: entry.name,
+            path: fullPath,
+            type: 'directory' as const,
+            children: readDirTree(fullPath, currentRules, false)
+          }
+        }
+        return {
+          name: entry.name,
+          path: fullPath,
+          type: 'file' as const,
+          isBinary: isBinaryFile(fullPath)
+        }
+      })
+  } catch {
+    return []
+  }
+}
+
+function formatTreeText(rootName: string, nodes: FileNode[]): string {
+  let result = `- ${rootName}/\n`
+  const walk = (list: FileNode[], indent: string): void => {
+    for (const node of list) {
+      if (node.type === 'directory') {
+        result += `${indent}- ${node.name}/\n`
+        if (node.children && node.children.length > 0) {
+          walk(node.children, indent + '  ')
+        }
+      } else {
+        result += `${indent}- ${node.name}\n`
+      }
+    }
+  }
+  walk(nodes, '  ')
+  return result
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -138,12 +195,15 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('read-file', async (_, workspace: string, relativePath: string) => {
+    const fullPath = join(workspace, relativePath)
+    if (!existsSync(fullPath)) {
+      return { exists: false, error: false, content: null }
+    }
     try {
-      const fullPath = join(workspace, relativePath)
       const content = readFileSync(fullPath, 'utf-8')
-      return { exists: true, content }
+      return { exists: true, error: false, content }
     } catch {
-      return { exists: false, content: null }
+      return { exists: true, error: true, content: null }
     }
   })
 
@@ -228,37 +288,13 @@ app.whenReady().then(() => {
   )
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
-    const readDir = (path: string, parentRules: IgnoreRule[], isRoot: boolean): unknown[] => {
-      const currentRules = loadIgnoreRules(path, parentRules, isRoot)
-      try {
-        const entries = readdirSync(path, { withFileTypes: true })
-        return entries
-          .filter((entry) => {
-            const fullPath = join(path, entry.name)
-            return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
-          })
-          .map((entry) => {
-            const fullPath = join(path, entry.name)
-            if (entry.isDirectory()) {
-              return {
-                name: entry.name,
-                path: fullPath,
-                type: 'directory',
-                children: readDir(fullPath, currentRules, false)
-              }
-            }
-            return {
-              name: entry.name,
-              path: fullPath,
-              type: 'file',
-              isBinary: isBinaryFile(fullPath)
-            }
-          })
-      } catch {
-        return []
-      }
-    }
-    return readDir(dirPath, [], true)
+    return readDirTree(dirPath, [], true)
+  })
+
+  ipcMain.handle('read-directory-tree', async (_, dirPath: string) => {
+    const nodes = readDirTree(dirPath, [], true)
+    const dirName = dirPath.split(/[/\\]/).pop() || dirPath
+    return formatTreeText(dirName, nodes)
   })
 
   createWindow()

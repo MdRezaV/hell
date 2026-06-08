@@ -92,7 +92,7 @@ SyntaxHighlighter.registerLanguage('dockerfile', docker)
 
 import hljs from 'highlight.js/lib/common'
 import { Play, Check, Copy, X } from 'lucide-react'
-import { trimSingleNewline, findMatchedBlocks, getActiveParser } from '../utils/markdownParser'
+import { parseReplaceBlock, getActiveParser } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
 
 interface MarkdownProps {
@@ -385,6 +385,82 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
               onScroll={handleRightScroll}
             />
           </div>
+        </div>
+      </div>
+    </div>
+  )
+})
+
+const FileMoveBlock = memo(function FileMoveBlock({
+  oldPath,
+  newPath
+}: {
+  oldPath: string
+  newPath: string
+}): React.JSX.Element {
+  const { workspace } = useWorkspace()
+  const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
+
+  const handleApply = useCallback(async (): Promise<void> => {
+    if (!workspace) return
+    const readResult: FileState = await window.electron.ipcRenderer.invoke(
+      'read-file',
+      workspace,
+      oldPath
+    )
+    if (!readResult.exists || readResult.content === null) {
+      setApplyState('error')
+      return
+    }
+    const writeResult: { success: boolean; error?: string } =
+      await window.electron.ipcRenderer.invoke('write-file', workspace, newPath, readResult.content)
+    if (!writeResult.success) {
+      setApplyState('error')
+      return
+    }
+    const deleteResult: { success: boolean; error?: string } =
+      await window.electron.ipcRenderer.invoke('delete-file', workspace, oldPath)
+    setApplyState(deleteResult.success ? 'applied' : 'error')
+  }, [workspace, oldPath, newPath])
+
+  return (
+    <div className="md-file-block">
+      <div className="md-file-header">
+        <div className="md-file-header-left">
+          <span className="md-file-status-label moved">MOVED</span>
+          <FilePathDisplay path={oldPath} />
+          <span className="md-file-move-arrow" style={{ margin: '0 8px', opacity: 0.6 }}>
+            →
+          </span>
+          <FilePathDisplay path={newPath} />
+        </div>
+        <div className="md-file-header-actions">
+          <button
+            type="button"
+            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            onClick={handleApply}
+            title={
+              applyState === 'applied'
+                ? 'Applied'
+                : applyState === 'error'
+                  ? 'Failed to apply'
+                  : 'Apply move'
+            }
+          >
+            {applyState === 'applied' ? (
+              <>
+                <Check size={12} />
+                <span>Applied</span>
+              </>
+            ) : applyState === 'error' ? (
+              <>
+                <X size={12} />
+                <span>Error</span>
+              </>
+            ) : (
+              <span>Apply</span>
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -770,6 +846,9 @@ const markdownComponents: Components = {
           } else if (childProps.className.startsWith('language-file-delete:')) {
             filePath = childProps.className.slice('language-file-delete:'.length)
             language = 'file-delete'
+          } else if (childProps.className.startsWith('language-file-move:')) {
+            filePath = childProps.className.slice('language-file-move:'.length)
+            language = 'file-move'
           } else if (childProps.className.startsWith('language-file:')) {
             filePath = childProps.className.slice('language-file:'.length)
             language = 'file'
@@ -784,18 +863,19 @@ const markdownComponents: Components = {
 
     if (filePath) {
       if (language === 'file-replace') {
-        const { matched: oldBlocks } = findMatchedBlocks(codeText, 'old')
-        const oldBlockRanges = oldBlocks.map((b) => ({
-          start: b.open.start,
-          end: b.close.end
-        }))
-        const { matched: newBlocks } = findMatchedBlocks(codeText, 'new', oldBlockRanges)
-        const oldCode = oldBlocks.length > 0 ? trimSingleNewline(oldBlocks[0].body) : ''
-        const newCode = newBlocks.length > 0 ? trimSingleNewline(newBlocks[0].body) : ''
+        const parsed = parseReplaceBlock(codeText)
+        const oldCode = parsed?.oldCode ?? ''
+        const newCode = parsed?.newCode ?? ''
         return <FileReplaceBlock path={filePath} oldCode={oldCode} newCode={newCode} />
       }
       if (language === 'file-delete') {
         return <FileDeleteBlock path={filePath} />
+      }
+      if (language === 'file-move') {
+        const arrowIdx = filePath.indexOf('->')
+        const oldPath = arrowIdx >= 0 ? filePath.slice(0, arrowIdx) : filePath
+        const newPath = arrowIdx >= 0 ? filePath.slice(arrowIdx + 2) : ''
+        return <FileMoveBlock oldPath={oldPath} newPath={newPath} />
       }
       return <FileBlock path={filePath} code={codeText} />
     }

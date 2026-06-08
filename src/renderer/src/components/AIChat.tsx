@@ -277,8 +277,9 @@ const MessageBubble = memo(function MessageBubble({
 })
 
 export interface AIChatHandle {
-  copyByIndex(index?: number, files?: FileContext[]): Promise<boolean>
+  copyByIndex(index?: number, files?: FileContext[], dirStructure?: string): Promise<boolean>
   pasteAsAssistant(): Promise<boolean>
+  getResolvedUserIndex(): number
 }
 
 interface AIChatProps {
@@ -328,7 +329,16 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   useImperativeHandle(ref, () => {
     return {
-      async copyByIndex(index?: number, files: FileContext[] = []): Promise<boolean> {
+      getResolvedUserIndex(): number {
+        const userMessages = messages.filter((m) => m.role === 'user')
+        if (userMessages.length === 0) return 0
+        return userMessages.length - 1
+      },
+      async copyByIndex(
+        index?: number,
+        files: FileContext[] = [],
+        dirStructure?: string
+      ): Promise<boolean> {
         let currentMessages = messages
 
         const userMessages = currentMessages.filter((m) => m.role === 'user')
@@ -358,7 +368,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
             : index
         const userMsg = updatedUserMessages[resolvedIndex]
         const userContent = userMsg.variants[userMsg.activeVariant].content
-        const promptText = buildPrompt(userContent, resolvedIndex, files)
+        const promptText = buildPrompt(userContent, resolvedIndex, files, dirStructure)
         try {
           await navigator.clipboard.writeText(promptText)
           return true

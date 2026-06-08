@@ -163,20 +163,31 @@ export interface FileContext {
   content: string
 }
 
-function formatFiles(files: FileContext[]): string {
-  if (files.length === 0) return ''
-  return files
-    .map((f) => `<file path="${f.path}">\n<![CDATA[\n${f.content}\n]]>\n</file>`)
-    .join('\n')
+function formatContext(files: FileContext[], dirStructure?: string): string {
+  let result = ''
+  if (dirStructure) {
+    result += `<directory_structure>\n${dirStructure}</directory_structure>\n`
+  }
+  if (files.length > 0) {
+    result += files
+      .map((f) => `<file path="${f.path}">\n<![CDATA[\n${f.content}\n]]>\n</file>`)
+      .join('\n')
+  }
+  return result
 }
 
-export function buildPrompt(userMessage: string, index: number, files: FileContext[] = []): string {
-  const filesSection = formatFiles(files)
+export function buildPrompt(
+  userMessage: string,
+  index: number,
+  files: FileContext[] = [],
+  dirStructure?: string
+): string {
+  const contextSection = formatContext(files, dirStructure)
   if (index === 0) {
-    return `${SYSTEM_PROMPT_INITIAL_START}\n${filesSection}\n${SYSTEM_PROMPT_INITIAL_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_INITIAL_END}`
+    return `${SYSTEM_PROMPT_INITIAL_START}\n${contextSection}\n${SYSTEM_PROMPT_INITIAL_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_INITIAL_END}`
   }
   if (index % 5 == 0) {
-    return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${filesSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}\n${SYSTEM_REMINDER_OUTPUT_FORMAT}`
+    return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}\n${SYSTEM_REMINDER_OUTPUT_FORMAT}`
   }
-  return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${filesSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}`
+  return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}`
 }

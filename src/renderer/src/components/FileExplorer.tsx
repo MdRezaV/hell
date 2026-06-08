@@ -228,7 +228,9 @@ function FileExplorer({
   onToggleFile,
   onToggleExpand,
   onClearSelections,
-  onFilePathsChange
+  onFilePathsChange,
+  includeDirStructure,
+  onIncludeDirStructureChange
 }: {
   workspace: string | null
   onWorkspaceChange: (path: string | null) => void
@@ -238,6 +240,8 @@ function FileExplorer({
   onToggleExpand: (path: string, expanded: boolean) => void
   onClearSelections: () => void
   onFilePathsChange: (paths: Set<string>) => void
+  includeDirStructure: boolean
+  onIncludeDirStructureChange: (value: boolean) => void
 }): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
 
@@ -338,6 +342,32 @@ function FileExplorer({
             onToggleExpand={onToggleExpand}
           />
         ))}
+      </div>
+      <div
+        style={{
+          padding: '8px 12px',
+          borderTop: '1px solid var(--border, #333)',
+          marginTop: 'auto'
+        }}
+      >
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '12px',
+            cursor: 'pointer',
+            userSelect: 'none'
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={includeDirStructure}
+            onChange={(e) => onIncludeDirStructureChange(e.target.checked)}
+            disabled={!workspace}
+          />
+          <span>Include directory structure</span>
+        </label>
       </div>
     </div>
   )
