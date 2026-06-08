@@ -3,7 +3,6 @@ import React, {
   useRef,
   useEffect,
   useCallback,
-  useMemo,
   memo,
   forwardRef,
   useImperativeHandle
@@ -12,13 +11,11 @@ import {
   Copy,
   Bot,
   Sparkles,
-  Loader2,
   MessageSquarePlus,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   Pencil,
-  RefreshCw,
   Check,
   X
 } from 'lucide-react'
@@ -95,8 +92,20 @@ function ModeSelector({
   )
 }
 
-function getAIResponse(userMessage: string): string {
-  return userMessage
+function TypingIndicator(): React.JSX.Element {
+  return (
+    <div className="chat-message chat-message-ai">
+      <div className="chat-message-body">
+        <div className="chat-bubble chat-bubble-ai">
+          <div className="chat-typing">
+            <span className="chat-typing-dot" />
+            <span className="chat-typing-dot" />
+            <span className="chat-typing-dot" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function formatTime(date: Date): string {
@@ -165,25 +174,19 @@ function EditMessage({
 
 const MessageBubble = memo(function MessageBubble({
   message,
-  isLastAssistant,
-  isLoading,
   isEditing,
   isCopied,
   onVariantChange,
   onEdit,
-  onRegenerate,
   onStartEdit,
   onCancelEdit,
   onCopy
 }: {
   message: ChatMessage
-  isLastAssistant: boolean
-  isLoading: boolean
   isEditing: boolean
   isCopied: boolean
   onVariantChange: (id: string, dir: 'prev' | 'next') => void
   onEdit: (id: string, content: string) => void
-  onRegenerate: (id: string) => void
   onStartEdit: (id: string) => void
   onCancelEdit: () => void
   onCopy: (id: string, content: string) => void
@@ -191,7 +194,6 @@ const MessageBubble = memo(function MessageBubble({
   const isUser = message.role === 'user'
   const variant = message.variants[message.activeVariant]
   const hasVariants = message.variants.length > 1
-  const isActiveEmpty = variant.content === '' && isLoading
 
   return (
     <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-ai'}`}>
@@ -207,13 +209,7 @@ const MessageBubble = memo(function MessageBubble({
         ) : (
           <>
             <div className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-ai'}`}>
-              {isActiveEmpty ? (
-                <div className="chat-typing">
-                  <span className="chat-typing-dot" />
-                  <span className="chat-typing-dot" />
-                  <span className="chat-typing-dot" />
-                </div>
-              ) : isUser ? (
+              {isUser ? (
                 <div className="chat-bubble-content">
                   {variant.content.split('\n').map((line, i) => (
                     <span key={i}>
@@ -234,7 +230,7 @@ const MessageBubble = memo(function MessageBubble({
                 <div className="chat-variant-nav">
                   <button
                     onClick={() => onVariantChange(message.id, 'prev')}
-                    disabled={message.activeVariant === 0 || isLoading}
+                    disabled={message.activeVariant === 0}
                     title="Previous"
                   >
                     <ChevronLeft size={12} />
@@ -244,14 +240,14 @@ const MessageBubble = memo(function MessageBubble({
                   </span>
                   <button
                     onClick={() => onVariantChange(message.id, 'next')}
-                    disabled={message.activeVariant === message.variants.length - 1 || isLoading}
+                    disabled={message.activeVariant === message.variants.length - 1}
                     title="Next"
                   >
                     <ChevronRight size={12} />
                   </button>
                 </div>
               )}
-              {isUser && !isLoading && (
+              {isUser && (
                 <button
                   className="chat-action-btn"
                   onClick={() => onStartEdit(message.id)}
@@ -260,16 +256,7 @@ const MessageBubble = memo(function MessageBubble({
                   <Pencil size={12} />
                 </button>
               )}
-              {!isUser && isLastAssistant && !isLoading && (
-                <button
-                  className="chat-action-btn"
-                  onClick={() => onRegenerate(message.id)}
-                  title="Regenerate"
-                >
-                  <RefreshCw size={12} />
-                </button>
-              )}
-              {!isActiveEmpty && (
+              {
                 <button
                   className="chat-action-btn"
                   onClick={() => onCopy(message.id, variant.content)}
@@ -277,7 +264,7 @@ const MessageBubble = memo(function MessageBubble({
                 >
                   {isCopied ? <Check size={12} /> : <Copy size={12} />}
                 </button>
-              )}
+              }
             </div>
           </>
         )}
@@ -286,48 +273,22 @@ const MessageBubble = memo(function MessageBubble({
   )
 })
 
-function TypingIndicator(): React.JSX.Element {
-  return (
-    <div className="chat-message chat-message-ai">
-      <div className="chat-message-body">
-        <div className="chat-bubble chat-bubble-ai">
-          <div className="chat-typing">
-            <span className="chat-typing-dot" />
-            <span className="chat-typing-dot" />
-            <span className="chat-typing-dot" />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export interface AIChatHandle {
-  copyByIndex(index?: number): Promise<boolean>
+  copyByIndex(index?: number, files?: string[]): Promise<boolean>
   pasteAsAssistant(): Promise<boolean>
 }
 
 const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0])
+  const [isAwaitingResponse, setIsAwaitingResponse] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const copyTimeoutRef = useRef<number | null>(null)
-  const messagesRef = useRef(messages)
-  const isLoadingRef = useRef(isLoading)
   const resizeTextarea = useAutoResizeTextarea()
-
-  useEffect(() => {
-    messagesRef.current = messages
-  }, [messages])
-
-  useEffect(() => {
-    isLoadingRef.current = isLoading
-  }, [isLoading])
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -335,7 +296,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isLoading])
+  }, [messages, isAwaitingResponse])
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -358,7 +319,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
   useImperativeHandle(
     ref,
     () => ({
-      async copyByIndex(index?: number): Promise<boolean> {
+      async copyByIndex(index?: number, files: string[] = []): Promise<boolean> {
         const userMessages = messages.filter((m) => m.role === 'user')
         if (userMessages.length === 0) return false
         const resolvedIndex =
@@ -367,7 +328,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
             : index
         const userMsg = userMessages[resolvedIndex]
         const userContent = userMsg.variants[userMsg.activeVariant].content
-        const promptText = buildPrompt(userContent, resolvedIndex)
+        const promptText = buildPrompt(userContent, resolvedIndex, files)
         try {
           await navigator.clipboard.writeText(promptText)
           return true
@@ -386,6 +347,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
             activeVariant: 0
           }
           setMessages((prev) => [...prev, aiMessage])
+          setIsAwaitingResponse(false)
           return true
         } catch {
           return false
@@ -395,9 +357,9 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     [messages]
   )
 
-  const handleSend = async (): Promise<void> => {
+  const handleSend = (): void => {
     const trimmed = input.trim()
-    if (!trimmed || isLoading) return
+    if (!trimmed) return
 
     const userMessage: ChatMessage = {
       id: generateId(),
@@ -411,104 +373,27 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
     }
-    setIsLoading(true)
-
-    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200))
-
-    const aiMessage: ChatMessage = {
-      id: generateId(),
-      role: 'assistant',
-      variants: [{ content: getAIResponse(trimmed), timestamp: new Date() }],
-      activeVariant: 0
-    }
-
-    setMessages((prev) => [...prev, aiMessage])
-    setIsLoading(false)
+    setIsAwaitingResponse(true)
   }
 
-  const handleRegenerate = useCallback(async (messageId: string): Promise<void> => {
-    if (isLoadingRef.current) return
-
-    const currentMessages = messagesRef.current
-    const msgIndex = currentMessages.findIndex((m) => m.id === messageId)
-    if (msgIndex === -1) return
-
-    const userMsg = currentMessages
-      .slice(0, msgIndex)
-      .reverse()
-      .find((m) => m.role === 'user')
-    if (!userMsg) return
-
-    const userContent = userMsg.variants[userMsg.activeVariant].content
+  const handleEditSave = useCallback((messageId: string, newContent: string): void => {
+    const trimmed = newContent.trim()
+    if (!trimmed) return
 
     setMessages((prev) => {
-      const updated = [...prev]
-      const idx = updated.findIndex((m) => m.id === messageId)
+      const idx = prev.findIndex((m) => m.id === messageId)
       if (idx === -1) return prev
+      const updated = prev.slice(0, idx + 1)
       const msg = { ...updated[idx] }
-      msg.variants = [...msg.variants, { content: '', timestamp: new Date() }]
+      msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
       msg.activeVariant = msg.variants.length - 1
       updated[idx] = msg
       return updated
     })
 
-    setIsLoading(true)
-
-    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200))
-
-    const newContent = getAIResponse(userContent)
-
-    setMessages((prev) => {
-      const updated = [...prev]
-      const idx = updated.findIndex((m) => m.id === messageId)
-      if (idx === -1) return prev
-      const msg = { ...updated[idx] }
-      msg.variants = [...msg.variants]
-      msg.variants[msg.activeVariant] = { content: newContent, timestamp: new Date() }
-      updated[idx] = msg
-      return updated
-    })
-
-    setIsLoading(false)
+    setEditingId(null)
+    setIsAwaitingResponse(true)
   }, [])
-
-  const handleEditSave = useCallback(
-    async (messageId: string, newContent: string): Promise<void> => {
-      const trimmed = newContent.trim()
-      if (!trimmed || isLoadingRef.current) return
-
-      const currentMessages = messagesRef.current
-      const msgIndex = currentMessages.findIndex((m) => m.id === messageId)
-      if (msgIndex === -1) return
-
-      setMessages((prev) => {
-        const idx = prev.findIndex((m) => m.id === messageId)
-        if (idx === -1) return prev
-        const updated = prev.slice(0, idx + 1)
-        const msg = { ...updated[idx] }
-        msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
-        msg.activeVariant = msg.variants.length - 1
-        updated[idx] = msg
-        return updated
-      })
-
-      setEditingId(null)
-      setIsLoading(true)
-
-      await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200))
-
-      const aiMessage: ChatMessage = {
-        id: generateId(),
-        role: 'assistant',
-        variants: [{ content: getAIResponse(trimmed), timestamp: new Date() }],
-        activeVariant: 0
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
-      setIsLoading(false)
-    },
-    []
-  )
 
   const handleVariantChange = useCallback((messageId: string, direction: 'prev' | 'next'): void => {
     setMessages((prev) => {
@@ -538,9 +423,9 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
     }
-    setIsLoading(false)
     setEditingId(null)
     setCopiedId(null)
+    setIsAwaitingResponse(false)
   }, [])
 
   const handleCopy = useCallback(async (messageId: string, content: string): Promise<void> => {
@@ -573,12 +458,6 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
   }
 
   const isChatMode = messages.length > 0
-  const lastAssistantIndex = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'assistant') return i
-    }
-    return -1
-  }, [messages])
 
   if (!isChatMode) {
     return (
@@ -600,7 +479,6 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
               onChange={handleTextareaInput}
               onKeyDown={handleKeyDown}
               rows={1}
-              disabled={isLoading}
             />
             <div className="ai-chat-input-footer">
               <ModeSelector mode={mode} onChange={setMode} />
@@ -618,7 +496,6 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
           <Bot size={14} />
           <span>AI Assistant</span>
           <span className="ai-chat-mode-badge">{mode}</span>
-          {isLoading && <Loader2 size={12} className="spin" />}
         </div>
         <div className="ai-chat-header-actions">
           <button onClick={handleNewChat} title="New Chat">
@@ -627,25 +504,20 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
         </div>
       </div>
       <div className="ai-chat-messages">
-        {messages.map((msg, i) => (
+        {messages.map((msg) => (
           <MessageBubble
             key={msg.id}
             message={msg}
-            isLastAssistant={i === lastAssistantIndex}
-            isLoading={isLoading}
             isEditing={editingId === msg.id}
             isCopied={copiedId === msg.id}
             onVariantChange={handleVariantChange}
             onEdit={handleEditSave}
-            onRegenerate={handleRegenerate}
             onStartEdit={setEditingId}
             onCancelEdit={handleCancelEdit}
             onCopy={handleCopy}
           />
         ))}
-        {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
-          <TypingIndicator />
-        )}
+        {isAwaitingResponse && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>
       <div className="ai-chat-input-bar ai-chat-input-bar-floating">
@@ -658,7 +530,6 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
             onChange={handleTextareaInput}
             onKeyDown={handleKeyDown}
             rows={1}
-            disabled={isLoading}
           />
         </div>
       </div>

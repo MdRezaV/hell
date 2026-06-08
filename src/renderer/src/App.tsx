@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import FileExplorer from './components/FileExplorer'
+import FileExplorer, { type FileTag } from './components/FileExplorer'
 import AIChat, { type AIChatHandle } from './components/AIChat'
+import StatusBar from './components/StatusBar'
 import { WorkspaceContext } from './WorkspaceContext'
+
+type FileStates = Map<string, FileTag>
 
 const MIN_LEFT_WIDTH = 160
 const MAX_LEFT_WIDTH = 520
@@ -10,16 +13,78 @@ const DEFAULT_LEFT_WIDTH = 280
 function App(): React.JSX.Element {
   const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
   const [workspace, setWorkspace] = useState<string | null>(null)
+  const [fileStates, setFileStates] = useState<FileStates>(new Map())
+  const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
+  const copySnapshotRef = useRef<Set<string>>(new Set())
   const isResizing = useRef(false)
   const layoutRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<AIChatHandle>(null)
 
-  const handleCopy = useCallback(async (): Promise<void> => {
-    await chatRef.current?.copyByIndex()
+  const handleWorkspaceChange = useCallback((path: string | null): void => {
+    setWorkspace(path)
+    setFileStates(new Map())
+    copySnapshotRef.current = new Set()
   }, [])
+
+  const handleToggleFile = useCallback((paths: string[], checked: boolean): void => {
+    setFileStates((prev) => {
+      const next = new Map(prev)
+      if (checked) {
+        paths.forEach((p) => {
+          if (!next.has(p)) next.set(p, 'PND')
+        })
+      } else {
+        paths.forEach((p) => {
+          if (next.get(p) !== 'ADD') next.delete(p)
+        })
+      }
+      return next
+    })
+  }, [])
+
+  const handleFilePathsChange = useCallback((paths: Set<string>): void => {
+    setFilePaths(paths)
+  }, [])
+
+  const handleCopy = useCallback(async (): Promise<void> => {
+    const pendingFiles: string[] = []
+    fileStates.forEach((state, path) => {
+      if (state === 'PND' && filePaths.has(path)) {
+        pendingFiles.push(path)
+      }
+    })
+
+    await chatRef.current?.copyByIndex(undefined, pendingFiles)
+
+    setFileStates((prev) => {
+      const next = new Map(prev)
+      const snapshot = new Set<string>()
+      next.forEach((state, path) => {
+        if (state === 'PND') {
+          snapshot.add(path)
+          next.set(path, 'INQ')
+        }
+      })
+      copySnapshotRef.current = snapshot
+      return next
+    })
+  }, [fileStates, filePaths])
 
   const handlePaste = useCallback(async (): Promise<void> => {
     await chatRef.current?.pasteAsAssistant()
+
+    const snapshot = copySnapshotRef.current
+    setFileStates((prev) => {
+      const next = new Map(prev)
+      snapshot.forEach((path) => {
+        next.set(path, 'ADD')
+      })
+      next.forEach((state, path) => {
+        if (state === 'INQ') next.set(path, 'ADD')
+      })
+      return next
+    })
+    copySnapshotRef.current = new Set()
   }, [])
 
   const startResize = useCallback((e: React.MouseEvent): void => {
@@ -58,9 +123,20 @@ function App(): React.JSX.Element {
         <div className="flex flex-1 overflow-hidden" ref={layoutRef}>
           <div
             className="min-w-[160px] max-w-[520px] border-r border-border bg-background-soft flex flex-col"
-            style={{ width: `${leftWidth}px`, flexBasis: `${leftWidth}px`, flexGrow: 0, flexShrink: 0 }}
+            style={{
+              width: `${leftWidth}px`,
+              flexBasis: `${leftWidth}px`,
+              flexGrow: 0,
+              flexShrink: 0
+            }}
           >
-            <FileExplorer workspace={workspace} onWorkspaceChange={setWorkspace} />
+            <FileExplorer
+              workspace={workspace}
+              onWorkspaceChange={handleWorkspaceChange}
+              fileStates={fileStates}
+              onToggleFile={handleToggleFile}
+              onFilePathsChange={handleFilePathsChange}
+            />
           </div>
           <div
             className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
@@ -70,24 +146,7 @@ function App(): React.JSX.Element {
             <AIChat ref={chatRef} />
           </div>
         </div>
-        <div className="flex items-center h-5 m-0 px-2.5 bg-accent flex-shrink-0 gap-3 leading-none">
-          <span className="text-[11px] font-medium text-accent-text opacity-85 leading-none">Ready</span>
-          <span className="flex-1"></span>
-          <div className="flex gap-0">
-            <button
-              onClick={handlePaste}
-              className="inline-flex items-center justify-center px-2 h-[18px] text-[10px] font-bold tracking-wider text-white bg-[rgba(0,0,0,0.15)] border border-[rgba(255,255,255,0.2)] border-r-0 rounded-none cursor-pointer leading-none hover:bg-[rgba(0,0,0,0.3)] active:bg-[rgba(0,0,0,0.4)]"
-            >
-              PASTE
-            </button>
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center justify-center px-2 h-[18px] text-[10px] font-bold tracking-wider text-white bg-[rgba(0,0,0,0.15)] border border-[rgba(255,255,255,0.2)] rounded-none cursor-pointer leading-none hover:bg-[rgba(0,0,0,0.3)] active:bg-[rgba(0,0,0,0.4)]"
-            >
-              COPY
-            </button>
-          </div>
-        </div>
+        <StatusBar onCopy={handleCopy} onPaste={handlePaste} />
       </div>
     </WorkspaceContext.Provider>
   )

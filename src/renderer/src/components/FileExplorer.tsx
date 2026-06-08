@@ -1,5 +1,15 @@
-import { useState, useCallback, useEffect, useMemo, memo } from 'react'
-import { ChevronRight, ChevronDown, Folder, File } from 'lucide-react'
+import { useState, useEffect, useMemo, memo } from 'react'
+import {
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  File,
+  FolderOpen,
+  RefreshCw,
+  Folder as FolderBig
+} from 'lucide-react'
+
+export type FileTag = 'PND' | 'INQ' | 'ADD'
 
 interface FileNode {
   name: string
@@ -10,22 +20,13 @@ interface FileNode {
 
 type CheckState = 'checked' | 'unchecked' | 'indeterminate'
 
-function getCheckState(
-  node: FileNode,
-  checkedPaths: Set<string>
-): CheckState {
-  if (node.type === 'file') {
-    return checkedPaths.has(node.path) ? 'checked' : 'unchecked'
+function getCheckState(node: FileNode, fileStates: Map<string, FileTag>): CheckState {
+  if (node.type === 'file' || !node.children || node.children.length === 0) {
+    return fileStates.has(node.path) ? 'checked' : 'unchecked'
   }
-
-  if (!node.children || node.children.length === 0) {
-    return checkedPaths.has(node.path) ? 'checked' : 'unchecked'
-  }
-
-  const childStates = node.children.map(child => getCheckState(child, checkedPaths))
-  const hasChecked = childStates.some(s => s === 'checked' || s === 'indeterminate')
-  const allChecked = childStates.every(s => s === 'checked')
-
+  const childStates = node.children.map((child) => getCheckState(child, fileStates))
+  const hasChecked = childStates.some((s) => s === 'checked' || s === 'indeterminate')
+  const allChecked = childStates.every((s) => s === 'checked')
   if (allChecked) return 'checked'
   if (hasChecked) return 'indeterminate'
   return 'unchecked'
@@ -34,7 +35,7 @@ function getCheckState(
 function getAllPaths(node: FileNode): string[] {
   const paths = [node.path]
   if (node.children) {
-    node.children.forEach(child => {
+    node.children.forEach((child) => {
       paths.push(...getAllPaths(child))
     })
   }
@@ -44,21 +45,22 @@ function getAllPaths(node: FileNode): string[] {
 const TreeNode = memo(function TreeNode({
   node,
   level,
-  checkedPaths,
+  fileStates,
   onToggle
 }: {
   node: FileNode
   level: number
-  checkedPaths: Set<string>
-  onToggle: (node: FileNode, checked: boolean) => void
+  fileStates: Map<string, FileTag>
+  onToggle: (paths: string[], checked: boolean) => void
 }): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
-  const checkState = getCheckState(node, checkedPaths)
+  const checkState = getCheckState(node, fileStates)
+  const tag = fileStates.get(node.path)
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     e.stopPropagation()
-    onToggle(node, e.target.checked)
+    onToggle(getAllPaths(node), e.target.checked)
   }
 
   const handleCheckboxClick = (e: React.MouseEvent): void => {
@@ -73,7 +75,7 @@ const TreeNode = memo(function TreeNode({
         onClick={() => hasChildren && setIsOpen(!isOpen)}
       >
         <span className="tree-chevron">
-          {hasChildren ? (isOpen ? <ChevronDown /> : <ChevronRight />) : null}
+          {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
         </span>
         <span className="tree-checkbox" onClick={handleCheckboxClick}>
           <input
@@ -91,15 +93,16 @@ const TreeNode = memo(function TreeNode({
           {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
         </span>
         <span className="tree-label">{node.name}</span>
+        {tag && <span className={`tree-tag tree-tag-${tag.toLowerCase()}`}>{tag}</span>}
       </div>
       {isOpen && hasChildren && (
         <div>
-          {node.children!.map(child => (
+          {node.children!.map((child) => (
             <TreeNode
               key={child.path}
               node={child}
               level={level + 1}
-              checkedPaths={checkedPaths}
+              fileStates={fileStates}
               onToggle={onToggle}
             />
           ))}
@@ -117,7 +120,7 @@ function sortTree(nodes: FileNode[]): FileNode[] {
       }
       return a.name.localeCompare(b.name)
     })
-    .map(node => {
+    .map((node) => {
       if (node.children) {
         return { ...node, children: sortTree(node.children) }
       }
@@ -125,35 +128,53 @@ function sortTree(nodes: FileNode[]): FileNode[] {
     })
 }
 
-import { FolderOpen, RefreshCw, Folder as FolderBig } from 'lucide-react'
+function collectFilePaths(nodes: FileNode[]): Set<string> {
+  const paths = new Set<string>()
+  const walk = (list: FileNode[]): void => {
+    for (const n of list) {
+      if (n.type === 'file') paths.add(n.path)
+      if (n.children) walk(n.children)
+    }
+  }
+  walk(nodes)
+  return paths
+}
 
 function FileExplorer({
   workspace,
-  onWorkspaceChange
+  onWorkspaceChange,
+  fileStates,
+  onToggleFile,
+  onFilePathsChange
 }: {
   workspace: string | null
   onWorkspaceChange: (path: string | null) => void
+  fileStates: Map<string, FileTag>
+  onToggleFile: (paths: string[], checked: boolean) => void
+  onFilePathsChange: (paths: Set<string>) => void
 }): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
-  const [checkedPaths, setCheckedPaths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
     if (workspace) {
       window.electron.ipcRenderer.invoke('read-directory', workspace).then((files: FileNode[]) => {
         if (!cancelled) {
-          setTree(sortTree(files))
-          setCheckedPaths(new Set())
+          const sorted = sortTree(files)
+          setTree(sorted)
+          onFilePathsChange(collectFilePaths(sorted))
         }
       })
     } else {
       queueMicrotask(() => {
         setTree([])
-        setCheckedPaths(new Set())
+        onFilePathsChange(new Set())
       })
     }
-    return () => { cancelled = true }
-  }, [workspace])
+    return () => {
+      cancelled = true
+    }
+  }, [workspace, onFilePathsChange])
 
   const handleOpenWorkspace = async (): Promise<void> => {
     const path = await window.electron.ipcRenderer.invoke('open-workspace')
@@ -165,46 +186,21 @@ function FileExplorer({
   const handleRefresh = async (): Promise<void> => {
     if (!workspace) return
     const files = await window.electron.ipcRenderer.invoke('read-directory', workspace)
-    setTree(sortTree(files))
-    setCheckedPaths(new Set())
+    const sorted = sortTree(files)
+    setTree(sorted)
+    onFilePathsChange(collectFilePaths(sorted))
   }
 
-  const handleToggle = useCallback((node: FileNode, checked: boolean): void => {
-    setCheckedPaths(prev => {
-      const next = new Set(prev)
-      const paths = getAllPaths(node)
-
-      if (checked) {
-        paths.forEach(p => next.add(p))
-      } else {
-        paths.forEach(p => next.delete(p))
-      }
-
-      return next
-    })
-  }, [])
-
-  const filePathSet = useMemo(() => {
-    const paths = new Set<string>()
-    const collect = (nodes: FileNode[]): void => {
-      for (const node of nodes) {
-        if (node.type === 'file') paths.add(node.path)
-        if (node.children) collect(node.children)
-      }
-    }
-    collect(tree)
-    return paths
-  }, [tree])
-
-  const fileCount = useMemo(() => filePathSet.size, [filePathSet])
+  const filePathSet = useMemo(() => collectFilePaths(tree), [tree])
+  const fileCount = filePathSet.size
 
   const checkedCount = useMemo(() => {
     let count = 0
-    checkedPaths.forEach(p => {
+    fileStates.forEach((_, p) => {
       if (filePathSet.has(p)) count++
     })
     return count
-  }, [filePathSet, checkedPaths])
+  }, [filePathSet, fileStates])
 
   if (!workspace) {
     return (
@@ -221,7 +217,9 @@ function FileExplorer({
       <div className="explorer-header">
         <div className="explorer-header-left">
           <span className="explorer-header-title">{workspace.split(/[/\\]/).pop()}</span>
-          <span className="explorer-count">{checkedCount}/{fileCount}</span>
+          <span className="explorer-count">
+            {checkedCount}/{fileCount}
+          </span>
         </div>
         <div className="explorer-header-actions">
           <button onClick={handleRefresh} title="Refresh">
@@ -233,13 +231,13 @@ function FileExplorer({
         </div>
       </div>
       <div className="explorer-tree">
-        {tree.map(node => (
+        {tree.map((node) => (
           <TreeNode
             key={node.path}
             node={node}
             level={0}
-            checkedPaths={checkedPaths}
-            onToggle={handleToggle}
+            fileStates={fileStates}
+            onToggle={onToggleFile}
           />
         ))}
       </div>

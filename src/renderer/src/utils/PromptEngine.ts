@@ -1,10 +1,15 @@
 export const SYSTEM_PROMPT_FIRST = `SYSTEM PROMPT (I WILL CONFIGURE IT MY SELF)`
 export const SYSTEM_PROMPT_SUBSEQUENT = `SYSTEM PROMPT 2`
-export const FILES_PLACEHOLDER = `[FILES-SHOULD-ADDED-HERE] (IGNORE THIS FOR NOW)`
 
-export function buildPrompt(userMessage: string, index: number): string {
+function formatFiles(files: string[]): string {
+  if (files.length === 0) return '[NO FILES SELECTED]'
+  return `Files:\n${files.map((f) => `- ${f}`).join('\n')}`
+}
+
+export function buildPrompt(userMessage: string, index: number, files: string[] = []): string {
+  const filesSection = formatFiles(files)
   if (index === 0) {
-    return `${SYSTEM_PROMPT_FIRST}\n${index}\n${FILES_PLACEHOLDER}\n\n${userMessage}`
+    return `${SYSTEM_PROMPT_FIRST}\n${index}\n${filesSection}\n\n${userMessage}`
   }
-  return `${FILES_PLACEHOLDER}\n${index}\n${userMessage}\n\n${SYSTEM_PROMPT_SUBSEQUENT}`
+  return `${filesSection}\n${index}\n${userMessage}\n\n${SYSTEM_PROMPT_SUBSEQUENT}`
 }
