@@ -1,4 +1,13 @@
-import { useState, useRef, useEffect, useCallback, useMemo, memo, forwardRef, useImperativeHandle } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  memo,
+  forwardRef,
+  useImperativeHandle
+} from 'react'
 import {
   Copy,
   Bot,
@@ -16,6 +25,7 @@ import {
 import Markdown from './Markdown'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
+import { buildPrompt } from '../utils/PromptEngine'
 
 interface MessageVariant {
   content: string
@@ -54,7 +64,7 @@ function ModeSelector({
       <button
         type="button"
         className="ai-chat-input-mode-trigger"
-        onClick={() => setIsOpen(v => !v)}
+        onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -63,7 +73,7 @@ function ModeSelector({
       </button>
       {isOpen && (
         <div className="ai-chat-mode-menu" role="listbox">
-          {CHAT_MODES.map(m => (
+          {CHAT_MODES.map((m) => (
             <button
               key={m}
               type="button"
@@ -115,7 +125,7 @@ function EditMessage({
       editRef.current.focus()
       resizeTextarea(editRef.current)
     }
-  }, [])
+  }, [resizeTextarea])
 
   const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -345,43 +355,45 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     }
   }, [])
 
-  useImperativeHandle(ref, () => ({
-    async copyByIndex(index?: number): Promise<boolean> {
-      const userMessages = messages.filter(m => m.role === 'user')
-      if (userMessages.length === 0) return false
-      const resolvedIndex =
-        index === undefined || index < 0 || index >= userMessages.length
-          ? userMessages.length - 1
-          : index
-      const userMsg = userMessages[resolvedIndex]
-      const userIdx = messages.indexOf(userMsg)
-      const assistantMsg = messages.slice(userIdx + 1).find(m => m.role === 'assistant')
-      const target = assistantMsg ?? userMsg
-      const content = target.variants[target.activeVariant].content
-      try {
-        await navigator.clipboard.writeText(content)
-        return true
-      } catch {
-        return false
-      }
-    },
-    async pasteAsAssistant(): Promise<boolean> {
-      try {
-        const text = await navigator.clipboard.readText()
-        if (!text) return false
-        const aiMessage: ChatMessage = {
-          id: generateId(),
-          role: 'assistant',
-          variants: [{ content: text, timestamp: new Date() }],
-          activeVariant: 0
+  useImperativeHandle(
+    ref,
+    () => ({
+      async copyByIndex(index?: number): Promise<boolean> {
+        const userMessages = messages.filter((m) => m.role === 'user')
+        if (userMessages.length === 0) return false
+        const resolvedIndex =
+          index === undefined || index < 0 || index >= userMessages.length
+            ? userMessages.length - 1
+            : index
+        const userMsg = userMessages[resolvedIndex]
+        const userContent = userMsg.variants[userMsg.activeVariant].content
+        const promptText = buildPrompt(userContent, resolvedIndex)
+        try {
+          await navigator.clipboard.writeText(promptText)
+          return true
+        } catch {
+          return false
         }
-        setMessages(prev => [...prev, aiMessage])
-        return true
-      } catch {
-        return false
+      },
+      async pasteAsAssistant(): Promise<boolean> {
+        try {
+          const text = await navigator.clipboard.readText()
+          if (!text) return false
+          const aiMessage: ChatMessage = {
+            id: generateId(),
+            role: 'assistant',
+            variants: [{ content: text, timestamp: new Date() }],
+            activeVariant: 0
+          }
+          setMessages((prev) => [...prev, aiMessage])
+          return true
+        } catch {
+          return false
+        }
       }
-    }
-  }), [messages])
+    }),
+    [messages]
+  )
 
   const handleSend = async (): Promise<void> => {
     const trimmed = input.trim()
@@ -394,14 +406,14 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
       activeVariant: 0
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInput('')
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
     }
     setIsLoading(true)
 
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
+    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200))
 
     const aiMessage: ChatMessage = {
       id: generateId(),
@@ -410,7 +422,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
       activeVariant: 0
     }
 
-    setMessages(prev => [...prev, aiMessage])
+    setMessages((prev) => [...prev, aiMessage])
     setIsLoading(false)
   }
 
@@ -418,20 +430,20 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     if (isLoadingRef.current) return
 
     const currentMessages = messagesRef.current
-    const msgIndex = currentMessages.findIndex(m => m.id === messageId)
+    const msgIndex = currentMessages.findIndex((m) => m.id === messageId)
     if (msgIndex === -1) return
 
     const userMsg = currentMessages
       .slice(0, msgIndex)
       .reverse()
-      .find(m => m.role === 'user')
+      .find((m) => m.role === 'user')
     if (!userMsg) return
 
     const userContent = userMsg.variants[userMsg.activeVariant].content
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const updated = [...prev]
-      const idx = updated.findIndex(m => m.id === messageId)
+      const idx = updated.findIndex((m) => m.id === messageId)
       if (idx === -1) return prev
       const msg = { ...updated[idx] }
       msg.variants = [...msg.variants, { content: '', timestamp: new Date() }]
@@ -442,13 +454,13 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
 
     setIsLoading(true)
 
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
+    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200))
 
     const newContent = getAIResponse(userContent)
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const updated = [...prev]
-      const idx = updated.findIndex(m => m.id === messageId)
+      const idx = updated.findIndex((m) => m.id === messageId)
       if (idx === -1) return prev
       const msg = { ...updated[idx] }
       msg.variants = [...msg.variants]
@@ -460,45 +472,48 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     setIsLoading(false)
   }, [])
 
-  const handleEditSave = useCallback(async (messageId: string, newContent: string): Promise<void> => {
-    const trimmed = newContent.trim()
-    if (!trimmed || isLoadingRef.current) return
+  const handleEditSave = useCallback(
+    async (messageId: string, newContent: string): Promise<void> => {
+      const trimmed = newContent.trim()
+      if (!trimmed || isLoadingRef.current) return
 
-    const currentMessages = messagesRef.current
-    const msgIndex = currentMessages.findIndex(m => m.id === messageId)
-    if (msgIndex === -1) return
+      const currentMessages = messagesRef.current
+      const msgIndex = currentMessages.findIndex((m) => m.id === messageId)
+      if (msgIndex === -1) return
 
-    setMessages(prev => {
-      const idx = prev.findIndex(m => m.id === messageId)
-      if (idx === -1) return prev
-      const updated = prev.slice(0, idx + 1)
-      const msg = { ...updated[idx] }
-      msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
-      msg.activeVariant = msg.variants.length - 1
-      updated[idx] = msg
-      return updated
-    })
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === messageId)
+        if (idx === -1) return prev
+        const updated = prev.slice(0, idx + 1)
+        const msg = { ...updated[idx] }
+        msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
+        msg.activeVariant = msg.variants.length - 1
+        updated[idx] = msg
+        return updated
+      })
 
-    setEditingId(null)
-    setIsLoading(true)
+      setEditingId(null)
+      setIsLoading(true)
 
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
+      await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 1200))
 
-    const aiMessage: ChatMessage = {
-      id: generateId(),
-      role: 'assistant',
-      variants: [{ content: getAIResponse(trimmed), timestamp: new Date() }],
-      activeVariant: 0
-    }
+      const aiMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        variants: [{ content: getAIResponse(trimmed), timestamp: new Date() }],
+        activeVariant: 0
+      }
 
-    setMessages(prev => [...prev, aiMessage])
-    setIsLoading(false)
-  }, [])
+      setMessages((prev) => [...prev, aiMessage])
+      setIsLoading(false)
+    },
+    []
+  )
 
   const handleVariantChange = useCallback((messageId: string, direction: 'prev' | 'next'): void => {
-    setMessages(prev => {
+    setMessages((prev) => {
       const updated = [...prev]
-      const idx = updated.findIndex(m => m.id === messageId)
+      const idx = updated.findIndex((m) => m.id === messageId)
       if (idx === -1) return prev
       const msg = { ...updated[idx] }
       if (direction === 'prev' && msg.activeVariant > 0) {
@@ -536,7 +551,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
         clearTimeout(copyTimeoutRef.current)
       }
       copyTimeoutRef.current = window.setTimeout(() => {
-        setCopiedId(prev => (prev === messageId ? null : prev))
+        setCopiedId((prev) => (prev === messageId ? null : prev))
       }, 1500)
     } catch {
       /* ignore clipboard errors */
