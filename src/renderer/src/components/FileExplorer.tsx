@@ -38,14 +38,37 @@ function getCheckState(node: FileNode, fileStates: Map<string, FileTag>): CheckS
   return 'unchecked'
 }
 
-function getAllPaths(node: FileNode): string[] {
-  const paths = [node.path]
-  if (node.children) {
-    node.children.forEach((child) => {
-      paths.push(...getAllPaths(child))
-    })
-  }
+function getLeafPaths(node: FileNode): string[] {
+  if (node.type === 'file') return [node.path]
+  if (!node.children || node.children.length === 0) return []
+  const paths: string[] = []
+  node.children.forEach((child) => paths.push(...getLeafPaths(child)))
   return paths
+}
+
+const TAG_CHARS: Record<FileTag, string> = {
+  PND: 'P',
+  INQ: 'I',
+  ADD: 'A'
+}
+
+const TAG_ORDER: FileTag[] = ['PND', 'INQ', 'ADD']
+
+function getNodeTags(node: FileNode, fileStates: Map<string, FileTag>): FileTag[] {
+  if (node.type === 'file') {
+    const tag = fileStates.get(node.path)
+    return tag ? [tag] : []
+  }
+  const tagSet = new Set<FileTag>()
+  const walk = (n: FileNode): void => {
+    if (n.type === 'file') {
+      const t = fileStates.get(n.path)
+      if (t) tagSet.add(t)
+    }
+    n.children?.forEach(walk)
+  }
+  node.children?.forEach(walk)
+  return TAG_ORDER.filter((t) => tagSet.has(t))
 }
 
 const TreeNode = memo(function TreeNode({
@@ -62,11 +85,11 @@ const TreeNode = memo(function TreeNode({
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
   const checkState = getCheckState(node, fileStates)
-  const tag = fileStates.get(node.path)
+  const tags = getNodeTags(node, fileStates)
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     e.stopPropagation()
-    onToggle(getAllPaths(node), e.target.checked)
+    onToggle(getLeafPaths(node), e.target.checked)
   }
 
   const handleCheckboxClick = (e: React.MouseEvent): void => {
@@ -99,11 +122,11 @@ const TreeNode = memo(function TreeNode({
           {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
         </span>
         <span className="tree-label">{node.name}</span>
-        {tag && (
-          <span className="tree-tag" style={TAG_STYLES[tag]}>
-            {tag}
+        {tags.map((tag) => (
+          <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
+            {node.type === 'file' ? tag : TAG_CHARS[tag]}
           </span>
-        )}
+        ))}
       </div>
       {isOpen && hasChildren && (
         <div>
