@@ -77,6 +77,7 @@ export const SYSTEM_PROMPT_INITIAL_END = `</user_request>
 - The SEARCH block must contain a unique, contiguous excerpt from the file, including all whitespace and indentation.
 - To INSERT, include an existing unique line in SEARCH and add the new lines alongside that exact unique line in REPLACE.
 - To DELETE, put the code to remove in SEARCH and leave REPLACE empty (just the delimiter lines).
+- IMPORTANT:  Output format must be STRICTLY followed without deviation.
 
 - Full file write (creates or replaces an entire file):
 --- FILE path/to/file.ext ---
@@ -187,7 +188,7 @@ export function buildPrompt(
     return `${SYSTEM_PROMPT_INITIAL_START}\n${contextSection}\n${SYSTEM_PROMPT_INITIAL_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_INITIAL_END}`
   }
   //if (index % 1 == 0) {
-    return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}\n${SYSTEM_REMINDER_OUTPUT_FORMAT}`
+  return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}\n${SYSTEM_REMINDER_OUTPUT_FORMAT}`
   //}
   //return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}`
 }
