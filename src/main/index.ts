@@ -1,9 +1,20 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, relative } from 'path'
-import { readdirSync, readFileSync, openSync, readSync, closeSync } from 'fs'
+import { readdirSync, readFileSync, openSync, readSync, closeSync, existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import ignore, { type Ignore } from 'ignore'
 import icon from '../../resources/icon.png?asset'
+import {
+  initDatabase,
+  closeDatabase,
+  touchWorkspace,
+  getWorkspaceState,
+  getLastWorkspace,
+  setFileState,
+  removeFileState,
+  clearFileStates,
+  setDirExpanded
+} from './database'
 
 interface IgnoreRule {
   dir: string
@@ -91,6 +102,8 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  initDatabase()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -121,6 +134,45 @@ app.whenReady().then(() => {
       return { exists: false, content: null }
     }
   })
+
+  ipcMain.handle('db:get-last-workspace', async () => {
+    const path = getLastWorkspace()
+    if (path && existsSync(path)) return path
+    return null
+  })
+
+  ipcMain.handle('db:touch-workspace', async (_, workspacePath: string) => {
+    touchWorkspace(workspacePath)
+  })
+
+  ipcMain.handle('db:get-workspace-state', async (_, workspacePath: string) => {
+    return getWorkspaceState(workspacePath)
+  })
+
+  ipcMain.handle(
+    'db:set-file-state',
+    async (_, workspacePath: string, absolutePath: string, tag: string) => {
+      setFileState(workspacePath, absolutePath, tag)
+    }
+  )
+
+  ipcMain.handle(
+    'db:remove-file-state',
+    async (_, workspacePath: string, absolutePath: string) => {
+      removeFileState(workspacePath, absolutePath)
+    }
+  )
+
+  ipcMain.handle('db:clear-file-states', async (_, workspacePath: string) => {
+    clearFileStates(workspacePath)
+  })
+
+  ipcMain.handle(
+    'db:set-dir-expanded',
+    async (_, workspacePath: string, absolutePath: string, expanded: boolean) => {
+      setDirExpanded(workspacePath, absolutePath, expanded)
+    }
+  )
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
     const readDir = (path: string, parentRules: IgnoreRule[], isRoot: boolean): unknown[] => {
@@ -163,6 +215,10 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  closeDatabase()
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

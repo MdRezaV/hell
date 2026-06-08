@@ -5,7 +5,7 @@ import {
   Folder,
   File,
   FolderOpen,
-  RefreshCw,
+  Eraser,
   Folder as FolderBig
 } from 'lucide-react'
 
@@ -78,20 +78,26 @@ const TreeNode = memo(function TreeNode({
   node,
   level,
   fileStates,
-  onToggle
+  expandedDirs,
+  onToggle,
+  onToggleExpand
 }: {
   node: FileNode
   level: number
   fileStates: Map<string, FileTag>
+  expandedDirs: Set<string>
   onToggle: (paths: string[], checked: boolean) => void
+  onToggleExpand: (path: string, expanded: boolean) => void
 }): React.JSX.Element {
-  const [isOpen, setIsOpen] = useState(false)
+  const isOpen = expandedDirs.has(node.path)
   const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
   const checkState = getCheckState(node, fileStates)
   const tags = getNodeTags(node, fileStates)
+  const isBinary = node.type === 'file' && !!node.isBinary
 
   const selectablePaths = getLeafPaths(node)
   const isDisabled = selectablePaths.length === 0
+  const showCheckbox = !isBinary
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     e.stopPropagation()
@@ -104,39 +110,44 @@ const TreeNode = memo(function TreeNode({
     e.stopPropagation()
   }
 
+  const handleRowClick = (): void => {
+    if (hasChildren && node.type === 'directory') {
+      onToggleExpand(node.path, !isOpen)
+    }
+  }
+
   return (
     <div>
       <div
         className="tree-node"
         style={{ paddingLeft: `${level * 16}px` }}
-        onClick={() => hasChildren && setIsOpen(!isOpen)}
+        onClick={handleRowClick}
       >
         <span className="tree-chevron">
           {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
         </span>
-        <span className="tree-checkbox" onClick={handleCheckboxClick}>
-          <input
-            type="checkbox"
-            checked={checkState === 'checked'}
-            disabled={isDisabled}
-            ref={(el) => {
-              if (el) {
-                el.indeterminate = checkState === 'indeterminate'
-              }
-            }}
-            onChange={handleCheckboxChange}
-          />
-        </span>
+        {showCheckbox && (
+          <span className="tree-checkbox" onClick={handleCheckboxClick}>
+            <input
+              type="checkbox"
+              checked={checkState === 'checked'}
+              disabled={isDisabled}
+              ref={(el) => {
+                if (el) {
+                  el.indeterminate = checkState === 'indeterminate'
+                }
+              }}
+              onChange={handleCheckboxChange}
+            />
+          </span>
+        )}
         <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
           {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
         </span>
-        <span
-          className="tree-label"
-          style={node.type === 'file' && node.isBinary ? { opacity: 0.5 } : undefined}
-        >
+        <span className="tree-label" style={isBinary ? { opacity: 0.5 } : undefined}>
           {node.name}
         </span>
-        {node.type === 'file' && node.isBinary && (
+        {isBinary && (
           <span
             className="tree-tag"
             style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
@@ -158,7 +169,9 @@ const TreeNode = memo(function TreeNode({
               node={child}
               level={level + 1}
               fileStates={fileStates}
+              expandedDirs={expandedDirs}
               onToggle={onToggle}
+              onToggleExpand={onToggleExpand}
             />
           ))}
         </div>
@@ -199,13 +212,19 @@ function FileExplorer({
   workspace,
   onWorkspaceChange,
   fileStates,
+  expandedDirs,
   onToggleFile,
+  onToggleExpand,
+  onClearSelections,
   onFilePathsChange
 }: {
   workspace: string | null
   onWorkspaceChange: (path: string | null) => void
   fileStates: Map<string, FileTag>
+  expandedDirs: Set<string>
   onToggleFile: (paths: string[], checked: boolean) => void
+  onToggleExpand: (path: string, expanded: boolean) => void
+  onClearSelections: () => void
   onFilePathsChange: (paths: Set<string>) => void
 }): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
@@ -236,14 +255,6 @@ function FileExplorer({
     if (path) {
       onWorkspaceChange(path)
     }
-  }
-
-  const handleRefresh = async (): Promise<void> => {
-    if (!workspace) return
-    const files = await window.electron.ipcRenderer.invoke('read-directory', workspace)
-    const sorted = sortTree(files)
-    setTree(sorted)
-    onFilePathsChange(collectFilePaths(sorted))
   }
 
   const filePathSet = useMemo(() => collectFilePaths(tree), [tree])
@@ -277,8 +288,8 @@ function FileExplorer({
           </span>
         </div>
         <div className="explorer-header-actions">
-          <button onClick={handleRefresh} title="Refresh">
-            <RefreshCw size={14} strokeWidth={2} />
+          <button onClick={onClearSelections} title="Clear selections">
+            <Eraser size={14} strokeWidth={2} />
           </button>
           <button onClick={handleOpenWorkspace} title="Open Folder">
             <FolderOpen size={14} strokeWidth={2} />
@@ -292,7 +303,9 @@ function FileExplorer({
             node={node}
             level={0}
             fileStates={fileStates}
+            expandedDirs={expandedDirs}
             onToggle={onToggleFile}
+            onToggleExpand={onToggleExpand}
           />
         ))}
       </div>

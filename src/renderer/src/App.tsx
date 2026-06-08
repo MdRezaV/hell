@@ -10,38 +10,126 @@ const MIN_LEFT_WIDTH = 160
 const MAX_LEFT_WIDTH = 520
 const DEFAULT_LEFT_WIDTH = 280
 
+function joinWithWorkspace(workspace: string, relPath: string): string {
+  const sep = workspace.includes('\\') ? '\\' : '/'
+  return workspace + sep + relPath
+}
+
 function App(): React.JSX.Element {
   const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
   const copySnapshotRef = useRef<Set<string>>(new Set())
   const isResizing = useRef(false)
   const layoutRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<AIChatHandle>(null)
 
-  const handleWorkspaceChange = useCallback((path: string | null): void => {
-    setWorkspace(path)
-    setFileStates(new Map())
-    setFilePaths(new Set())
-    copySnapshotRef.current = new Set()
+  const loadWorkspaceState = useCallback(async (path: string): Promise<void> => {
+    const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
+      await window.electron.ipcRenderer.invoke('db:get-workspace-state', path)
+    const fsMap = new Map<string, FileTag>()
+    for (const [rel, tag] of state.fileStates) {
+      fsMap.set(joinWithWorkspace(path, rel), tag as FileTag)
+    }
+    const expSet = new Set<string>()
+    for (const rel of state.expandedDirs) {
+      expSet.add(joinWithWorkspace(path, rel))
+    }
+    setFileStates(fsMap)
+    setExpandedDirs(expSet)
   }, [])
 
-  const handleToggleFile = useCallback((paths: string[], checked: boolean): void => {
-    setFileStates((prev) => {
-      const next = new Map(prev)
-      if (checked) {
-        paths.forEach((p) => {
-          if (!next.has(p)) next.set(p, 'PND')
-        })
+  const handleWorkspaceChange = useCallback(
+    async (path: string | null, { restore = true } = {}): Promise<void> => {
+      setWorkspace(path)
+      setFilePaths(new Set())
+      copySnapshotRef.current = new Set()
+      if (path) {
+        await window.electron.ipcRenderer.invoke('db:touch-workspace', path)
+        if (restore) {
+          await loadWorkspaceState(path)
+        } else {
+          setFileStates(new Map())
+          setExpandedDirs(new Set())
+        }
       } else {
-        paths.forEach((p) => {
-          if (next.get(p) !== 'ADD') next.delete(p)
-        })
+        setFileStates(new Map())
+        setExpandedDirs(new Set())
       }
-      return next
-    })
-  }, [])
+    },
+    [loadWorkspaceState]
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    window.electron.ipcRenderer
+      .invoke('db:get-last-workspace')
+      .then(async (path: string | null) => {
+        if (!cancelled && path) {
+          await handleWorkspaceChange(path)
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [handleWorkspaceChange])
+
+  const handleToggleFile = useCallback(
+    (paths: string[], checked: boolean): void => {
+      setFileStates((prev) => {
+        const next = new Map(prev)
+        if (checked) {
+          paths.forEach((p) => {
+            if (!next.has(p)) {
+              next.set(p, 'PND')
+              if (workspace) {
+                window.electron.ipcRenderer.invoke('db:set-file-state', workspace, p, 'PND')
+              }
+            }
+          })
+        } else {
+          paths.forEach((p) => {
+            const current = next.get(p)
+            if (current && current !== 'ADD') {
+              next.delete(p)
+              if (workspace) {
+                window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, p)
+              }
+            }
+          })
+        }
+        return next
+      })
+    },
+    [workspace]
+  )
+
+  const handleToggleExpand = useCallback(
+    (path: string, expanded: boolean): void => {
+      setExpandedDirs((prev) => {
+        const next = new Set(prev)
+        if (expanded) next.add(path)
+        else next.delete(path)
+        return next
+      })
+      if (workspace) {
+        window.electron.ipcRenderer.invoke('db:set-dir-expanded', workspace, path, expanded)
+      }
+    },
+    [workspace]
+  )
+
+  const handleClearSelections = useCallback(async (): Promise<void> => {
+    if (!workspace) return
+    await window.electron.ipcRenderer.invoke('db:clear-file-states', workspace)
+    setFileStates(new Map())
+    copySnapshotRef.current = new Set()
+  }, [workspace])
 
   const handleFilePathsChange = useCallback((paths: Set<string>): void => {
     setFilePaths(paths)
@@ -83,6 +171,9 @@ function App(): React.JSX.Element {
         if (state === 'PND') {
           snapshot.add(path)
           next.set(path, 'INQ')
+          if (workspace) {
+            window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'INQ')
+          }
         } else if (state === 'INQ') {
           snapshot.add(path)
         }
@@ -97,11 +188,14 @@ function App(): React.JSX.Element {
       const next = new Map<string, FileTag>()
       prev.forEach((_, path) => {
         next.set(path, 'PND')
+        if (workspace) {
+          window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'PND')
+        }
       })
       return next
     })
     copySnapshotRef.current = new Set()
-  }, [])
+  }, [workspace])
 
   const handlePaste = useCallback(async (): Promise<void> => {
     await chatRef.current?.pasteAsAssistant()
@@ -111,14 +205,22 @@ function App(): React.JSX.Element {
       const next = new Map(prev)
       snapshot.forEach((path) => {
         next.set(path, 'ADD')
+        if (workspace) {
+          window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'ADD')
+        }
       })
       next.forEach((state, path) => {
-        if (state === 'INQ') next.set(path, 'ADD')
+        if (state === 'INQ') {
+          next.set(path, 'ADD')
+          if (workspace) {
+            window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'ADD')
+          }
+        }
       })
       return next
     })
     copySnapshotRef.current = new Set()
-  }, [])
+  }, [workspace])
 
   const startResize = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
@@ -167,7 +269,10 @@ function App(): React.JSX.Element {
               workspace={workspace}
               onWorkspaceChange={handleWorkspaceChange}
               fileStates={fileStates}
+              expandedDirs={expandedDirs}
               onToggleFile={handleToggleFile}
+              onToggleExpand={handleToggleExpand}
+              onClearSelections={handleClearSelections}
               onFilePathsChange={handleFilePathsChange}
             />
           </div>
