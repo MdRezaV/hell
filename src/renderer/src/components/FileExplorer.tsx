@@ -11,6 +11,12 @@ import {
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'
 
+const TAG_STYLES: Record<FileTag, React.CSSProperties> = {
+  PND: { backgroundColor: 'rgba(249, 226, 175, 0.45)', color: '#f9e2af' },
+  INQ: { backgroundColor: 'rgba(203, 166, 247, 0.45)', color: '#cba6f7' },
+  ADD: { backgroundColor: 'rgba(166, 227, 161, 0.45)', color: '#a6e3a1' }
+}
+
 interface FileNode {
   name: string
   path: string
@@ -93,7 +99,11 @@ const TreeNode = memo(function TreeNode({
           {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
         </span>
         <span className="tree-label">{node.name}</span>
-        {tag && <span className={`tree-tag tree-tag-${tag.toLowerCase()}`}>{tag}</span>}
+        {tag && (
+          <span className="tree-tag" style={TAG_STYLES[tag]}>
+            {tag}
+          </span>
+        )}
       </div>
       {isOpen && hasChildren && (
         <div>

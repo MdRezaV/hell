@@ -23,6 +23,7 @@ function App(): React.JSX.Element {
   const handleWorkspaceChange = useCallback((path: string | null): void => {
     setWorkspace(path)
     setFileStates(new Map())
+    setFilePaths(new Set())
     copySnapshotRef.current = new Set()
   }, [])
 

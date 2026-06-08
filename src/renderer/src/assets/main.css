@@ -168,12 +168,23 @@
 
   input[type='checkbox']:checked::after {
     content: '';
-    @apply absolute top-0.5 left-1.5 w-1 h-2 border-solid border-accent-text border-0 border-r-2 border-b-2 rotate-45;
+    @apply absolute border-solid border-accent-text border-0;
+    border-width: 0 2px 2px 0;
+    width: 5px;
+    height: 9px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%) rotate(45deg);
   }
 
   input[type='radio']:checked::after {
     content: '';
-    @apply absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-accent-text;
+    @apply absolute rounded-full bg-accent-text;
+    width: 8px;
+    height: 8px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 
   input[type='checkbox']:indeterminate {
@@ -481,19 +492,7 @@
   }
 
   .tree-tag {
-    @apply ml-1.5 px-1 py-0 text-[9px] font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
-  }
-
-  .tree-tag-pnd {
-    @apply bg-[rgba(249,226,175,0.3)] text-ctp-yellow;
-  }
-
-  .tree-tag-inq {
-    @apply bg-[rgba(137,180,250,0.3)] text-ctp-blue;
-  }
-
-  .tree-tag-add {
-    @apply bg-[rgba(166,227,161,0.3)] text-ctp-green;
+    @apply ml-1.5 px-1 py-0 text-[10px] font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
   }
 
   .ai-chat {

@@ -320,13 +320,34 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
     ref,
     () => ({
       async copyByIndex(index?: number, files: string[] = []): Promise<boolean> {
-        const userMessages = messages.filter((m) => m.role === 'user')
-        if (userMessages.length === 0) return false
+        let currentMessages = messages
+
+        const userMessages = currentMessages.filter((m) => m.role === 'user')
+        if (userMessages.length === 0) {
+          const trimmed = input.trim()
+          if (!trimmed) return false
+          const userMessage: ChatMessage = {
+            id: generateId(),
+            role: 'user',
+            variants: [{ content: trimmed, timestamp: new Date() }],
+            activeVariant: 0
+          }
+          currentMessages = [...currentMessages, userMessage]
+          setMessages(currentMessages)
+          setInput('')
+          if (inputRef.current) {
+            inputRef.current.style.height = 'auto'
+          }
+          setIsAwaitingResponse(true)
+        }
+
+        const updatedUserMessages = currentMessages.filter((m) => m.role === 'user')
+        if (updatedUserMessages.length === 0) return false
         const resolvedIndex =
-          index === undefined || index < 0 || index >= userMessages.length
-            ? userMessages.length - 1
+          index === undefined || index < 0 || index >= updatedUserMessages.length
+            ? updatedUserMessages.length - 1
             : index
-        const userMsg = userMessages[resolvedIndex]
+        const userMsg = updatedUserMessages[resolvedIndex]
         const userContent = userMsg.variants[userMsg.activeVariant].content
         const promptText = buildPrompt(userContent, resolvedIndex, files)
         try {
@@ -340,13 +361,27 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
         try {
           const text = await navigator.clipboard.readText()
           if (!text) return false
-          const aiMessage: ChatMessage = {
-            id: generateId(),
-            role: 'assistant',
-            variants: [{ content: text, timestamp: new Date() }],
-            activeVariant: 0
-          }
-          setMessages((prev) => [...prev, aiMessage])
+          setMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (last && last.role === 'assistant') {
+              const updated = [...prev]
+              const updatedLast = { ...last }
+              updatedLast.variants = [
+                ...updatedLast.variants,
+                { content: text, timestamp: new Date() }
+              ]
+              updatedLast.activeVariant = updatedLast.variants.length - 1
+              updated[updated.length - 1] = updatedLast
+              return updated
+            }
+            const aiMessage: ChatMessage = {
+              id: generateId(),
+              role: 'assistant',
+              variants: [{ content: text, timestamp: new Date() }],
+              activeVariant: 0
+            }
+            return [...prev, aiMessage]
+          })
           setIsAwaitingResponse(false)
           return true
         } catch {
@@ -354,7 +389,7 @@ const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.J
         }
       }
     }),
-    [messages]
+    [input, messages]
   )
 
   const handleSend = (): void => {
