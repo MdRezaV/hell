@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import FileExplorer from './components/FileExplorer'
-import AIChat from './components/AIChat'
-import Versions from './components/Versions'
+import AIChat, { type AIChatHandle } from './components/AIChat'
 import { WorkspaceContext } from './WorkspaceContext'
 
 const MIN_LEFT_WIDTH = 160
@@ -13,6 +12,15 @@ function App(): React.JSX.Element {
   const [workspace, setWorkspace] = useState<string | null>(null)
   const isResizing = useRef(false)
   const layoutRef = useRef<HTMLDivElement>(null)
+  const chatRef = useRef<AIChatHandle>(null)
+
+  const handleCopy = useCallback(async (): Promise<void> => {
+    await chatRef.current?.copyByIndex()
+  }, [])
+
+  const handlePaste = useCallback(async (): Promise<void> => {
+    await chatRef.current?.pasteAsAssistant()
+  }, [])
 
   const startResize = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
@@ -59,13 +67,26 @@ function App(): React.JSX.Element {
             onMouseDown={startResize}
           />
           <div className="flex-1 bg-background flex overflow-hidden min-w-0">
-            <AIChat />
+            <AIChat ref={chatRef} />
           </div>
         </div>
         <div className="flex items-center h-5 m-0 px-2.5 bg-accent flex-shrink-0 gap-3 leading-none">
           <span className="text-[11px] font-medium text-accent-text opacity-85 leading-none">Ready</span>
           <span className="flex-1"></span>
-          <Versions />
+          <div className="flex gap-0">
+            <button
+              onClick={handlePaste}
+              className="inline-flex items-center justify-center px-2 h-[18px] text-[10px] font-bold tracking-wider text-white bg-[rgba(0,0,0,0.15)] border border-[rgba(255,255,255,0.2)] border-r-0 rounded-none cursor-pointer leading-none hover:bg-[rgba(0,0,0,0.3)] active:bg-[rgba(0,0,0,0.4)]"
+            >
+              PASTE
+            </button>
+            <button
+              onClick={handleCopy}
+              className="inline-flex items-center justify-center px-2 h-[18px] text-[10px] font-bold tracking-wider text-white bg-[rgba(0,0,0,0.15)] border border-[rgba(255,255,255,0.2)] rounded-none cursor-pointer leading-none hover:bg-[rgba(0,0,0,0.3)] active:bg-[rgba(0,0,0,0.4)]"
+            >
+              COPY
+            </button>
+          </div>
         </div>
       </div>
     </WorkspaceContext.Provider>

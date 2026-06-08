@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo, forwardRef, useImperativeHandle } from 'react'
 import {
   Copy,
   Bot,
@@ -292,7 +292,12 @@ function TypingIndicator(): React.JSX.Element {
   )
 }
 
-function AIChat(): React.JSX.Element {
+export interface AIChatHandle {
+  copyByIndex(index?: number): Promise<boolean>
+  pasteAsAssistant(): Promise<boolean>
+}
+
+const AIChat = forwardRef<AIChatHandle, object>(function AIChat(_, ref): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -339,6 +344,44 @@ function AIChat(): React.JSX.Element {
       }
     }
   }, [])
+
+  useImperativeHandle(ref, () => ({
+    async copyByIndex(index?: number): Promise<boolean> {
+      const userMessages = messages.filter(m => m.role === 'user')
+      if (userMessages.length === 0) return false
+      const resolvedIndex =
+        index === undefined || index < 0 || index >= userMessages.length
+          ? userMessages.length - 1
+          : index
+      const userMsg = userMessages[resolvedIndex]
+      const userIdx = messages.indexOf(userMsg)
+      const assistantMsg = messages.slice(userIdx + 1).find(m => m.role === 'assistant')
+      const target = assistantMsg ?? userMsg
+      const content = target.variants[target.activeVariant].content
+      try {
+        await navigator.clipboard.writeText(content)
+        return true
+      } catch {
+        return false
+      }
+    },
+    async pasteAsAssistant(): Promise<boolean> {
+      try {
+        const text = await navigator.clipboard.readText()
+        if (!text) return false
+        const aiMessage: ChatMessage = {
+          id: generateId(),
+          role: 'assistant',
+          variants: [{ content: text, timestamp: new Date() }],
+          activeVariant: 0
+        }
+        setMessages(prev => [...prev, aiMessage])
+        return true
+      } catch {
+        return false
+      }
+    }
+  }), [messages])
 
   const handleSend = async (): Promise<void> => {
     const trimmed = input.trim()
@@ -606,6 +649,6 @@ function AIChat(): React.JSX.Element {
       </div>
     </div>
   )
-}
+})
 
 export default AIChat
