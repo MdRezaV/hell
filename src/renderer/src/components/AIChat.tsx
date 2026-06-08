@@ -330,7 +330,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isAwaitingResponse])
+  }, [messages, isAwaitingResponse, scrollToBottom])
 
   useEffect(() => {
     if (messages.length === 0) {
