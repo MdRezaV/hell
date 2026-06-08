@@ -13,7 +13,8 @@ import {
   setFileState,
   removeFileState,
   clearFileStates,
-  setDirExpanded
+  setDirExpanded,
+  pruneWorkspaceState
 } from './database'
 import { startWatching, stopWatching } from './watcher'
 
@@ -184,6 +185,13 @@ app.whenReady().then(() => {
       }
     })
   })
+
+  ipcMain.handle(
+    'db:prune-workspace-state',
+    async (_, workspacePath: string, validFilePaths: string[], validDirPaths: string[]) => {
+      pruneWorkspaceState(workspacePath, validFilePaths, validDirPaths)
+    }
+  )
 
   ipcMain.handle('read-directory', async (_, dirPath: string) => {
     const readDir = (path: string, parentRules: IgnoreRule[], isRoot: boolean): unknown[] => {

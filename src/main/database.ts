@@ -13,23 +13,69 @@ export function initDatabase(): void {
   db.pragma('foreign_keys = ON')
 
   db.exec(`
-    CREATE TABLE IF NOT EXISTS workspaces (
-      path TEXT PRIMARY KEY,
-      last_opened INTEGER NOT NULL
+    CREATE TABLE IF NOT EXISTS workspaces
+    (
+      path
+      TEXT
+      PRIMARY
+      KEY,
+      last_opened
+      INTEGER
+      NOT
+      NULL
     );
-    CREATE TABLE IF NOT EXISTS file_states (
-      workspace_path TEXT NOT NULL,
-      relative_path TEXT NOT NULL,
-      tag TEXT NOT NULL,
-      PRIMARY KEY (workspace_path, relative_path),
-      FOREIGN KEY (workspace_path) REFERENCES workspaces(path) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS expanded_dirs (
-      workspace_path TEXT NOT NULL,
-      relative_path TEXT NOT NULL,
-      PRIMARY KEY (workspace_path, relative_path),
-      FOREIGN KEY (workspace_path) REFERENCES workspaces(path) ON DELETE CASCADE
-    );
+    CREATE TABLE IF NOT EXISTS file_states
+    (
+      workspace_path
+      TEXT
+      NOT
+      NULL,
+      relative_path
+      TEXT
+      NOT
+      NULL,
+      tag
+      TEXT
+      NOT
+      NULL,
+      PRIMARY
+      KEY
+    (
+      workspace_path,
+      relative_path
+    ),
+      FOREIGN KEY
+    (
+      workspace_path
+    ) REFERENCES workspaces
+    (
+      path
+    ) ON DELETE CASCADE
+      );
+    CREATE TABLE IF NOT EXISTS expanded_dirs
+    (
+      workspace_path
+      TEXT
+      NOT
+      NULL,
+      relative_path
+      TEXT
+      NOT
+      NULL,
+      PRIMARY
+      KEY
+    (
+      workspace_path,
+      relative_path
+    ),
+      FOREIGN KEY
+    (
+      workspace_path
+    ) REFERENCES workspaces
+    (
+      path
+    ) ON DELETE CASCADE
+      );
   `)
 }
 
@@ -101,9 +147,9 @@ export function getWorkspaceState(workspacePath: string): WorkspaceState {
 
 export function getLastWorkspace(): string | null {
   const d = getDb()
-  const row = d
-    .prepare('SELECT path FROM workspaces ORDER BY last_opened DESC LIMIT 1')
-    .get() as { path: string } | undefined
+  const row = d.prepare('SELECT path FROM workspaces ORDER BY last_opened DESC LIMIT 1').get() as
+    | { path: string }
+    | undefined
   return row?.path ?? null
 }
 
@@ -130,7 +176,11 @@ export function clearFileStates(workspacePath: string): void {
   d.prepare('DELETE FROM file_states WHERE workspace_path = ?').run(workspacePath)
 }
 
-export function setDirExpanded(workspacePath: string, absolutePath: string, expanded: boolean): void {
+export function setDirExpanded(
+  workspacePath: string,
+  absolutePath: string,
+  expanded: boolean
+): void {
   const d = getDb()
   const rel = toRelative(workspacePath, absolutePath)
   if (expanded) {
@@ -143,4 +193,43 @@ export function setDirExpanded(workspacePath: string, absolutePath: string, expa
       rel
     )
   }
+}
+
+export function pruneWorkspaceState(
+  workspacePath: string,
+  validFilePaths: string[],
+  validDirPaths: string[]
+): void {
+  const d = getDb()
+  const validRelFiles = new Set(validFilePaths.map((p) => toRelative(workspacePath, p)))
+  const validRelDirs = new Set(validDirPaths.map((p) => toRelative(workspacePath, p)))
+
+  const fileStates = d
+    .prepare('SELECT relative_path FROM file_states WHERE workspace_path = ?')
+    .all(workspacePath) as Array<{ relative_path: string }>
+  const expandedDirs = d
+    .prepare('SELECT relative_path FROM expanded_dirs WHERE workspace_path = ?')
+    .all(workspacePath) as Array<{ relative_path: string }>
+
+  const tx = d.transaction(() => {
+    const delFile = d.prepare(
+      'DELETE FROM file_states WHERE workspace_path = ? AND relative_path = ?'
+    )
+    const delDir = d.prepare(
+      'DELETE FROM expanded_dirs WHERE workspace_path = ? AND relative_path = ?'
+    )
+
+    for (const row of fileStates) {
+      if (!validRelFiles.has(row.relative_path)) {
+        delFile.run(workspacePath, row.relative_path)
+      }
+    }
+
+    for (const row of expandedDirs) {
+      if (!validRelDirs.has(row.relative_path)) {
+        delDir.run(workspacePath, row.relative_path)
+      }
+    }
+  })
+  tx()
 }

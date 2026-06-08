@@ -208,6 +208,18 @@ function collectFilePaths(nodes: FileNode[]): Set<string> {
   return paths
 }
 
+function collectDirPaths(nodes: FileNode[]): Set<string> {
+  const paths = new Set<string>()
+  const walk = (list: FileNode[]): void => {
+    for (const n of list) {
+      if (n.type === 'directory') paths.add(n.path)
+      if (n.children) walk(n.children)
+    }
+  }
+  walk(nodes)
+  return paths
+}
+
 function FileExplorer({
   workspace,
   onWorkspaceChange,
@@ -245,7 +257,15 @@ function FileExplorer({
         if (cancelled) return
         const sorted = sortTree(files)
         setTree(sorted)
-        onFilePathsChange(collectFilePaths(sorted))
+        const filePaths = collectFilePaths(sorted)
+        const dirPaths = collectDirPaths(sorted)
+        onFilePathsChange(filePaths)
+        window.electron.ipcRenderer.invoke(
+          'db:prune-workspace-state',
+          workspace,
+          Array.from(filePaths),
+          Array.from(dirPaths)
+        )
       })
     }
 
