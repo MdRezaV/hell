@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import {
-  ChevronRight,
   ChevronDown,
-  Folder,
-  File,
-  FolderOpen,
+  ChevronRight,
   Eraser,
-  Folder as FolderBig
+  File,
+  Folder,
+  Folder as FolderBig,
+  FolderOpen
 } from 'lucide-react'
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'

@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  wrapInFence,
+  getActiveParser,
+  listParsers,
   parseReplaceBlock,
   preprocess,
-  getActiveParser,
   setActiveParser,
-  listParsers
+  wrapInFence
 } from './markdownParser'
 
 describe('wrapInFence', () => {
@@ -313,8 +313,7 @@ describe('preprocess — EDIT blocks', () => {
   })
 
   it('rejects longer separator than opener', () => {
-    const input =
-      '--- EDIT a.ts ---\n<<<<<<< SEARCH\n========\n=======\nnew\n>>>>>>> REPLACE'
+    const input = '--- EDIT a.ts ---\n<<<<<<< SEARCH\n========\n=======\nnew\n>>>>>>> REPLACE'
     const out = preprocess(input)
     expect(out).toContain('========')
     expect(out).toContain('new')

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useCopyToClipboard(resetMs = 1500): {
   copied: boolean

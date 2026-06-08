@@ -1,4 +1,4 @@
-import { watch, type FSWatcher } from 'chokidar'
+import { type FSWatcher, watch } from 'chokidar'
 
 const DEBOUNCE_MS = 200
 const WRITE_STABILITY_MS = 200

@@ -1,15 +1,15 @@
 import React, {
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-  memo,
   Children,
   isValidElement,
-  type ReactNode
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState
 } from 'react'
-import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -42,6 +42,10 @@ import csharp from 'react-syntax-highlighter/dist/esm/languages/prism/csharp'
 import php from 'react-syntax-highlighter/dist/esm/languages/prism/php'
 import ruby from 'react-syntax-highlighter/dist/esm/languages/prism/ruby'
 import docker from 'react-syntax-highlighter/dist/esm/languages/prism/docker'
+import hljs from 'highlight.js/lib/common'
+import { Check, Copy, Play, X } from 'lucide-react'
+import { getActiveParser, parseReplaceBlock } from '../utils/markdownParser'
+import { useWorkspace } from '../WorkspaceContext'
 
 SyntaxHighlighter.registerLanguage('javascript', javascript)
 SyntaxHighlighter.registerLanguage('js', javascript)
@@ -89,11 +93,6 @@ SyntaxHighlighter.registerLanguage('ruby', ruby)
 SyntaxHighlighter.registerLanguage('rb', ruby)
 SyntaxHighlighter.registerLanguage('docker', docker)
 SyntaxHighlighter.registerLanguage('dockerfile', docker)
-
-import hljs from 'highlight.js/lib/common'
-import { Play, Check, Copy, X } from 'lucide-react'
-import { parseReplaceBlock, getActiveParser } from '../utils/markdownParser'
-import { useWorkspace } from '../WorkspaceContext'
 
 interface MarkdownProps {
   content: string

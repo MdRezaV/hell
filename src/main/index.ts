@@ -1,37 +1,37 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, relative, dirname } from 'path'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { dirname, join, relative } from 'path'
 import {
-  readdirSync,
-  readFileSync,
-  openSync,
-  readSync,
   closeSync,
   existsSync,
-  writeFileSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
   unlinkSync,
-  mkdirSync
+  writeFileSync
 } from 'fs'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import ignore, { type Ignore } from 'ignore'
 import icon from '../../resources/icon.png?asset'
 import {
-  initDatabase,
-  closeDatabase,
-  touchWorkspace,
-  getWorkspaceState,
-  getLastWorkspace,
-  setFileState,
-  removeFileState,
   clearFileStates,
-  setDirExpanded,
-  pruneWorkspaceState,
-  getIncludeDirStructure,
-  setIncludeDirStructure,
+  closeDatabase,
   createChatSession,
-  updateChatSession,
-  getChatSessions,
+  deleteChatSession,
   getChatSession,
-  deleteChatSession
+  getChatSessions,
+  getIncludeDirStructure,
+  getLastWorkspace,
+  getWorkspaceState,
+  initDatabase,
+  pruneWorkspaceState,
+  removeFileState,
+  setDirExpanded,
+  setFileState,
+  setIncludeDirStructure,
+  touchWorkspace,
+  updateChatSession
 } from './database'
 import { startWatching, stopWatching } from './watcher'
 

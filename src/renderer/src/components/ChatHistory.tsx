@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { MessageSquare, Plus, Trash2, Clock, Search, ChevronDown, X } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { ChevronDown, Clock, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react'
 
 export interface ChatSession {
   id: string
@@ -70,28 +70,34 @@ export default function ChatHistory({
   const [search, setSearch] = useState('')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  const loadSessions = useCallback(async () => {
-    const result: ChatSession[] = await window.electron.ipcRenderer.invoke(
-      'db:get-chat-sessions',
-      workspace
-    )
-    setSessions(result || [])
-  }, [workspace])
-
   useEffect(() => {
-    loadSessions()
-  }, [loadSessions, refreshKey])
+    let ignore = false
+    window.electron.ipcRenderer
+      .invoke('db:get-chat-sessions', workspace)
+      .then((result: ChatSession[]) => {
+        if (!ignore) {
+          setSessions(result || [])
+        }
+      })
+    return () => {
+      ignore = true
+    }
+  }, [workspace, refreshKey])
 
   const handleDelete = useCallback(
     async (e: React.MouseEvent, id: string) => {
       e.stopPropagation()
       await window.electron.ipcRenderer.invoke('db:delete-chat-session', id)
-      loadSessions()
+      const result: ChatSession[] = await window.electron.ipcRenderer.invoke(
+        'db:get-chat-sessions',
+        workspace
+      )
+      setSessions(result || [])
       if (activeChatId === id) {
         onNewChat()
       }
     },
-    [activeChatId, onNewChat, loadSessions]
+    [activeChatId, onNewChat, workspace]
   )
 
   const filtered = useMemo(() => {
@@ -129,11 +135,7 @@ export default function ChatHistory({
           className="chat-history-search-input"
         />
         {search && (
-          <button
-            className="chat-history-search-clear"
-            onClick={() => setSearch('')}
-            title="Clear"
-          >
+          <button className="chat-history-search-clear" onClick={() => setSearch('')} title="Clear">
             <X size={12} />
           </button>
         )}

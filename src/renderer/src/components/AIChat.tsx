@@ -1,22 +1,22 @@
 import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  memo,
   forwardRef,
-  useImperativeHandle
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState
 } from 'react'
 import {
-  Copy,
   Bot,
-  Sparkles,
-  Plus,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
+  Copy,
   Pencil,
-  Check,
+  Plus,
+  Sparkles,
   X
 } from 'lucide-react'
 import Markdown from './Markdown'

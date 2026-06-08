@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import FileExplorer, { type FileTag } from './components/FileExplorer'
 import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat'
 import ChatHistory from './components/ChatHistory'
@@ -299,9 +299,9 @@ function App(): React.JSX.Element {
       await saveCurrentChat()
       const session = await window.electron.ipcRenderer.invoke('db:get-chat-session', id)
       if (session) {
-        const messages = JSON.parse(session.messages).map((m: any) => ({
+        const messages = JSON.parse(session.messages).map((m: ChatMessage) => ({
           ...m,
-          variants: m.variants.map((v: any) => ({
+          variants: m.variants.map((v: ChatMessage['variants'][number]) => ({
             ...v,
             timestamp: new Date(v.timestamp)
           }))
