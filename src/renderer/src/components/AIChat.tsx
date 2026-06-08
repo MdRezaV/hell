@@ -24,12 +24,12 @@ import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
 import { buildPrompt, type FileContext } from '../utils/PromptEngine'
 
-interface MessageVariant {
+export interface MessageVariant {
   content: string
   timestamp: Date
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   variants: MessageVariant[]
@@ -280,14 +280,17 @@ export interface AIChatHandle {
   copyByIndex(index?: number, files?: FileContext[], dirStructure?: string): Promise<boolean>
   pasteAsAssistant(): Promise<boolean>
   getResolvedUserIndex(): number
+  getMessages(): ChatMessage[]
+  loadChat(messages: ChatMessage[]): void
 }
 
 interface AIChatProps {
   onNewChat?: () => void
+  onMessagesChange?: (messages: ChatMessage[]) => void
 }
 
 const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
-  { onNewChat },
+  { onNewChat, onMessagesChange },
   ref
 ): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -299,7 +302,16 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const copyTimeoutRef = useRef<number | null>(null)
+  const isLoadingRef = useRef(false)
   const resizeTextarea = useAutoResizeTextarea()
+
+  useEffect(() => {
+    if (isLoadingRef.current) return
+    const timeout = setTimeout(() => {
+      onMessagesChange?.(messages)
+    }, 1500)
+    return () => clearTimeout(timeout)
+  }, [messages, onMessagesChange])
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -333,6 +345,23 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         const userMessages = messages.filter((m) => m.role === 'user')
         if (userMessages.length === 0) return 0
         return userMessages.length - 1
+      },
+      getMessages(): ChatMessage[] {
+        return messages
+      },
+      loadChat(newMessages: ChatMessage[]): void {
+        isLoadingRef.current = true
+        setMessages(newMessages)
+        setInput('')
+        if (inputRef.current) {
+          inputRef.current.style.height = 'auto'
+        }
+        setEditingId(null)
+        setCopiedId(null)
+        setIsAwaitingResponse(false)
+        setTimeout(() => {
+          isLoadingRef.current = false
+        }, 50)
       },
       async copyByIndex(
         index?: number,
@@ -471,14 +500,6 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = null
     }
-    setMessages([])
-    setInput('')
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto'
-    }
-    setEditingId(null)
-    setCopiedId(null)
-    setIsAwaitingResponse(false)
     onNewChat?.()
   }, [onNewChat])
 

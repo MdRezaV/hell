@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import FileExplorer, { type FileTag } from './components/FileExplorer'
-import AIChat, { type AIChatHandle } from './components/AIChat'
+import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat'
+import ChatHistory from './components/ChatHistory'
 import StatusBar from './components/StatusBar'
 import { WorkspaceContext } from './WorkspaceContext'
 
@@ -15,18 +16,41 @@ function joinWithWorkspace(workspace: string, relPath: string): string {
   return workspace + sep + relPath
 }
 
+function deriveTitle(messages: ChatMessage[]): string {
+  const firstUser = messages.find((m) => m.role === 'user')
+  if (!firstUser) return 'New Chat'
+  const content = firstUser.variants[firstUser.activeVariant]?.content ?? ''
+  const trimmed = content.replace(/\s+/g, ' ').trim()
+  if (trimmed.length <= 40) return trimmed
+  return trimmed.slice(0, 40) + '...'
+}
+
 function App(): React.JSX.Element {
   const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
+  const [rightWidth, setRightWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
   const [includeDirStructure, setIncludeDirStructure] = useState(true)
   const [dirStructureAddedAtIndex, setDirStructureAddedAtIndex] = useState<number | null>(null)
+  const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const [chatHistoryKey, setChatHistoryKey] = useState(0)
   const copySnapshotRef = useRef<Set<string>>(new Set())
   const isResizing = useRef(false)
+  const resizeTarget = useRef<'left' | 'right' | null>(null)
   const layoutRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<AIChatHandle>(null)
+  const activeChatIdRef = useRef<string | null>(null)
+  const workspaceRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId
+  }, [activeChatId])
+
+  useEffect(() => {
+    workspaceRef.current = workspace
+  }, [workspace])
 
   const loadWorkspaceState = useCallback(async (path: string): Promise<void> => {
     const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
@@ -51,8 +75,32 @@ function App(): React.JSX.Element {
     setDirStructureAddedAtIndex(null)
   }, [])
 
+  const saveCurrentChat = useCallback(async (): Promise<void> => {
+    if (!chatRef.current) return
+    const messages = chatRef.current.getMessages()
+    if (messages.length === 0) return
+    const title = deriveTitle(messages)
+    if (activeChatIdRef.current) {
+      await window.electron.ipcRenderer.invoke(
+        'db:update-chat-session',
+        activeChatIdRef.current,
+        title,
+        JSON.stringify(messages)
+      )
+    } else {
+      const id = await window.electron.ipcRenderer.invoke(
+        'db:create-chat-session',
+        workspaceRef.current,
+        title,
+        JSON.stringify(messages)
+      )
+      setActiveChatId(id)
+    }
+  }, [])
+
   const handleWorkspaceChange = useCallback(
     async (path: string | null, { restore = true } = {}): Promise<void> => {
+      await saveCurrentChat()
       setWorkspace(path)
       setFilePaths(new Set())
       copySnapshotRef.current = new Set()
@@ -69,8 +117,10 @@ function App(): React.JSX.Element {
         setFileStates(new Map())
         setExpandedDirs(new Set())
       }
+      setActiveChatId(null)
+      chatRef.current?.loadChat([])
     },
-    [loadWorkspaceState]
+    [loadWorkspaceState, saveCurrentChat]
   )
 
   useEffect(() => {
@@ -158,29 +208,53 @@ function App(): React.JSX.Element {
   const handleCopy = useCallback(async (): Promise<void> => {
     if (!workspace) return
 
-    const pendingFilesPromises = Array.from(fileStates.entries()).map(
-      async ([absolutePath, state]) => {
-        if ((state === 'PND' || state === 'INQ') && filePaths.has(absolutePath)) {
-          let relativePath = absolutePath
-          if (relativePath.startsWith(workspace)) {
-            relativePath = relativePath.substring(workspace.length)
-            if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
-              relativePath = relativePath.substring(1)
-            }
-          }
-          const res: { exists: boolean; error: boolean; content: string | null } =
-            await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
-          if (!res.exists) return null
-          if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
-          if (res.content !== null) return { path: relativePath, content: res.content }
+    // 1. Transition PND -> INQ first and collect paths synchronously
+    const pathsToInclude: string[] = []
+    const pathsToMarkInq: string[] = []
+
+    fileStates.forEach((state, path) => {
+      if (filePaths.has(path)) {
+        if (state === 'PND') {
+          pathsToMarkInq.push(path)
         }
-        return null
+        if (state === 'PND' || state === 'INQ') {
+          pathsToInclude.push(path)
+        }
       }
-    )
+    })
+
+    if (pathsToMarkInq.length > 0) {
+      setFileStates((prev) => {
+        const next = new Map(prev)
+        pathsToMarkInq.forEach((p) => {
+          next.set(p, 'INQ')
+          window.electron.ipcRenderer.invoke('db:set-file-state', workspace, p, 'INQ')
+        })
+        return next
+      })
+    }
+
+    // 2. Read file contents for all targeted paths
+    const pendingFilesPromises = pathsToInclude.map(async (absolutePath) => {
+      let relativePath = absolutePath
+      if (relativePath.startsWith(workspace)) {
+        relativePath = relativePath.substring(workspace.length)
+        if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+          relativePath = relativePath.substring(1)
+        }
+      }
+      const res: { exists: boolean; error: boolean; content: string | null } =
+        await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
+      if (!res.exists) return null
+      if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
+      if (res.content !== null) return { path: relativePath, content: res.content }
+      return null
+    })
 
     const results = await Promise.all(pendingFilesPromises)
     const pendingFiles = results.filter((f): f is { path: string; content: string } => f !== null)
 
+    // 3. Prepare context and copy
     const currentIndex = chatRef.current?.getResolvedUserIndex() ?? 0
     let dirStructure: string | undefined
     if (includeDirStructure) {
@@ -195,35 +269,19 @@ function App(): React.JSX.Element {
     const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
     if (!success) return
 
-    setFileStates((prev) => {
-      const next = new Map(prev)
-      const snapshot = new Set<string>()
-      next.forEach((state, path) => {
-        if (state === 'PND') {
-          snapshot.add(path)
-          next.set(path, 'INQ')
-          if (workspace) {
-            window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'INQ')
-          }
-        } else if (state === 'INQ') {
-          snapshot.add(path)
-        }
-      })
-      copySnapshotRef.current = snapshot
-      return next
-    })
+    copySnapshotRef.current = new Set(pathsToInclude)
   }, [fileStates, filePaths, workspace, includeDirStructure, dirStructureAddedAtIndex])
 
-  const handleNewChat = useCallback((): void => {
+  const handleNewChat = useCallback(async (): Promise<void> => {
+    await saveCurrentChat()
     setFileStates((prev) => {
       const next = new Map<string, FileTag>()
       prev.forEach((state, path) => {
         if (state === 'ADD') {
-          window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, path)
+          next.set(path, 'ADD')
         } else {
-          next.set(path, 'PND')
-          if (workspace) {
-            window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'PND')
+          if (workspaceRef.current) {
+            window.electron.ipcRenderer.invoke('db:remove-file-state', workspaceRef.current, path)
           }
         }
       })
@@ -231,10 +289,55 @@ function App(): React.JSX.Element {
     })
     copySnapshotRef.current = new Set()
     setDirStructureAddedAtIndex(null)
-  }, [workspace])
+    setActiveChatId(null)
+    chatRef.current?.loadChat([])
+    setChatHistoryKey((k) => k + 1)
+  }, [saveCurrentChat])
+
+  const handleSelectChat = useCallback(
+    async (id: string): Promise<void> => {
+      await saveCurrentChat()
+      const session = await window.electron.ipcRenderer.invoke('db:get-chat-session', id)
+      if (session) {
+        const messages = JSON.parse(session.messages).map((m: any) => ({
+          ...m,
+          variants: m.variants.map((v: any) => ({
+            ...v,
+            timestamp: new Date(v.timestamp)
+          }))
+        }))
+        setActiveChatId(id)
+        chatRef.current?.loadChat(messages)
+      }
+    },
+    [saveCurrentChat]
+  )
+
+  const handleMessagesChange = useCallback(async (messages: ChatMessage[]) => {
+    if (messages.length === 0) return
+    const title = deriveTitle(messages)
+    if (activeChatIdRef.current) {
+      await window.electron.ipcRenderer.invoke(
+        'db:update-chat-session',
+        activeChatIdRef.current,
+        title,
+        JSON.stringify(messages)
+      )
+    } else {
+      const id = await window.electron.ipcRenderer.invoke(
+        'db:create-chat-session',
+        workspaceRef.current,
+        title,
+        JSON.stringify(messages)
+      )
+      setActiveChatId(id)
+    }
+    setChatHistoryKey((k) => k + 1)
+  }, [])
 
   const handlePaste = useCallback(async (): Promise<void> => {
     await chatRef.current?.pasteAsAssistant()
+    await saveCurrentChat()
 
     const snapshot = copySnapshotRef.current
     setFileStates((prev) => {
@@ -256,10 +359,19 @@ function App(): React.JSX.Element {
       return next
     })
     copySnapshotRef.current = new Set()
-  }, [workspace])
+  }, [workspace, saveCurrentChat])
 
-  const startResize = useCallback((e: React.MouseEvent): void => {
+  const startResizeLeft = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
+    resizeTarget.current = 'left'
+    isResizing.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  const startResizeRight = useCallback((e: React.MouseEvent): void => {
+    e.preventDefault()
+    resizeTarget.current = 'right'
     isResizing.current = true
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
@@ -269,13 +381,19 @@ function App(): React.JSX.Element {
     const handleMouseMove = (e: MouseEvent): void => {
       if (!isResizing.current || !layoutRef.current) return
       const rect = layoutRef.current.getBoundingClientRect()
-      const newWidth = e.clientX - rect.left
-      setLeftWidth(Math.min(MAX_LEFT_WIDTH, Math.max(MIN_LEFT_WIDTH, newWidth)))
+      if (resizeTarget.current === 'left') {
+        const newWidth = e.clientX - rect.left
+        setLeftWidth(Math.min(MAX_LEFT_WIDTH, Math.max(MIN_LEFT_WIDTH, newWidth)))
+      } else if (resizeTarget.current === 'right') {
+        const newWidth = rect.right - e.clientX
+        setRightWidth(Math.min(MAX_LEFT_WIDTH, Math.max(MIN_LEFT_WIDTH, newWidth)))
+      }
     }
 
     const handleMouseUp = (): void => {
       if (!isResizing.current) return
       isResizing.current = false
+      resizeTarget.current = null
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
     }
@@ -325,10 +443,35 @@ function App(): React.JSX.Element {
           </div>
           <div
             className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
-            onMouseDown={startResize}
+            onMouseDown={startResizeLeft}
           />
           <div className="flex-1 bg-background flex overflow-hidden min-w-0">
-            <AIChat ref={chatRef} onNewChat={handleNewChat} />
+            <AIChat
+              ref={chatRef}
+              onNewChat={handleNewChat}
+              onMessagesChange={handleMessagesChange}
+            />
+          </div>
+          <div
+            className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
+            onMouseDown={startResizeRight}
+          />
+          <div
+            className="min-w-[160px] max-w-[520px] border-l border-border bg-background-soft flex flex-col"
+            style={{
+              width: `${rightWidth}px`,
+              flexBasis: `${rightWidth}px`,
+              flexGrow: 0,
+              flexShrink: 0
+            }}
+          >
+            <ChatHistory
+              workspace={workspace}
+              activeChatId={activeChatId}
+              onSelectChat={handleSelectChat}
+              onNewChat={handleNewChat}
+              refreshKey={chatHistoryKey}
+            />
           </div>
         </div>
         <StatusBar onCopy={handleCopy} onPaste={handlePaste} />

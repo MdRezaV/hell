@@ -26,7 +26,12 @@ import {
   setDirExpanded,
   pruneWorkspaceState,
   getIncludeDirStructure,
-  setIncludeDirStructure
+  setIncludeDirStructure,
+  createChatSession,
+  updateChatSession,
+  getChatSessions,
+  getChatSession,
+  deleteChatSession
 } from './database'
 import { startWatching, stopWatching } from './watcher'
 
@@ -288,6 +293,32 @@ app.whenReady().then(() => {
       pruneWorkspaceState(workspacePath, validFilePaths, validDirPaths)
     }
   )
+
+  ipcMain.handle(
+    'db:create-chat-session',
+    async (_, workspacePath: string | null, title: string, messages: string) => {
+      return createChatSession(workspacePath, title, messages)
+    }
+  )
+
+  ipcMain.handle(
+    'db:update-chat-session',
+    async (_, id: string, title: string, messages: string) => {
+      updateChatSession(id, title, messages)
+    }
+  )
+
+  ipcMain.handle('db:get-chat-sessions', async (_, workspacePath: string | null) => {
+    return getChatSessions(workspacePath)
+  })
+
+  ipcMain.handle('db:get-chat-session', async (_, id: string) => {
+    return getChatSession(id)
+  })
+
+  ipcMain.handle('db:delete-chat-session', async (_, id: string) => {
+    deleteChatSession(id)
+  })
 
   ipcMain.handle('db:get-include-dir-structure', async (_, workspacePath: string) => {
     return getIncludeDirStructure(workspacePath)

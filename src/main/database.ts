@@ -96,6 +96,31 @@ export function initDatabase(): void {
       path
     ) ON DELETE CASCADE
       );
+    CREATE TABLE IF NOT EXISTS chat_sessions
+    (
+      id
+      TEXT
+      PRIMARY
+      KEY,
+      workspace_path
+      TEXT,
+      title
+      TEXT
+      NOT
+      NULL,
+      messages
+      TEXT
+      NOT
+      NULL,
+      created_at
+      INTEGER
+      NOT
+      NULL,
+      updated_at
+      INTEGER
+      NOT
+      NULL
+    );
   `)
 }
 
@@ -229,6 +254,62 @@ export function setIncludeDirStructure(workspacePath: string, value: boolean): v
     `INSERT INTO workspace_settings (workspace_path, include_dir_structure) VALUES (?, ?)
      ON CONFLICT(workspace_path) DO UPDATE SET include_dir_structure = excluded.include_dir_structure`
   ).run(workspacePath, value ? 1 : 0)
+}
+
+export interface ChatSession {
+  id: string
+  workspace_path: string | null
+  title: string
+  messages: string
+  created_at: number
+  updated_at: number
+}
+
+export function createChatSession(
+  workspacePath: string | null,
+  title: string,
+  messages: string
+): string {
+  const d = getDb()
+  const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  d.prepare(
+    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(id, workspacePath ?? null, title, messages, Date.now(), Date.now())
+  return id
+}
+
+export function updateChatSession(id: string, title: string, messages: string): void {
+  const d = getDb()
+  d.prepare(`UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ? WHERE id = ?`).run(
+    title,
+    messages,
+    Date.now(),
+    id
+  )
+}
+
+export function getChatSessions(workspacePath: string | null): ChatSession[] {
+  const d = getDb()
+  if (workspacePath) {
+    return d
+      .prepare(`SELECT * FROM chat_sessions WHERE workspace_path = ? ORDER BY updated_at DESC`)
+      .all(workspacePath) as ChatSession[]
+  }
+  return d.prepare(`SELECT * FROM chat_sessions ORDER BY updated_at DESC`).all() as ChatSession[]
+}
+
+export function getChatSession(id: string): ChatSession | null {
+  const d = getDb()
+  const row = d.prepare('SELECT * FROM chat_sessions WHERE id = ?').get(id) as
+    | ChatSession
+    | undefined
+  return row ?? null
+}
+
+export function deleteChatSession(id: string): void {
+  const d = getDb()
+  d.prepare('DELETE FROM chat_sessions WHERE id = ?').run(id)
 }
 
 export function pruneWorkspaceState(
