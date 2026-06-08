@@ -1562,6 +1562,14 @@ body {
 
 .md-file-diff-code {
   background: transparent;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.md-file-diff-code .md-file-gutter,
+.md-file-diff-code .md-file-code-scroll {
+  height: 100%;
 }
 
 .md-file-diff-code .md-file-gutter {
