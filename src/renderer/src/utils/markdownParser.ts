@@ -226,7 +226,7 @@ export function matchOpenClose(
     let j = i + 1
     while (j < regularOpens.length) {
       const nextOpen = regularOpens[j]
-      const hasCloseBetween = closes.some((c) => c.start > open.end && c.start < nextOpen.start)
+      const hasCloseBetween = closes.some((c) => c.start >= open.end && c.start < nextOpen.start)
       if (hasCloseBetween) break
       j++
     }
@@ -235,7 +235,7 @@ export function matchOpenClose(
 
     let bestCloseIdx = -1
     for (let k = 0; k < closes.length; k++) {
-      if (closes[k].start > open.end && closes[k].start < boundary) {
+      if (closes[k].start >= open.end && closes[k].start < boundary) {
         bestCloseIdx = k
       }
     }

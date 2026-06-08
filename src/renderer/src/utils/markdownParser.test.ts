@@ -482,12 +482,12 @@ describe('matchOpenClose', () => {
     expect(matches[0].body).toBe('body')
   })
 
-  it('does not match when close immediately follows open (empty body)', () => {
+  it('matches when close immediately follows open (empty body)', () => {
     const text = '<x></x>'
     const { opens, closes } = findTagsInText(text, 'x', [])
-    // matchOpenClose uses strict > so close.start === open.end is not matched
     const matches = matchOpenClose(opens, closes, text.length, text)
-    expect(matches.length).toBe(0)
+    expect(matches.length).toBe(1)
+    expect(matches[0].body).toBe('')
   })
 
   it('handles three consecutive matched pairs', () => {
@@ -571,11 +571,11 @@ describe('findMatchedBlocks', () => {
     expect(matched.length).toBe(0)
   })
 
-  it('does not match tags with empty body (close immediately follows open)', () => {
+  it('matches tags with empty body (close immediately follows open)', () => {
     const text = '<file></file>'
     const { matched } = findMatchedBlocks(text, 'file')
-    // matchOpenClose uses strict > so close.start === open.end is not matched
-    expect(matched.length).toBe(0)
+    expect(matched.length).toBe(1)
+    expect(matched[0].body).toBe('')
   })
 
   it('matches tags with whitespace-only body', () => {
