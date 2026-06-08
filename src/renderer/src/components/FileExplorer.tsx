@@ -23,12 +23,13 @@ interface FileNode {
   type: 'file' | 'directory'
   children?: FileNode[]
   isBinary?: boolean
+  leafPaths: string[]
 }
 
 type CheckState = 'checked' | 'unchecked' | 'indeterminate'
 
 function getCheckState(node: FileNode, fileStates: Map<string, FileTag>): CheckState {
-  const selectablePaths = getLeafPaths(node)
+  const selectablePaths = node.leafPaths
   if (selectablePaths.length === 0) return 'unchecked'
   let checkedCount = 0
   for (const p of selectablePaths) {
@@ -37,16 +38,6 @@ function getCheckState(node: FileNode, fileStates: Map<string, FileTag>): CheckS
   if (checkedCount === 0) return 'unchecked'
   if (checkedCount === selectablePaths.length) return 'checked'
   return 'indeterminate'
-}
-
-function getLeafPaths(node: FileNode): string[] {
-  if (node.type === 'file') {
-    return node.isBinary ? [] : [node.path]
-  }
-  if (!node.children || node.children.length === 0) return []
-  const paths: string[] = []
-  node.children.forEach((child) => paths.push(...getLeafPaths(child)))
-  return paths
 }
 
 const TAG_CHARS: Record<FileTag, string> = {
@@ -63,130 +54,138 @@ function getNodeTags(node: FileNode, fileStates: Map<string, FileTag>): FileTag[
     return tag ? [tag] : []
   }
   const tagSet = new Set<FileTag>()
-  const walk = (n: FileNode): void => {
-    if (n.type === 'file') {
-      const t = fileStates.get(n.path)
-      if (t) tagSet.add(t)
-    }
-    n.children?.forEach(walk)
+  for (const p of node.leafPaths) {
+    const t = fileStates.get(p)
+    if (t) tagSet.add(t)
   }
-  node.children?.forEach(walk)
   return TAG_ORDER.filter((t) => tagSet.has(t))
 }
 
-const TreeNode = memo(function TreeNode({
-  node,
-  level,
-  fileStates,
-  expandedDirs,
-  onToggle,
-  onToggleExpand
-}: {
-  node: FileNode
-  level: number
-  fileStates: Map<string, FileTag>
-  expandedDirs: Set<string>
-  onToggle: (paths: string[], checked: boolean) => void
-  onToggleExpand: (path: string, expanded: boolean) => void
-}): React.JSX.Element {
-  const isOpen = expandedDirs.has(node.path)
-  const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
-  const checkState = getCheckState(node, fileStates)
-  const tags = getNodeTags(node, fileStates)
-  const isBinary = node.type === 'file' && !!node.isBinary
+const TreeNode = memo(
+  function TreeNode({
+    node,
+    level,
+    fileStates,
+    expandedDirs,
+    onToggle,
+    onToggleExpand
+  }: {
+    node: FileNode
+    level: number
+    fileStates: Map<string, FileTag>
+    expandedDirs: Set<string>
+    onToggle: (paths: string[], checked: boolean) => void
+    onToggleExpand: (path: string, expanded: boolean) => void
+  }): React.JSX.Element {
+    const isOpen = expandedDirs.has(node.path)
+    const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
+    const checkState = getCheckState(node, fileStates)
+    const tags = getNodeTags(node, fileStates)
+    const isBinary = node.type === 'file' && !!node.isBinary
 
-  const selectablePaths = getLeafPaths(node)
-  const isDisabled = selectablePaths.length === 0
-  const showCheckbox = !isBinary
+    const selectablePaths = node.leafPaths
+    const isDisabled = selectablePaths.length === 0
+    const showCheckbox = !isBinary
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    e.stopPropagation()
-    const paths = getLeafPaths(node)
-    if (paths.length === 0) return
-    onToggle(paths, e.target.checked)
-  }
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+      e.stopPropagation()
+      const paths = node.leafPaths
+      if (paths.length === 0) return
+      onToggle(paths, e.target.checked)
+    }
 
-  const handleCheckboxClick = (e: React.MouseEvent): void => {
-    e.stopPropagation()
-  }
+    const handleCheckboxClick = (e: React.MouseEvent): void => {
+      e.stopPropagation()
+    }
 
-  const handleRowClick = (): void => {
-    if (hasChildren && node.type === 'directory') {
-      onToggleExpand(node.path, !isOpen)
-    } else if (node.type === 'file' && !isDisabled) {
-      const paths = getLeafPaths(node)
-      if (paths.length > 0) {
-        onToggle(paths, checkState !== 'checked')
+    const handleRowClick = (): void => {
+      if (hasChildren && node.type === 'directory') {
+        onToggleExpand(node.path, !isOpen)
+      } else if (node.type === 'file' && !isDisabled) {
+        if (node.leafPaths.length > 0) {
+          onToggle(node.leafPaths, checkState !== 'checked')
+        }
       }
     }
-  }
 
-  return (
-    <div>
-      <div
-        className="tree-node"
-        style={{ paddingLeft: `${level * 16}px` }}
-        onClick={handleRowClick}
-      >
-        <span className="tree-chevron">
-          {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
-        </span>
-        {showCheckbox && (
-          <span className="tree-checkbox" onClick={handleCheckboxClick}>
-            <input
-              type="checkbox"
-              checked={checkState === 'checked'}
-              disabled={isDisabled}
-              ref={(el) => {
-                if (el) {
-                  el.indeterminate = checkState === 'indeterminate'
-                }
-              }}
-              onChange={handleCheckboxChange}
-            />
+    return (
+      <div>
+        <div
+          className="tree-node"
+          style={{ paddingLeft: `${level * 16}px` }}
+          onClick={handleRowClick}
+        >
+          <span className="tree-chevron">
+            {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
           </span>
-        )}
-        <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
-          {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
-        </span>
-        <span className="tree-label" style={isBinary ? { opacity: 0.5 } : undefined}>
-          {node.name}
-        </span>
-        {isBinary && (
-          <span
-            className="tree-tag"
-            style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
-          >
-            BIN
+          {showCheckbox && (
+            <span className="tree-checkbox" onClick={handleCheckboxClick}>
+              <input
+                type="checkbox"
+                checked={checkState === 'checked'}
+                disabled={isDisabled}
+                ref={(el) => {
+                  if (el) {
+                    el.indeterminate = checkState === 'indeterminate'
+                  }
+                }}
+                onChange={handleCheckboxChange}
+              />
+            </span>
+          )}
+          <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
+            {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
           </span>
-        )}
-        {tags.map((tag) => (
-          <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
-            {node.type === 'file' ? tag : TAG_CHARS[tag]}
+          <span className="tree-label" style={isBinary ? { opacity: 0.5 } : undefined}>
+            {node.name}
           </span>
-        ))}
-      </div>
-      {isOpen && hasChildren && (
-        <div>
-          {node.children!.map((child) => (
-            <TreeNode
-              key={child.path}
-              node={child}
-              level={level + 1}
-              fileStates={fileStates}
-              expandedDirs={expandedDirs}
-              onToggle={onToggle}
-              onToggleExpand={onToggleExpand}
-            />
+          {isBinary && (
+            <span
+              className="tree-tag"
+              style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
+            >
+              BIN
+            </span>
+          )}
+          {tags.map((tag) => (
+            <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
+              {node.type === 'file' ? tag : TAG_CHARS[tag]}
+            </span>
           ))}
         </div>
-      )}
-    </div>
-  )
-})
+        {isOpen && hasChildren && (
+          <div>
+            {node.children!.map((child) => (
+              <TreeNode
+                key={child.path}
+                node={child}
+                level={level + 1}
+                fileStates={fileStates}
+                expandedDirs={expandedDirs}
+                onToggle={onToggle}
+                onToggleExpand={onToggleExpand}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  },
+  (prevProps, nextProps) => {
+    if (prevProps.node !== nextProps.node) return false
+    if (prevProps.level !== nextProps.level) return false
+    if (prevProps.onToggle !== nextProps.onToggle) return false
+    if (prevProps.onToggleExpand !== nextProps.onToggleExpand) return false
+    if (prevProps.expandedDirs !== nextProps.expandedDirs) return false
+    for (const p of prevProps.node.leafPaths) {
+      if (prevProps.fileStates.get(p) !== nextProps.fileStates.get(p)) return false
+    }
+    return true
+  }
+)
 
 function sortTree(nodes: FileNode[]): FileNode[] {
-  return [...nodes]
+  const sorted = [...nodes]
     .sort((a, b) => {
       if (a.type !== b.type) {
         return a.type === 'directory' ? -1 : 1
@@ -199,6 +198,21 @@ function sortTree(nodes: FileNode[]): FileNode[] {
       }
       return node
     })
+  return populateLeafPaths(sorted)
+}
+
+function populateLeafPaths(nodes: FileNode[]): FileNode[] {
+  return nodes.map((node) => {
+    if (node.type === 'file') {
+      return { ...node, leafPaths: node.isBinary ? [] : [node.path] }
+    }
+    if (!node.children || node.children.length === 0) {
+      return { ...node, leafPaths: [] }
+    }
+    const children = populateLeafPaths(node.children)
+    const leafPaths = children.flatMap((c) => c.leafPaths)
+    return { ...node, children, leafPaths }
+  })
 }
 
 function collectFilePaths(nodes: FileNode[]): Set<string> {

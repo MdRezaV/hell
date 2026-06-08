@@ -61,10 +61,14 @@ function App(): React.JSX.Element {
     )) as boolean
     setIncludeDirStructure(includeDir)
     const fsMap = new Map<string, FileTag>()
+    const batchStates: Array<{ absolutePath: string; tag: string }> = []
     for (const [rel] of state.fileStates) {
       const abs = joinWithWorkspace(path, rel)
       fsMap.set(abs, 'PND')
-      window.electron.ipcRenderer.invoke('db:set-file-state', path, abs, 'PND')
+      batchStates.push({ absolutePath: abs, tag: 'PND' })
+    }
+    if (batchStates.length > 0) {
+      await window.electron.ipcRenderer.invoke('db:batch-set-file-states', path, batchStates)
     }
     const expSet = new Set<string>()
     for (const rel of state.expandedDirs) {
@@ -145,27 +149,27 @@ function App(): React.JSX.Element {
       setFileStates((prev) => {
         const next = new Map(prev)
         if (checked) {
-          paths.forEach((p) => {
-            if (!next.has(p)) {
-              next.set(p, 'PND')
-              if (workspace) {
-                window.electron.ipcRenderer.invoke('db:set-file-state', workspace, p, 'PND')
-              }
-            }
-          })
+          for (const p of paths) {
+            if (!next.has(p)) next.set(p, 'PND')
+          }
         } else {
-          paths.forEach((p) => {
-            const current = next.get(p)
-            if (current) {
-              next.delete(p)
-              if (workspace) {
-                window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, p)
-              }
-            }
-          })
+          for (const p of paths) {
+            next.delete(p)
+          }
         }
         return next
       })
+      if (workspace) {
+        if (checked) {
+          window.electron.ipcRenderer.invoke(
+            'db:batch-set-file-states',
+            workspace,
+            paths.map((p) => ({ absolutePath: p, tag: 'PND' }))
+          )
+        } else {
+          window.electron.ipcRenderer.invoke('db:batch-remove-file-states', workspace, paths)
+        }
+      }
     },
     [workspace]
   )
@@ -189,13 +193,17 @@ function App(): React.JSX.Element {
     if (!workspace) return
     setFileStates((prev) => {
       const next = new Map<string, FileTag>()
+      const toRemove: string[] = []
       prev.forEach((state, path) => {
         if (state === 'ADD') {
           next.set(path, 'ADD')
         } else {
-          window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, path)
+          toRemove.push(path)
         }
       })
+      if (toRemove.length > 0) {
+        window.electron.ipcRenderer.invoke('db:batch-remove-file-states', workspace, toRemove)
+      }
       return next
     })
     copySnapshotRef.current = new Set()
@@ -205,88 +213,88 @@ function App(): React.JSX.Element {
     setFilePaths(paths)
   }, [])
 
-  const handleCopy = useCallback(async (): Promise<void> => {
-    if (!workspace) return
+  const latestCopyFnRef = useRef<(() => Promise<void>) | undefined>(undefined)
+  const latestPasteFnRef = useRef<(() => Promise<void>) | undefined>(undefined)
 
-    // 1. Transition PND -> INQ first and collect paths synchronously
-    const pathsToInclude: string[] = []
-    const pathsToMarkInq: string[] = []
+  useEffect(() => {
+    latestCopyFnRef.current = async (): Promise<void> => {
+      if (!workspace) return
 
-    fileStates.forEach((state, path) => {
-      if (filePaths.has(path)) {
-        if (state === 'PND') {
-          pathsToMarkInq.push(path)
-        }
-        if (state === 'PND' || state === 'INQ') {
-          pathsToInclude.push(path)
-        }
-      }
-    })
+      // 1. Transition PND -> INQ first and collect paths synchronously
+      const pathsToInclude: string[] = []
+      const pathsToMarkInq: string[] = []
 
-    if (pathsToMarkInq.length > 0) {
-      setFileStates((prev) => {
-        const next = new Map(prev)
-        pathsToMarkInq.forEach((p) => {
-          next.set(p, 'INQ')
-          window.electron.ipcRenderer.invoke('db:set-file-state', workspace, p, 'INQ')
-        })
-        return next
-      })
-    }
-
-    // 2. Read file contents for all targeted paths
-    const pendingFilesPromises = pathsToInclude.map(async (absolutePath) => {
-      let relativePath = absolutePath
-      if (relativePath.startsWith(workspace)) {
-        relativePath = relativePath.substring(workspace.length)
-        if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
-          relativePath = relativePath.substring(1)
-        }
-      }
-      const res: { exists: boolean; error: boolean; content: string | null } =
-        await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
-      if (!res.exists) return null
-      if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
-      if (res.content !== null) return { path: relativePath, content: res.content }
-      return null
-    })
-
-    const results = await Promise.all(pendingFilesPromises)
-    const pendingFiles = results.filter((f): f is { path: string; content: string } => f !== null)
-
-    // 3. Prepare context and copy
-    const currentIndex = chatRef.current?.getResolvedUserIndex() ?? 0
-    let dirStructure: string | undefined
-    if (includeDirStructure) {
-      if (dirStructureAddedAtIndex === null || dirStructureAddedAtIndex === currentIndex) {
-        dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
-        if (dirStructureAddedAtIndex === null) {
-          setDirStructureAddedAtIndex(currentIndex)
-        }
-      }
-    }
-
-    const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
-    if (!success) return
-
-    copySnapshotRef.current = new Set(pathsToInclude)
-  }, [fileStates, filePaths, workspace, includeDirStructure, dirStructureAddedAtIndex])
-
-  const handleNewChat = useCallback(async (): Promise<void> => {
-    await saveCurrentChat()
-    setFileStates((prev) => {
-      const next = new Map<string, FileTag>()
-      prev.forEach((state, path) => {
-        if (state === 'ADD') {
-          next.set(path, 'ADD')
-        } else {
-          if (workspaceRef.current) {
-            window.electron.ipcRenderer.invoke('db:remove-file-state', workspaceRef.current, path)
+      fileStates.forEach((state, path) => {
+        if (filePaths.has(path)) {
+          if (state === 'PND') {
+            pathsToMarkInq.push(path)
+          }
+          if (state === 'PND' || state === 'INQ') {
+            pathsToInclude.push(path)
           }
         }
       })
-      return next
-    })
+
+      if (pathsToMarkInq.length > 0) {
+        setFileStates((prev) => {
+          const next = new Map(prev)
+          for (const p of pathsToMarkInq) {
+            next.set(p, 'INQ')
+          }
+          return next
+        })
+        window.electron.ipcRenderer.invoke(
+          'db:batch-set-file-states',
+          workspace,
+          pathsToMarkInq.map((p) => ({ absolutePath: p, tag: 'INQ' }))
+        )
+      }
+
+      // 2. Read file contents for all targeted paths
+      const pendingFilesPromises = pathsToInclude.map(async (absolutePath) => {
+        let relativePath = absolutePath
+        if (relativePath.startsWith(workspace)) {
+          relativePath = relativePath.substring(workspace.length)
+          if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+            relativePath = relativePath.substring(1)
+          }
+        }
+        const res: { exists: boolean; error: boolean; content: string | null } =
+          await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
+        if (!res.exists) return null
+        if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
+        if (res.content !== null) return { path: relativePath, content: res.content }
+        return null
+      })
+
+      const results = await Promise.all(pendingFilesPromises)
+      const pendingFiles = results.filter((f): f is { path: string; content: string } => f !== null)
+
+      // 3. Prepare context and copy
+      const currentIndex = chatRef.current?.getResolvedUserIndex() ?? 0
+      let dirStructure: string | undefined
+      if (includeDirStructure) {
+        if (dirStructureAddedAtIndex === null || dirStructureAddedAtIndex === currentIndex) {
+          dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
+          if (dirStructureAddedAtIndex === null) {
+            setDirStructureAddedAtIndex(currentIndex)
+          }
+        }
+      }
+
+      const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
+      if (!success) return
+
+      copySnapshotRef.current = new Set(pathsToInclude)
+    }
+  }, [workspace, fileStates, filePaths, includeDirStructure, dirStructureAddedAtIndex])
+
+  const handleCopy = useCallback(() => {
+    latestCopyFnRef.current?.()
+  }, [])
+
+  const handleNewChat = useCallback(async (): Promise<void> => {
+    await saveCurrentChat()
     copySnapshotRef.current = new Set()
     setDirStructureAddedAtIndex(null)
     setActiveChatId(null)
@@ -335,31 +343,41 @@ function App(): React.JSX.Element {
     setChatHistoryKey((k) => k + 1)
   }, [])
 
-  const handlePaste = useCallback(async (): Promise<void> => {
-    await chatRef.current?.pasteAsAssistant()
-    await saveCurrentChat()
+  useEffect(() => {
+    latestPasteFnRef.current = async (): Promise<void> => {
+      await chatRef.current?.pasteAsAssistant()
+      await saveCurrentChat()
 
-    const snapshot = copySnapshotRef.current
-    setFileStates((prev) => {
-      const next = new Map(prev)
-      snapshot.forEach((path) => {
-        next.set(path, 'ADD')
-        if (workspace) {
-          window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'ADD')
-        }
-      })
-      next.forEach((state, path) => {
-        if (state === 'INQ') {
+      const snapshot = copySnapshotRef.current
+      setFileStates((prev) => {
+        const next = new Map(prev)
+        const toAdd = new Set<string>()
+        snapshot.forEach((path) => {
           next.set(path, 'ADD')
-          if (workspace) {
-            window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'ADD')
+          toAdd.add(path)
+        })
+        next.forEach((state, path) => {
+          if (state === 'INQ') {
+            next.set(path, 'ADD')
+            toAdd.add(path)
           }
+        })
+        if (workspace && toAdd.size > 0) {
+          window.electron.ipcRenderer.invoke(
+            'db:batch-set-file-states',
+            workspace,
+            [...toAdd].map((p) => ({ absolutePath: p, tag: 'ADD' }))
+          )
         }
+        return next
       })
-      return next
-    })
-    copySnapshotRef.current = new Set()
+      copySnapshotRef.current = new Set()
+    }
   }, [workspace, saveCurrentChat])
+
+  const handlePaste = useCallback(() => {
+    latestPasteFnRef.current?.()
+  }, [])
 
   const startResizeLeft = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()

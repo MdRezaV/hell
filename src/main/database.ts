@@ -216,6 +216,36 @@ export function removeFileState(workspacePath: string, absolutePath: string): vo
   )
 }
 
+export function batchSetFileStates(
+  workspacePath: string,
+  states: Array<{ absolutePath: string; tag: string }>
+): void {
+  const d = getDb()
+  const stmt = d.prepare(
+    `INSERT INTO file_states (workspace_path, relative_path, tag) VALUES (?, ?, ?)
+     ON CONFLICT(workspace_path, relative_path) DO UPDATE SET tag = excluded.tag`
+  )
+  const tx = d.transaction(() => {
+    for (const { absolutePath, tag } of states) {
+      const rel = toRelative(workspacePath, absolutePath)
+      stmt.run(workspacePath, rel, tag)
+    }
+  })
+  tx()
+}
+
+export function batchRemoveFileStates(workspacePath: string, absolutePaths: string[]): void {
+  const d = getDb()
+  const stmt = d.prepare('DELETE FROM file_states WHERE workspace_path = ? AND relative_path = ?')
+  const tx = d.transaction(() => {
+    for (const absolutePath of absolutePaths) {
+      const rel = toRelative(workspacePath, absolutePath)
+      stmt.run(workspacePath, rel)
+    }
+  })
+  tx()
+}
+
 export function clearFileStates(workspacePath: string): void {
   const d = getDb()
   d.prepare('DELETE FROM file_states WHERE workspace_path = ?').run(workspacePath)

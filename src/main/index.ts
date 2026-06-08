@@ -15,6 +15,8 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import ignore, { type Ignore } from 'ignore'
 import icon from '../../resources/icon.png?asset'
 import {
+  batchRemoveFileStates,
+  batchSetFileStates,
   clearFileStates,
   closeDatabase,
   createChatSession,
@@ -262,6 +264,20 @@ app.whenReady().then(() => {
   ipcMain.handle('db:remove-file-state', async (_, workspacePath: string, absolutePath: string) => {
     removeFileState(workspacePath, absolutePath)
   })
+
+  ipcMain.handle(
+    'db:batch-set-file-states',
+    async (_, workspacePath: string, states: Array<{ absolutePath: string; tag: string }>) => {
+      batchSetFileStates(workspacePath, states)
+    }
+  )
+
+  ipcMain.handle(
+    'db:batch-remove-file-states',
+    async (_, workspacePath: string, absolutePaths: string[]) => {
+      batchRemoveFileStates(workspacePath, absolutePaths)
+    }
+  )
 
   ipcMain.handle('db:clear-file-states', async (_, workspacePath: string) => {
     clearFileStates(workspacePath)

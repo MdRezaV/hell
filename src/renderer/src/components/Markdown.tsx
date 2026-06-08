@@ -218,20 +218,62 @@ interface FileStateCache {
   workspace: string
 }
 
+const FILE_CACHE_MAX = 256
+
+const fileContentCache = new Map<string, Promise<FileState>>()
+
+function invalidateFileContentCache(workspace: string, path: string): void {
+  fileContentCache.delete(`${workspace}::${path}`)
+  window.dispatchEvent(new CustomEvent('file-content-invalidated', { detail: { workspace, path } }))
+}
+
 function useFileContent(path: string): FileState | null {
   const { workspace } = useWorkspace()
   const [cache, setCache] = useState<FileStateCache | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!workspace) return
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent).detail as { workspace: string; path: string }
+      if (detail.workspace === workspace && detail.path === path) {
+        setRefreshKey((k) => k + 1)
+      }
+    }
+    window.addEventListener('file-content-invalidated', handler)
+    return () => window.removeEventListener('file-content-invalidated', handler)
+  }, [workspace, path])
+
+  useEffect(() => {
+    if (!workspace) return
+    const cacheKey = `${workspace}::${path}`
     let cancelled = false
-    window.electron.ipcRenderer.invoke('read-file', workspace, path).then((result: FileState) => {
-      if (!cancelled) setCache({ data: result, path, workspace })
-    })
+
+    const existingPromise = fileContentCache.get(cacheKey)
+    if (existingPromise) {
+      existingPromise.then((result) => {
+        if (!cancelled) setCache({ data: result, path, workspace })
+      })
+    } else {
+      const promise = window.electron.ipcRenderer.invoke(
+        'read-file',
+        workspace,
+        path
+      ) as Promise<FileState>
+      if (fileContentCache.size >= FILE_CACHE_MAX) {
+        const firstKey = fileContentCache.keys().next().value
+        if (firstKey !== undefined) fileContentCache.delete(firstKey)
+      }
+      fileContentCache.set(cacheKey, promise)
+      promise.then((result) => {
+        if (!cancelled) setCache({ data: result, path, workspace })
+      })
+    }
+
     return () => {
       cancelled = true
     }
-  }, [workspace, path])
+  }, [workspace, path, refreshKey])
 
   if (!workspace) {
     return { exists: false, content: null }
@@ -294,6 +336,7 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
       path,
       newContent
     )
+    if (result.success) invalidateFileContentCache(workspace, path)
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, oldCode, newCode])
 
@@ -419,6 +462,10 @@ const FileMoveBlock = memo(function FileMoveBlock({
     }
     const deleteResult: { success: boolean; error?: string } =
       await window.electron.ipcRenderer.invoke('delete-file', workspace, oldPath)
+    if (deleteResult.success) {
+      invalidateFileContentCache(workspace, oldPath)
+      invalidateFileContentCache(workspace, newPath)
+    }
     setApplyState(deleteResult.success ? 'applied' : 'error')
   }, [workspace, oldPath, newPath])
 
@@ -488,6 +535,7 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
       workspace,
       path
     )
+    if (result.success) invalidateFileContentCache(workspace, path)
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path])
 
@@ -595,6 +643,7 @@ const FileBlock = memo(function FileBlock({
       path,
       code
     )
+    if (result.success) invalidateFileContentCache(workspace, path)
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, code])
 
