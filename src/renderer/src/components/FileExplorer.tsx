@@ -113,6 +113,11 @@ const TreeNode = memo(function TreeNode({
   const handleRowClick = (): void => {
     if (hasChildren && node.type === 'directory') {
       onToggleExpand(node.path, !isOpen)
+    } else if (node.type === 'file' && !isDisabled) {
+      const paths = getLeafPaths(node)
+      if (paths.length > 0) {
+        onToggle(paths, checkState !== 'checked')
+      }
     }
   }
 

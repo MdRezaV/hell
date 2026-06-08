@@ -106,7 +106,7 @@ function App(): React.JSX.Element {
         } else {
           paths.forEach((p) => {
             const current = next.get(p)
-            if (current && current !== 'ADD') {
+            if (current) {
               next.delete(p)
               if (workspace) {
                 window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, p)
@@ -137,8 +137,17 @@ function App(): React.JSX.Element {
 
   const handleClearSelections = useCallback(async (): Promise<void> => {
     if (!workspace) return
-    await window.electron.ipcRenderer.invoke('db:clear-file-states', workspace)
-    setFileStates(new Map())
+    setFileStates((prev) => {
+      const next = new Map<string, FileTag>()
+      prev.forEach((state, path) => {
+        if (state === 'ADD') {
+          next.set(path, 'ADD')
+        } else {
+          window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, path)
+        }
+      })
+      return next
+    })
     copySnapshotRef.current = new Set()
   }, [workspace])
 
@@ -208,10 +217,14 @@ function App(): React.JSX.Element {
   const handleNewChat = useCallback((): void => {
     setFileStates((prev) => {
       const next = new Map<string, FileTag>()
-      prev.forEach((_, path) => {
-        next.set(path, 'PND')
-        if (workspace) {
-          window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'PND')
+      prev.forEach((state, path) => {
+        if (state === 'ADD') {
+          window.electron.ipcRenderer.invoke('db:remove-file-state', workspace, path)
+        } else {
+          next.set(path, 'PND')
+          if (workspace) {
+            window.electron.ipcRenderer.invoke('db:set-file-state', workspace, path, 'PND')
+          }
         }
       })
       return next

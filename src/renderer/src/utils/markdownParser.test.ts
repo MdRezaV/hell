@@ -79,7 +79,7 @@ describe('parseReplaceBlock', () => {
   it('treats ======= as content when opener is longer', () => {
     const code = '<<<<<<<< SEARCH\nconst x = "======="\n========\nconst x = "new"\n>>>>>>>> REPLACE'
     const result = parseReplaceBlock(code)
-    expect(result).toEqual({ oldCode: 'const x = "=======\n"', newCode: 'const x = "new"' })
+    expect(result).toEqual({ oldCode: 'const x = "======="', newCode: 'const x = "new"' })
   })
 
   it('returns null when opening marker is missing', () => {
@@ -99,7 +99,7 @@ describe('parseReplaceBlock', () => {
     const code =
       '<<<<<<<< SEARCH\noriginal\n========\nconst y = "======="\nreplaced\n>>>>>>>> REPLACE'
     const result = parseReplaceBlock(code)
-    expect(result).toEqual({ oldCode: 'original', newCode: 'const y = "=======\n"\nreplaced' })
+    expect(result).toEqual({ oldCode: 'original', newCode: 'const y = "======="\nreplaced' })
   })
 })
 
@@ -300,7 +300,7 @@ describe('preprocess — EDIT blocks', () => {
     const input =
       '--- EDIT a.ts ---\n<<<<<<<< SEARCH\nconst x = "======="\n========\nconst x = "new"\n>>>>>>>> REPLACE'
     const out = preprocess(input)
-    expect(out).toContain('const x = "=======\n"')
+    expect(out).toContain('const x = "======="')
     expect(out).toContain('const x = "new"')
   })
 
