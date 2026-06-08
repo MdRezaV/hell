@@ -109,7 +109,8 @@ const AUTO_LANG_CACHE_MAX = 512
 function detectLanguage(code: string): string {
   const cached = autoLanguageCache.get(code)
   if (cached !== undefined) return cached
-  const detected = hljs.highlightAuto(code).language || 'text'
+  const sample = code.length > 2048 ? code.slice(0, 2048) : code
+  const detected = hljs.highlightAuto(sample).language || 'text'
   autoLanguageCache.set(code, detected)
   if (autoLanguageCache.size > AUTO_LANG_CACHE_MAX) {
     const firstKey = autoLanguageCache.keys().next().value
@@ -121,10 +122,15 @@ function detectLanguage(code: string): string {
 function extractText(node: ReactNode): string {
   if (typeof node === 'string') return node
   if (typeof node === 'number') return String(node)
-  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (Array.isArray(node)) {
+    let result = ''
+    for (let i = 0; i < node.length; i++) {
+      result += extractText(node[i])
+    }
+    return result
+  }
   if (node && typeof node === 'object' && 'props' in node) {
-    const el = node as { props: { children?: ReactNode } }
-    return extractText(el.props.children)
+    return extractText((node as { props: { children?: ReactNode } }).props.children)
   }
   return ''
 }

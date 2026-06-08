@@ -177,8 +177,10 @@ const TreeNode = memo(
     if (prevProps.onToggle !== nextProps.onToggle) return false
     if (prevProps.onToggleExpand !== nextProps.onToggleExpand) return false
     if (prevProps.expandedDirs !== nextProps.expandedDirs) return false
-    for (const p of prevProps.node.leafPaths) {
-      if (prevProps.fileStates.get(p) !== nextProps.fileStates.get(p)) return false
+    if (prevProps.fileStates !== nextProps.fileStates) {
+      for (const p of prevProps.node.leafPaths) {
+        if (prevProps.fileStates.get(p) !== nextProps.fileStates.get(p)) return false
+      }
     }
     return true
   }

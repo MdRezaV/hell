@@ -303,7 +303,12 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const copyTimeoutRef = useRef<number | null>(null)
   const isLoadingRef = useRef(false)
+  const messagesRef = useRef<ChatMessage[]>([])
+  const inputValueRef = useRef('')
   const resizeTextarea = useAutoResizeTextarea()
+
+  messagesRef.current = messages
+  inputValueRef.current = input
 
   useEffect(() => {
     if (isLoadingRef.current) return
@@ -313,9 +318,9 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     return () => clearTimeout(timeout)
   }, [messages, onMessagesChange])
 
-  const scrollToBottom = (): void => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const scrollToBottom = useCallback((): void => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
@@ -342,12 +347,12 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   useImperativeHandle(ref, () => {
     return {
       getResolvedUserIndex(): number {
-        const userMessages = messages.filter((m) => m.role === 'user')
+        const userMessages = messagesRef.current.filter((m) => m.role === 'user')
         if (userMessages.length === 0) return 0
         return userMessages.length - 1
       },
       getMessages(): ChatMessage[] {
-        return messages
+        return messagesRef.current
       },
       loadChat(newMessages: ChatMessage[]): void {
         isLoadingRef.current = true
@@ -368,11 +373,11 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         files: FileContext[] = [],
         dirStructure?: string
       ): Promise<boolean> {
-        let currentMessages = messages
+        let currentMessages = messagesRef.current
 
         const userMessages = currentMessages.filter((m) => m.role === 'user')
         if (userMessages.length === 0) {
-          const trimmed = input.trim()
+          const trimmed = inputValueRef.current.trim()
           if (!trimmed) return false
           const userMessage: ChatMessage = {
             id: generateId(),
@@ -437,7 +442,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         }
       }
     }
-  }, [input, messages])
+  }, [])
 
   const handleSend = (): void => {
     const trimmed = input.trim()
