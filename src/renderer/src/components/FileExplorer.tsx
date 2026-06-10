@@ -293,7 +293,7 @@ function FileExplorer({
   const [search, setSearch] = useState('')
   const [contentMatches, setContentMatches] = useState<Set<string>>(new Set())
   const [searchLoading, setSearchLoading] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancelRef = useRef(false)
 
   if (workspace !== prevWorkspace) {
