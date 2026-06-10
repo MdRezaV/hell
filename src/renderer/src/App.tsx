@@ -381,6 +381,18 @@ function App(): React.JSX.Element {
     latestPasteFnRef.current?.()
   }, [])
 
+  const handleClearDb = useCallback(async (): Promise<void> => {
+    await window.electron.ipcRenderer.invoke('db:clear-all')
+    setFileStates(new Map())
+    setExpandedDirs(new Set())
+    setFilePaths(new Set())
+    setActiveChatId(null)
+    copySnapshotRef.current = new Set()
+    chatRef.current?.loadChat([])
+    setChatHistoryKey((k) => k + 1)
+    setDirStructureAddedAtIndex(null)
+  }, [])
+
   const startResizeLeft = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
     resizeTarget.current = 'left'
@@ -494,7 +506,7 @@ function App(): React.JSX.Element {
             />
           </div>
         </div>
-        <StatusBar onCopy={handleCopy} onPaste={handlePaste} />
+        <StatusBar onCopy={handleCopy} onPaste={handlePaste} onClearDb={handleClearDb} />
       </div>
     </WorkspaceContext.Provider>
   )
