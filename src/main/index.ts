@@ -27,6 +27,7 @@ import {
   updateChatSession
 } from './database'
 import { startWatching, stopWatching } from './watcher'
+import { initializeLogging, log } from './logger'
 
 interface IgnoreRule {
   dir: string
@@ -241,6 +242,7 @@ function formatTreeText(rootName: string, nodes: FileNode[]): string {
 }
 
 function createWindow(): void {
+  log.info('Creating main window')
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -276,7 +278,13 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  initDatabase()
+  initializeLogging()
+  try {
+    initDatabase()
+    log.info('Database initialized')
+  } catch (e) {
+    log.error('Failed to initialize database', e)
+  }
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -296,6 +304,7 @@ app.whenReady().then(() => {
       properties: ['openDirectory']
     })
     if (result.canceled || result.filePaths.length === 0) return null
+    log.info('Workspace opened:', result.filePaths[0])
     return result.filePaths[0]
   })
 
@@ -321,6 +330,7 @@ app.whenReady().then(() => {
         writeFileSync(fullPath, content, 'utf-8')
         return { success: true }
       } catch (e: unknown) {
+        log.error('Failed to write file:', relativePath, e)
         return { success: false, error: e instanceof Error ? e.message : String(e) }
       }
     }
@@ -332,6 +342,7 @@ app.whenReady().then(() => {
       unlinkSync(fullPath)
       return { success: true }
     } catch (e: unknown) {
+      log.error('Failed to delete file:', relativePath, e)
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })
@@ -467,6 +478,7 @@ app.whenReady().then(() => {
 })
 
 app.on('before-quit', () => {
+  log.info('App quitting')
   stopWatching()
   closeDatabase()
 })
@@ -475,6 +487,7 @@ app.on('before-quit', () => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  log.info('All windows closed')
   if (process.platform !== 'darwin') {
     app.quit()
   }

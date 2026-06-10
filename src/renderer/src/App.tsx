@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import log from 'electron-log/renderer'
 import FileExplorer, { type FileTag } from './components/FileExplorer'
 import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat'
 import ChatHistory from './components/ChatHistory'
@@ -105,6 +106,7 @@ function App(): React.JSX.Element {
   const handleWorkspaceChange = useCallback(
     async (path: string | null, { restore = true } = {}): Promise<void> => {
       await saveCurrentChat()
+      log.info('Workspace changed:', path ?? '(none)')
       setWorkspace(path)
       setFilePaths(new Set())
       copySnapshotRef.current = new Set()
@@ -136,8 +138,8 @@ function App(): React.JSX.Element {
           await handleWorkspaceChange(path)
         }
       })
-      .catch(() => {
-        /* ignore */
+      .catch((e) => {
+        log.warn('Failed to load last workspace', e)
       })
     return () => {
       cancelled = true
