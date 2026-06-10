@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { initDatabase, closeDatabase } from './database'
+import { closeDatabase, initDatabase } from './database'
 import { stopWatching } from './watcher'
 import { initializeLogging, log } from './logger'
 import { createWindow } from './window'

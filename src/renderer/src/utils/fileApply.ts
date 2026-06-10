@@ -56,7 +56,11 @@ export function invalidateFileContentCache(workspace: string, path: string): voi
 }
 
 export async function readFile(workspace: string, path: string): Promise<FileState> {
-  return window.electron.ipcRenderer.invoke('read-file', workspace, path) as Promise<FileState>
+  return (await window.electron.ipcRenderer.invoke(
+    'read-file',
+    workspace,
+    path
+  )) as Promise<FileState>
 }
 
 export async function applyFileWrite(
@@ -65,12 +69,12 @@ export async function applyFileWrite(
   content: string
 ): Promise<ApplyResult> {
   try {
-    return await (window.electron.ipcRenderer.invoke(
+    return await ((await window.electron.ipcRenderer.invoke(
       'write-file',
       workspace,
       path,
       content
-    ) as Promise<ApplyResult>)
+    )) as Promise<ApplyResult>)
   } catch (e) {
     log.error('Failed to write file:', e)
     return { success: false, error: String(e) }

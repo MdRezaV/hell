@@ -1,277 +1,368 @@
 .md-content {
-@apply text-[13px] leading-relaxed text-text break-words min-w-0 overflow-hidden;
+  @apply text-[13px] leading-relaxed text-text break-words min-w-0 overflow-hidden;
 }
+
 .md-content > *:first-child {
-@apply mt-0;
+  @apply mt-0;
 }
+
 .md-content > *:last-child {
-@apply mb-0;
+  @apply mb-0;
 }
+
 .md-content p {
-@apply mb-2.5;
+  @apply mb-2.5;
 }
+
 .md-content h1, .md-content h2, .md-content h3, .md-content h4, .md-content h5, .md-content h6 {
-@apply mt-4 mb-2 font-semibold leading-snug text-text;
+  @apply mt-4 mb-2 font-semibold leading-snug text-text;
 }
+
 .md-content h1 {
-@apply text-2xl;
+  @apply text-2xl;
 }
+
 .md-content h2 {
-@apply text-xl;
+  @apply text-xl;
 }
+
 .md-content h3 {
-@apply text-[1.1rem];
+  @apply text-[1.1rem];
 }
+
 .md-content h4 {
-@apply text-sm;
+  @apply text-sm;
 }
+
 .md-content ul, .md-content ol {
-@apply mb-2.5 pl-[22px];
+  @apply mb-2.5 pl-[22px];
 }
+
 .md-content ul {
-@apply list-disc;
+  @apply list-disc;
 }
+
 .md-content ol {
-@apply list-decimal;
+  @apply list-decimal;
 }
+
 .md-content li {
-@apply mb-0.5;
+  @apply mb-0.5;
 }
+
 .md-content li > ul, .md-content li > ol {
-@apply mt-0.5 mb-0;
+  @apply mt-0.5 mb-0;
 }
+
 .md-content blockquote {
-@apply my-2.5 px-3.5 py-1.5 border-l-[3px] border-ctp-lavender bg-surface-0 text-text-secondary rounded-r-sm;
+  @apply my-2.5 px-3.5 py-1.5 border-l-[3px] border-ctp-lavender bg-surface-0 text-text-secondary rounded-r-sm;
 }
+
 .md-content blockquote p:last-child {
-@apply mb-0;
+  @apply mb-0;
 }
+
 .md-content code {
-@apply font-mono text-[0.9em] px-1.5 py-0.5 bg-surface-1 rounded-xs text-ctp-peach;
+  @apply font-mono text-[0.9em] px-1.5 py-0.5 bg-surface-1 rounded-xs text-ctp-peach;
 }
+
 .md-content pre {
-@apply my-2.5 px-3.5 py-3 bg-background-mute border border-border-subtle rounded-md overflow-x-auto text-[12px] leading-snug;
+  @apply my-2.5 px-3.5 py-3 bg-background-mute border border-border-subtle rounded-md overflow-x-auto text-[12px] leading-snug;
 }
+
 .md-content pre code {
-@apply p-0 bg-none rounded-none text-text;
+  @apply p-0 bg-none rounded-none text-text;
 }
+
 .md-code-block-wrapper {
-@apply relative min-w-0 overflow-hidden;
+  @apply relative min-w-0 overflow-hidden;
 }
+
 .md-code-lang {
-@apply absolute top-0 right-0 p-1.5 text-[10px] font-bold uppercase tracking-wider text-text-faint border-t-0 border-r-0 pointer-events-none;
+  @apply absolute top-0 right-0 p-1.5 text-[10px] font-bold uppercase tracking-wider text-text-faint border-t-0 border-r-0 pointer-events-none;
 }
+
 .md-code-block-wrapper pre {
-@apply m-0 min-w-0;
+  @apply m-0 min-w-0;
 }
+
 .md-command-block {
-@apply my-2.5 bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
+  @apply my-2.5 bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
 }
+
 .md-command-header {
-@apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border-b border-border-subtle;
+  @apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border-b border-border-subtle;
 }
+
 .md-command-label {
-@apply text-[10px] font-bold uppercase tracking-wider text-ctp-green inline-flex items-center gap-1.5 before:content-[''] before:inline-block before:w-1.5 before:h-1.5 before:rounded-full before:bg-ctp-green before:shadow-[0_0_5px_rgba(166,227,161,0.55)];
+  @apply text-[10px] font-bold uppercase tracking-wider text-ctp-green inline-flex items-center gap-1.5 before:content-[''] before:inline-block before:w-1.5 before:h-1.5 before:rounded-full before:bg-ctp-green before:shadow-[0_0_5px_rgba(166,227,161,0.55)];
 }
+
 .md-command-run {
-@apply inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer opacity-0 -translate-y-0.5 transition-all duration-normal hover:bg-accent-hover hover:border-accent-hover;
+  @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer opacity-0 -translate-y-0.5 transition-all duration-normal hover:bg-accent-hover hover:border-accent-hover;
 }
+
 .md-command-block:hover .md-command-run {
-@apply opacity-100 translate-y-0;
+  @apply opacity-100 translate-y-0;
 }
+
 .md-command-pre {
-@apply m-0 px-3.5 py-2.5 bg-transparent border-none rounded-none overflow-x-auto text-[12.5px] leading-snug;
+  @apply m-0 px-3.5 py-2.5 bg-transparent border-none rounded-none overflow-x-auto text-[12.5px] leading-snug;
 }
+
 .md-command-pre code {
-@apply p-0 bg-none rounded-none text-inherit;
+  @apply p-0 bg-none rounded-none text-inherit;
 }
+
 .md-content table {
-@apply my-2.5 w-full border-collapse text-[12.5px];
+  @apply my-2.5 w-full border-collapse text-[12.5px];
 }
+
 .md-content th, .md-content td {
-@apply px-3 py-1.5 border border-border-subtle text-left;
+  @apply px-3 py-1.5 border border-border-subtle text-left;
 }
+
 .md-content th {
-@apply bg-surface-0 font-semibold text-text-secondary;
+  @apply bg-surface-0 font-semibold text-text-secondary;
 }
+
 .md-content tr:hover td {
-@apply bg-surface-0;
+  @apply bg-surface-0;
 }
+
 .md-content a {
-@apply text-accent underline underline-offset-2 hover:text-accent-hover;
+  @apply text-accent underline underline-offset-2 hover:text-accent-hover;
 }
+
 .md-content hr {
-@apply my-3.5 border-none h-px bg-border;
+  @apply my-3.5 border-none h-px bg-border;
 }
+
 .md-content img {
-@apply max-w-full rounded-md;
+  @apply max-w-full rounded-md;
 }
+
 .md-content input[type='checkbox'] {
-@apply mr-1.5;
+  @apply mr-1.5;
 }
+
 .chat-bubble-user .md-content code {
-@apply bg-black/20;
+  @apply bg-black/20;
 }
+
 .md-file-block {
-@apply bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
+  @apply bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
 }
+
 .md-file-header {
-@apply flex items-center justify-between p-1.5 bg-background-mute border-b border-border-subtle gap-2;
+  @apply flex items-center justify-between p-1.5 bg-background-mute border-b border-border-subtle gap-2;
 }
+
 .md-file-header-left {
-@apply flex items-center gap-2 min-w-0;
+  @apply flex items-center gap-2 min-w-0;
 }
+
 .md-file-header-actions {
-@apply flex items-center gap-1.5 flex-shrink-0;
+  @apply flex items-center gap-1.5 flex-shrink-0;
 }
+
 .md-file-path {
-@apply inline-flex items-center gap-1.5 min-w-0 text-[12px] font-semibold text-ctp-blue overflow-hidden text-ellipsis whitespace-nowrap tracking-wide;
+  @apply inline-flex items-center gap-1.5 min-w-0 text-[12px] font-semibold text-ctp-blue overflow-hidden text-ellipsis whitespace-nowrap tracking-wide;
 }
+
 .md-file-path-icon {
-@apply flex-shrink-0 text-ctp-blue;
+  @apply flex-shrink-0 text-ctp-blue;
 }
+
 .md-file-path-text {
-@apply overflow-hidden text-ellipsis whitespace-nowrap;
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
 }
+
 .md-file-path-segment {
-@apply text-text-muted;
+  @apply text-text-muted;
 }
+
 .md-file-path-segment:last-child {
-@apply text-text font-bold;
+  @apply text-text font-bold;
 }
+
 .md-file-copy {
-@apply inline-flex items-center justify-center gap-1 p-0 text-[11px] font-medium text-text-subtle bg-transparent rounded-md border-none cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast hover:bg-surface-1 hover:text-text active:bg-background-mute;
+  @apply inline-flex items-center justify-center gap-1 p-0 text-[11px] font-medium text-text-subtle bg-transparent rounded-md border-none cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast hover:bg-surface-1 hover:text-text active:bg-background-mute;
 }
+
 .md-file-copy.copied {
-@apply text-ctp-green;
+  @apply text-ctp-green;
 }
+
 .md-file-apply {
-@apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover flex-shrink-0;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover flex-shrink-0;
 }
+
 .md-file-apply.applied {
-@apply bg-success border-success cursor-default;
+  @apply bg-success border-success cursor-default;
 }
+
 .md-file-apply.error {
-@apply bg-error border-error cursor-default;
+  @apply bg-error border-error cursor-default;
 }
+
 .md-file-code {
-@apply flex flex-row overflow-hidden text-[12px] leading-snug max-h-[404px] min-w-0 bg-background-mute;
+  @apply flex flex-row overflow-hidden text-[12px] leading-snug max-h-[404px] min-w-0 bg-background-mute;
 }
+
 .md-file-gutter {
-@apply flex-shrink-0 py-2 mr-2 text-right select-none bg-background-mute border-r border-border-subtle overflow-y-auto scrollbar-hide;
+  @apply flex-shrink-0 py-2 mr-2 text-right select-none bg-background-mute border-r border-border-subtle overflow-y-auto scrollbar-hide;
 }
+
 .md-file-gutter .md-file-line-number {
-@apply block px-3 text-ctp-overlay0 text-[12px] font-medium leading-snug whitespace-nowrap;
+  @apply block px-3 text-ctp-overlay0 text-[12px] font-medium leading-snug whitespace-nowrap;
 }
+
 .md-file-code-scroll {
-@apply flex-1 min-w-0 min-h-0 overflow-x-auto overflow-y-auto py-2;
+  @apply flex-1 min-w-0 min-h-0 overflow-x-auto overflow-y-auto py-2;
 }
+
 .md-file-code-scroll pre {
-@apply min-w-0;
+  @apply min-w-0;
 }
+
 .md-file-code-lines {
-@apply min-w-max;
+  @apply min-w-max;
 }
+
 .md-file-line-content {
-@apply px-4 py-0 pr-3 whitespace-pre leading-snug hover:bg-[rgba(137,180,250,0.05)];
+  @apply px-4 py-0 pr-3 whitespace-pre leading-snug hover:bg-[rgba(137,180,250,0.05)];
 }
+
 .md-file-line-content code {
-@apply block min-h-[1.55em] p-0 bg-none rounded-none text-inherit font-[inherit] leading-[inherit];
+  @apply block min-h-[1.55em] p-0 bg-none rounded-none text-inherit font-[inherit] leading-[inherit];
 }
+
 .md-commit-block {
-@apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border border-border-subtle rounded-md gap-2 text-[12px] leading-snug min-w-0 my-2.5 transition-colors duration-normal hover:border-ctp-overlay0;
+  @apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border border-border-subtle rounded-md gap-2 text-[12px] leading-snug min-w-0 my-2.5 transition-colors duration-normal hover:border-ctp-overlay0;
 }
+
 .md-commit-text {
-@apply flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-text;
+  @apply flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-text;
 }
+
 .md-commit-copy {
-@apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-xs text-text-subtle cursor-pointer flex-shrink-0 transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-xs text-text-subtle cursor-pointer flex-shrink-0 transition-colors duration-fast hover:bg-surface-1 hover:text-text;
 }
+
 .md-commit-copy.copied {
-@apply text-ctp-green;
+  @apply text-ctp-green;
 }
+
 .md-file-replace-block {
-@apply w-full min-w-0;
+  @apply w-full min-w-0;
 }
+
 .md-file-diff {
-@apply flex flex-row bg-background-mute w-full min-w-0;
+  @apply flex flex-row bg-background-mute w-full min-w-0;
 }
+
 .md-file-diff-side {
-@apply flex-1 min-w-0 flex flex-col bg-background-mute;
+  @apply flex-1 min-w-0 flex flex-col bg-background-mute;
 }
+
 .md-file-diff-side.old {
-@apply bg-[rgba(243,139,168,0.05)];
+  @apply bg-[rgba(243,139,168,0.05)];
 }
+
 .md-file-diff-side.new {
-@apply bg-[rgba(166,227,161,0.05)];
+  @apply bg-[rgba(166,227,161,0.05)];
 }
+
 .md-file-diff-divider {
-@apply w-px flex-shrink-0 bg-border-subtle self-stretch;
+  @apply w-px flex-shrink-0 bg-border-subtle self-stretch;
 }
+
 .md-file-diff-header {
-@apply flex items-center justify-between p-1.5 gap-2 border-b border-dashed border-border-subtle;
+  @apply flex items-center justify-between p-1.5 gap-2 border-b border-dashed border-border-subtle;
 }
+
 .md-file-replace-label {
-@apply text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug;
+  @apply text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug;
 }
+
 .md-file-replace-label.old {
-@apply text-ctp-red bg-[rgba(243,139,168,0.15)];
+  @apply text-ctp-red bg-[rgba(243,139,168,0.15)];
 }
+
 .md-file-replace-label.new {
-@apply text-ctp-green bg-[rgba(166,227,161,0.15)];
+  @apply text-ctp-green bg-[rgba(166,227,161,0.15)];
 }
+
 .md-file-status-label {
-@apply text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug flex-shrink-0;
+  @apply text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug flex-shrink-0;
 }
+
 .md-file-status-label.created {
-@apply text-ctp-green bg-[rgba(166,227,161,0.15)];
+  @apply text-ctp-green bg-[rgba(166,227,161,0.15)];
 }
+
 .md-file-status-label.deleted {
-@apply text-ctp-red bg-[rgba(243,139,168,0.15)];
+  @apply text-ctp-red bg-[rgba(243,139,168,0.15)];
 }
+
 .md-file-status-label.error {
-@apply text-ctp-peach bg-[rgba(250,179,135,0.15)];
+  @apply text-ctp-peach bg-[rgba(250,179,135,0.15)];
 }
+
 .md-file-error {
-@apply px-4 py-3 text-[12px] text-ctp-peach bg-[rgba(250,179,135,0.05)];
+  @apply px-4 py-3 text-[12px] text-ctp-peach bg-[rgba(250,179,135,0.05)];
 }
+
 .md-file-diff-code {
-@apply bg-transparent flex-1 min-h-0 max-h-none;
+  @apply bg-transparent flex-1 min-h-0 max-h-none;
 }
+
 .md-file-diff-code .md-file-gutter,
 .md-file-diff-code .md-file-code-scroll {
-@apply h-full;
+  @apply h-full;
 }
+
 .md-file-diff-code .md-file-gutter {
-@apply bg-transparent;
+  @apply bg-transparent;
 }
+
 .md-file-diff-side.old .md-file-diff-code {
-@apply bg-[rgba(243,139,168,0.05)];
+  @apply bg-[rgba(243,139,168,0.05)];
 }
+
 .md-file-diff-side.old .md-file-diff-code .md-file-gutter {
-@apply bg-[rgba(243,139,168,0.05)] border-r-[rgba(243,139,168,0.2)];
+  @apply bg-[rgba(243,139,168,0.05)] border-r-[rgba(243,139,168,0.2)];
 }
+
 .md-file-diff-side.new .md-file-diff-code {
-@apply bg-[rgba(166,227,161,0.05)];
+  @apply bg-[rgba(166,227,161,0.05)];
 }
+
 .md-file-diff-side.new .md-file-diff-code .md-file-gutter {
-@apply bg-[rgba(166,227,161,0.05)] border-r-[rgba(166,227,161,0.2)];
+  @apply bg-[rgba(166,227,161,0.05)] border-r-[rgba(166,227,161,0.2)];
 }
+
 .md-file-syntax {
-@apply !m-0 !p-0 !bg-transparent text-[12px] leading-snug min-w-max !border-none;
+  @apply !m-0 !p-0 !bg-transparent text-[12px] leading-snug min-w-max !border-none;
 }
+
 .md-file-syntax code {
-@apply !font-[inherit] !text-inherit !leading-[inherit] !bg-transparent !p-0 whitespace-pre;
+  @apply !font-[inherit] !text-inherit !leading-[inherit] !bg-transparent !p-0 whitespace-pre;
 }
+
 .md-command-syntax {
-@apply !m-0 !px-3.5 !py-2.5 !bg-transparent !border-none !rounded-none text-[12.5px] leading-snug;
+  @apply !m-0 !px-3.5 !py-2.5 !bg-transparent !border-none !rounded-none text-[12.5px] leading-snug;
 }
+
 .md-command-syntax code {
-@apply !font-[inherit] !text-inherit !leading-[inherit];
+  @apply !font-[inherit] !text-inherit !leading-[inherit];
 }
+
 .md-syntax-block {
-@apply !m-0 !px-3.5 !py-3 !bg-background-mute !border !border-border-subtle !rounded-md text-[12px] leading-snug;
+  @apply !m-0 !px-3.5 !py-3 !bg-background-mute !border !border-border-subtle !rounded-md text-[12px] leading-snug;
 }
+
 .md-syntax-block code {
-@apply !font-[inherit] !text-inherit !leading-[inherit];
+  @apply !font-[inherit] !text-inherit !leading-[inherit];
 }

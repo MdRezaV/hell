@@ -56,9 +56,9 @@ import {
   applyFileWrite,
   FILE_CACHE_MAX,
   fileContentCache,
+  type FileState,
   invalidateFileContentCache,
-  ipcThrottle,
-  type FileState
+  ipcThrottle
 } from '../utils/fileApply'
 import { useWorkspace } from '../WorkspaceContext'
 

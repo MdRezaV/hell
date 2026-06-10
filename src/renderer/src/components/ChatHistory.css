@@ -1,104 +1,134 @@
 .chat-history {
-@apply flex flex-col h-full bg-background-soft border-l border-border min-w-0;
+  @apply flex flex-col h-full bg-background-soft border-l border-border min-w-0;
 }
+
 .chat-history-header {
-@apply flex items-center justify-between px-3 h-7 border-b border-border bg-background-mute flex-shrink-0;
+  @apply flex items-center justify-between px-3 h-7 border-b border-border bg-background-mute flex-shrink-0;
 }
+
 .chat-history-header button {
-@apply p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
 }
+
 .chat-history-header button svg {
-@apply w-3.5 h-3.5;
+  @apply w-3.5 h-3.5;
 }
+
 .chat-history-title {
-@apply text-[11px] font-bold uppercase tracking-wider text-text-muted;
+  @apply text-[11px] font-bold uppercase tracking-wider text-text-muted;
 }
+
 .chat-history-search {
-@apply flex items-center gap-1.5 px-2 py-1.5 border-b border-border-subtle flex-shrink-0;
+  @apply flex items-center gap-1.5 px-2 py-1.5 border-b border-border-subtle flex-shrink-0;
 }
+
 .chat-history-search-icon {
-@apply flex-shrink-0 text-text-faint;
+  @apply flex-shrink-0 text-text-faint;
 }
+
 .chat-history-search-input {
-@apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0.5 px-0;
+  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0.5 px-0;
 }
+
 .chat-history-search-input:focus {
-@apply outline-none border-none shadow-none;
+  @apply outline-none border-none shadow-none;
 }
+
 .chat-history-search-clear {
-@apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-sm text-text-faint cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-sm text-text-faint cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
 }
+
 .chat-history-list {
-@apply flex-1 overflow-y-auto py-0.5;
+  @apply flex-1 overflow-y-auto py-0.5;
 }
+
 .chat-history-empty {
-@apply flex flex-col items-center justify-center gap-2 py-8 text-text-muted;
+  @apply flex flex-col items-center justify-center gap-2 py-8 text-text-muted;
 }
+
 .chat-history-empty svg {
-@apply opacity-50;
+  @apply opacity-50;
 }
+
 .chat-history-empty p {
-@apply text-[12px];
+  @apply text-[12px];
 }
+
 .chat-history-group {
-@apply mb-0;
+  @apply mb-0;
 }
+
 .chat-history-group-header {
-@apply flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer select-none transition-colors duration-fast hover:bg-surface-0 sticky top-0 z-[1] bg-background-soft;
+  @apply flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer select-none transition-colors duration-fast hover:bg-surface-0 sticky top-0 z-[1] bg-background-soft;
 }
+
 .chat-history-group-chevron {
-@apply flex-shrink-0 text-text-faint transition-transform duration-fast;
+  @apply flex-shrink-0 text-text-faint transition-transform duration-fast;
 }
+
 .chat-history-group-chevron.collapsed {
-@apply -rotate-90;
+  @apply -rotate-90;
 }
+
 .chat-history-group-title {
-@apply text-[10px] font-bold uppercase tracking-wider text-text-muted flex-1;
+  @apply text-[10px] font-bold uppercase tracking-wider text-text-muted flex-1;
 }
+
 .chat-history-group-count {
-@apply text-[10px] text-text-faint font-medium min-w-[16px] h-4 inline-flex items-center justify-center bg-surface-1 rounded-full leading-none px-1;
+  @apply text-[10px] text-text-faint font-medium min-w-[16px] h-4 inline-flex items-center justify-center bg-surface-1 rounded-full leading-none px-1;
 }
+
 .chat-history-group-items {
-animation: chat-history-expand 0.15s ease;
+  animation: chat-history-expand 0.15s ease;
 }
+
 .chat-history-item {
-@apply flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors duration-fast hover:bg-surface-0 text-[12px] min-w-0 border-l-2 border-transparent;
+  @apply flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors duration-fast hover:bg-surface-0 text-[12px] min-w-0 border-l-2 border-transparent;
 }
+
 .chat-history-item.active {
-@apply bg-surface-0 border-l-accent;
+  @apply bg-surface-0 border-l-accent;
 }
+
 .chat-history-icon {
-@apply flex-shrink-0 text-text-faint;
+  @apply flex-shrink-0 text-text-faint;
 }
+
 .chat-history-item.active .chat-history-icon {
-@apply text-accent;
+  @apply text-accent;
 }
+
 .chat-history-item-content {
-@apply flex flex-col min-w-0 flex-1 gap-0;
+  @apply flex flex-col min-w-0 flex-1 gap-0;
 }
+
 .chat-history-item-title {
-@apply text-text-secondary truncate text-[12px] leading-snug;
+  @apply text-text-secondary truncate text-[12px] leading-snug;
 }
+
 .chat-history-item.active .chat-history-item-title {
-@apply text-text font-medium;
+  @apply text-text font-medium;
 }
+
 .chat-history-item-date {
-@apply text-[10px] text-text-faint leading-snug;
+  @apply text-[10px] text-text-faint leading-snug;
 }
+
 .chat-history-delete {
-@apply inline-flex items-center justify-center p-1 bg-transparent border-none rounded-sm text-text-faint cursor-pointer opacity-0 transition-all duration-fast hover:text-error hover:bg-[rgba(243,139,168,0.1)] flex-shrink-0;
+  @apply inline-flex items-center justify-center p-1 bg-transparent border-none rounded-sm text-text-faint cursor-pointer opacity-0 transition-all duration-fast hover:text-error hover:bg-[rgba(243,139,168,0.1)] flex-shrink-0;
 }
+
 .chat-history-item:hover .chat-history-delete {
-@apply opacity-100;
+  @apply opacity-100;
 }
 
 @keyframes chat-history-expand {
-from {
-opacity: 0;
-transform: translateY(-4px);
-}
-to {
-opacity: 1;
-transform: translateY(0);
-}
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

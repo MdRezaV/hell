@@ -258,7 +258,7 @@ function App(): React.JSX.Element {
             }
             return next
           })
-          window.electron.ipcRenderer.invoke(
+          await window.electron.ipcRenderer.invoke(
             'db:batch-set-file-states',
             workspace,
             pathsToMarkInq.map((p) => ({ absolutePath: p, tag: 'INQ' }))
