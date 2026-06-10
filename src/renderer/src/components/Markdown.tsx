@@ -1,9 +1,11 @@
 import React, {
   Children,
+  createContext,
   isValidElement,
   memo,
   type ReactNode,
   useCallback,
+  useContext,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -309,6 +311,146 @@ function useFileContent(path: string): FileState | null {
   return cache.data
 }
 
+type ApplyBlockStatus = 'idle' | 'applied' | 'error' | 'notFound'
+
+interface ApplyBlockInfo {
+  apply: () => Promise<void>
+  status: ApplyBlockStatus
+}
+
+interface ApplyAllContextValue {
+  register: (id: string, apply: () => Promise<void>) => void
+  unregister: (id: string) => void
+  setStatus: (id: string, status: ApplyBlockStatus) => void
+  blocks: Map<string, ApplyBlockInfo>
+}
+
+const ApplyAllContext = createContext<ApplyAllContextValue | null>(null)
+
+function useApplyAllContext(): ApplyAllContextValue | null {
+  return useContext(ApplyAllContext)
+}
+
+let applyIdCounter = 0
+
+function useApplyRegistration(applyFn: () => Promise<void>, status: ApplyBlockStatus): void {
+  const ctx = useApplyAllContext()
+  const idRef = useRef(`apply-${++applyIdCounter}`)
+  const applyRef = useRef(applyFn)
+
+  useEffect(() => {
+    applyRef.current = applyFn
+  }, [applyFn])
+
+  useEffect(() => {
+    if (!ctx) return
+    const id = idRef.current
+    ctx.register(id, () => applyRef.current())
+    return () => ctx.unregister(id)
+  }, [ctx])
+
+  useEffect(() => {
+    if (!ctx) return
+    ctx.setStatus(idRef.current, status)
+  }, [ctx, status])
+}
+
+function ApplyAllProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  const [blocks, setBlocks] = useState<Map<string, ApplyBlockInfo>>(new Map())
+
+  const register = useCallback((id: string, apply: () => Promise<void>) => {
+    setBlocks((prev) => {
+      const next = new Map(prev)
+      next.set(id, { apply, status: prev.get(id)?.status ?? 'idle' })
+      return next
+    })
+  }, [])
+
+  const unregister = useCallback((id: string) => {
+    setBlocks((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Map(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
+  const setStatus = useCallback((id: string, status: ApplyBlockStatus) => {
+    setBlocks((prev) => {
+      const existing = prev.get(id)
+      if (!existing || existing.status === status) return prev
+      const next = new Map(prev)
+      next.set(id, { ...existing, status })
+      return next
+    })
+  }, [])
+
+  const value = useMemo(
+    () => ({ blocks, register, unregister, setStatus }),
+    [blocks, register, unregister, setStatus]
+  )
+
+  return <ApplyAllContext.Provider value={value}>{children}</ApplyAllContext.Provider>
+}
+
+function ApplyAllBar(): React.JSX.Element | null {
+  const ctx = useApplyAllContext()
+  const [applying, setApplying] = useState(false)
+  if (!ctx) return null
+  const { blocks } = ctx
+  const blockArr = [...blocks.values()]
+  if (blockArr.length === 0) return null
+
+  const idleBlocks = blockArr.filter((b) => b.status === 'idle')
+  const idleCount = idleBlocks.length
+  const hasWarning = blockArr.some((b) => b.status === 'notFound')
+  const allApplied = blockArr.every((b) => b.status === 'applied')
+
+  const handleApplyAll = async (): Promise<void> => {
+    if (applying || idleCount === 0) return
+    setApplying(true)
+    for (const b of idleBlocks) {
+      await b.apply()
+    }
+    setApplying(false)
+  }
+
+  let variantClass = ''
+  let label = `Apply All (${idleCount})`
+  let disabled = false
+
+  if (allApplied) {
+    variantClass = ' applied'
+    label = 'All Applied'
+    disabled = true
+  } else if (applying) {
+    label = 'Applying...'
+    disabled = true
+  } else if (hasWarning) {
+    variantClass = ' warning'
+    if (idleCount === 0) {
+      label = 'Not Found'
+      disabled = true
+    }
+  } else if (idleCount === 0) {
+    disabled = true
+  }
+
+  return (
+    <div className="md-apply-all-bar">
+      <button
+        type="button"
+        className={`md-apply-all${variantClass}`}
+        onClick={handleApplyAll}
+        disabled={disabled}
+      >
+        {allApplied && <Check size={12} />}
+        <span>{label}</span>
+      </button>
+    </div>
+  )
+}
+
 const FileReplaceBlock = memo(function FileReplaceBlock({
   path,
   oldCode,
@@ -350,6 +492,9 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
     if (result.success) invalidateFileContentCache(workspace, path)
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, oldCode, newCode])
+
+  const applyStatus: ApplyBlockStatus = notFound ? 'notFound' : applyState
+  useApplyRegistration(handleApply, applyStatus)
 
   return (
     <div className="md-file-block md-file-replace-block">
@@ -464,6 +609,8 @@ const FileMoveBlock = memo(function FileMoveBlock({
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, oldPath, newPath])
 
+  useApplyRegistration(handleApply, applyState)
+
   return (
     <div className="md-file-block">
       <div className="md-file-header">
@@ -526,11 +673,18 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
   }, [copy, fileState])
 
   const handleApply = useCallback(async (): Promise<void> => {
-    if (!workspace) return
+    if (!workspace || !fileState?.exists) return
     const result = await applyFileDelete(workspace, path)
     if (result.success) invalidateFileContentCache(workspace, path)
     setApplyState(result.success ? 'applied' : 'error')
-  }, [workspace, path])
+  }, [workspace, path, fileState])
+
+  const deleteStatus: ApplyBlockStatus = !fileState
+    ? 'idle'
+    : !fileState.exists
+      ? 'notFound'
+      : applyState
+  useApplyRegistration(handleApply, deleteStatus)
 
   if (fileState === null) {
     return (
@@ -634,6 +788,8 @@ const FileBlock = memo(function FileBlock({
     if (result.success) invalidateFileContentCache(workspace, path)
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, code])
+
+  useApplyRegistration(handleApply, applyState)
 
   const isCreated = fileState !== null && !fileState.exists
 
@@ -992,11 +1148,14 @@ const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.E
   }
 
   return (
-    <div className="md-content">
-      <ReactMarkdown remarkPlugins={markdownRemarkPlugins} components={markdownComponents}>
-        {processedContent}
-      </ReactMarkdown>
-    </div>
+    <ApplyAllProvider>
+      <div className="md-content">
+        <ReactMarkdown remarkPlugins={markdownRemarkPlugins} components={markdownComponents}>
+          {processedContent}
+        </ReactMarkdown>
+        <ApplyAllBar />
+      </div>
+    </ApplyAllProvider>
   )
 })
 
