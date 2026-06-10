@@ -80,71 +80,72 @@ export const SYSTEM_PROMPT_INITIAL_END = `</user_request>
 - IMPORTANT:  Output format must be STRICTLY followed without deviation.
 
 - Full file write (creates or replaces an entire file):
---- FILE path/to/file.ext ---
+[FILE path/to/file.ext]
 (file content verbatim, no escaping needed)
-=======
+[END]
 
 - Partial edit using SEARCH/REPLACE:
---- EDIT path/to/file.ext ---
-<<<<<<< SEARCH
+[FILE path/to/file.ext]
+[SEARCH]
 (exact code to find, including whitespace)
-=======
+[REPLACE]
 (replacement code; leave empty to delete)
->>>>>>> REPLACE
+[END]
 
 - Delete entire file:
---- DELETE path/to/file.ext ---
+[DELETE FILE path/to/file.ext]
 
 - Move / rename a file:
---- MOVE old/path/file.ext -> new/path/file.ext ---
+[MOVE FILE FROM old/path/file.ext TO new/path/file.ext]
 
 <example>
 I'll create a config file and completely rewrite the README.
 
---- FILE config.json ---
+[FILE config.json]
 {
   "theme": "dark",
   "language": "en"
 }
-=======
+[END]
 
---- FILE README.md ---
+[FILE README.md]
 # My Project
 
 This is the new overview.
-=======
+[END]
 
 Next, I'll fix a title and insert an import.
 
---- EDIT index.html ---
-<<<<<<< SEARCH
+[FILE index.html]
+[SEARCH]
   <title>My Appliction</title>
-=======
+[REPLACE]
   <title>My Application</title>
->>>>>>> REPLACE
+[END]
 
---- EDIT js/app.js ---
-<<<<<<< SEARCH
+[FILE js/app.js]
+[SEARCH]
 import { init } from './core';
-=======
+[REPLACE]
 import { init } from './core';
 import { helper } from './utils';
->>>>>>> REPLACE
+[END]
 
 Now I'll remove a deprecated CSS comment block, delete a legacy script, and
 rename the main stylesheet for clarity.
 
---- EDIT css/style.css ---
-<<<<<<< SEARCH
+[FILE css/style.css]
+[SEARCH]
 /* Deprecated layout styles
    .old-container { width: 100%; }
 */
-=======
->>>>>>> REPLACE
+[REPLACE]
+[END]
 
+[DELETE FILE js/legacy.js]
 --- DELETE js/legacy.js ---
 
---- MOVE css/style.css -> css/main.css ---
+[MOVE FILE FROM css/style.css TO css/main.css]
 
 All requested changes have been applied successfully. Let me know if you need anything else!
 

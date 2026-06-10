@@ -20,38 +20,33 @@ export function wrapInFence(code: string, lang: string): string {
 
 /**
  * Parse the internal file-replace fenced body:
- *   <<<<<<< SEARCH
+ *   [SEARCH]
  *   (old code)
- *   =======
+ *   [REPLACE]
  *   (new code)
- *   >>>>>>> REPLACE
- *
- * The separator length must match the opening marker length so that
- * `=======` strings inside code (e.g. `Hello("=======")`) are treated as
- * content rather than separators.
+ *   [END]
  */
 export function parseReplaceBlock(code: string): { oldCode: string; newCode: string } | null {
   const lines = normalizeLineEndings(code).split('\n')
   if (lines.length === 0) return null
 
-  const searchOpen = /^(<+)\s+SEARCH\s*$/.exec(lines[0])
-  if (!searchOpen) return null
+  let i = 0
+  while (i < lines.length && !/^\[SEARCH\]\s*$/.test(lines[i])) {
+    i++
+  }
+  if (i >= lines.length) return null
+  i++
 
-  const markerLen = searchOpen[1].length
-  const sepRe = new RegExp(`^={${markerLen}}\\s*$`)
-  const closeRe = new RegExp(`^>{${markerLen}}\\s+REPLACE\\s*$`)
-
-  let i = 1
   const searchLines: string[] = []
-  while (i < lines.length && !sepRe.test(lines[i])) {
+  while (i < lines.length && !/^\[REPLACE\]\s*$/.test(lines[i])) {
     searchLines.push(lines[i])
     i++
   }
   if (i >= lines.length) return null
-  i++ // skip separator
+  i++
 
   const replaceLines: string[] = []
-  while (i < lines.length && !closeRe.test(lines[i])) {
+  while (i < lines.length && !/^\[END\]\s*$/.test(lines[i])) {
     replaceLines.push(lines[i])
     i++
   }
@@ -59,9 +54,11 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
   return { oldCode: searchLines.join('\n'), newCode: replaceLines.join('\n') }
 }
 
-const MARKER_RE = /^--- (FILE|EDIT|DELETE|MOVE) .+ ---$/
-const COMMIT_RE = /^COMMIT: .+$/
-const FILE_TERMINATOR_RE = /^=======\s*$/
+const BLOCK_MARKER_RE =
+  /^\[FILE .+\]$|^\[DELETE FILE .+\]$|^\[MOVE FILE FROM .+ TO .+\]$|^COMMIT: .+$/
+const FILE_END_RE = /^\[END\]\s*$/
+const SEARCH_RE = /^\[SEARCH\]\s*$/
+const REPLACE_RE = /^\[REPLACE\]\s*$/
 
 function isCodeFenceOpen(line: string): { char: string; len: number } | null {
   const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
@@ -77,25 +74,52 @@ function isCodeFenceClose(line: string, fenceChar: string, fenceLen: number): bo
   return re.test(line)
 }
 
+function parseSearchReplacePairs(lines: string[]): Array<{ old: string; new: string }> {
+  const pairs: Array<{ old: string; new: string }> = []
+  let i = 0
+
+  while (i < lines.length) {
+    if (SEARCH_RE.test(lines[i])) {
+      i++
+      const searchLines: string[] = []
+      while (i < lines.length && !REPLACE_RE.test(lines[i])) {
+        searchLines.push(lines[i])
+        i++
+      }
+      if (i < lines.length) i++
+      const replaceLines: string[] = []
+      while (i < lines.length && !FILE_END_RE.test(lines[i]) && !SEARCH_RE.test(lines[i])) {
+        replaceLines.push(lines[i])
+        i++
+      }
+      pairs.push({ old: searchLines.join('\n'), new: replaceLines.join('\n') })
+    } else {
+      i++
+    }
+  }
+
+  return pairs
+}
+
 /**
- * Preprocess the Search/Replace format into fenced markdown blocks that
+ * Preprocess the bracket format into fenced markdown blocks that
  * the Markdown renderer understands:
  *
- *   --- FILE path ---        -> ```file:path
+ *   [FILE path]              -> ```file:path
  *   (content)                   (content)
- *   =======                   ```
+ *   [END]                     ```
  *
- *   --- EDIT path ---       -> ```file-replace:path
- *   <<<<<<< SEARCH            <<<<<<< SEARCH
- *   (old)                     (old)
- *   =======                   =======
- *   (new)                     (new)
- *   >>>>>>> REPLACE           >>>>>>> REPLACE
- *                             ```
+ *   [FILE path]              -> ```file-replace:path
+ *   [SEARCH]                    [SEARCH]
+ *   (old)                       (old)
+ *   [REPLACE]                   [REPLACE]
+ *   (new)                       (new)
+ *   [END]                       [END]
+ *                               ```
  *
- *   --- DELETE path ---     -> ```file-delete:path```
- *   --- MOVE a -> b ---     -> ```file-move:a->b```
- *   COMMIT: msg             -> ```commit\nmsg\n```
+ *   [DELETE FILE path]       -> ```file-delete:path```
+ *   [MOVE FILE FROM a TO b]  -> ```file-move:a->b```
+ *   COMMIT: msg              -> ```commit\nmsg\n```
  */
 export function preprocess(content: string): string {
   const lines = normalizeLineEndings(content).split('\n')
@@ -128,74 +152,41 @@ export function preprocess(content: string): string {
       continue
     }
 
-    // --- FILE path ---
-    const fileMatch = /^--- FILE (.+) ---$/.exec(line)
+    // [FILE path]
+    const fileMatch = /^\[FILE (.+)\]$/.exec(line)
     if (fileMatch) {
       const path = fileMatch[1].trim()
       i++
       const contentLines: string[] = []
       while (i < lines.length) {
-        if (FILE_TERMINATOR_RE.test(lines[i])) {
+        if (FILE_END_RE.test(lines[i])) {
           i++
           break
         }
-        if (MARKER_RE.test(lines[i])) break
-        if (COMMIT_RE.test(lines[i])) break
+        if (BLOCK_MARKER_RE.test(lines[i])) break
         contentLines.push(lines[i])
         i++
       }
-      const code = contentLines.join('\n')
-      const fenced = wrapInFence(code, `file:${path}`)
-      result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
-      continue
-    }
 
-    // --- EDIT path ---
-    const editMatch = /^--- EDIT (.+) ---$/.exec(line)
-    if (editMatch) {
-      const path = editMatch[1].trim()
-      i++
-      const pairs: Array<{ old: string; new: string }> = []
+      const hasSearch = contentLines.some((l) => SEARCH_RE.test(l))
 
-      while (i < lines.length) {
-        if (MARKER_RE.test(lines[i])) break
-        if (COMMIT_RE.test(lines[i])) break
-
-        const searchOpen = /^(<+)\s+SEARCH\s*$/.exec(lines[i])
-        if (searchOpen) {
-          const markerLen = searchOpen[1].length
-          const sepRe = new RegExp(`^={${markerLen}}\\s*$`)
-          const closeRe = new RegExp(`^>{${markerLen}}\\s+REPLACE\\s*$`)
-          i++
-          const searchLines: string[] = []
-          while (i < lines.length && !sepRe.test(lines[i])) {
-            searchLines.push(lines[i])
-            i++
-          }
-          if (i < lines.length) i++ // skip separator
-          const replaceLines: string[] = []
-          while (i < lines.length && !closeRe.test(lines[i])) {
-            replaceLines.push(lines[i])
-            i++
-          }
-          if (i < lines.length) i++ // skip close
-          pairs.push({ old: searchLines.join('\n'), new: replaceLines.join('\n') })
-        } else {
-          if (lines[i].trim() !== '' && pairs.length > 0) break
-          i++
+      if (hasSearch) {
+        const pairs = parseSearchReplacePairs(contentLines)
+        for (const pair of pairs) {
+          const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
+          const fenced = wrapInFence(combined, `file-replace:${path}`)
+          result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
         }
-      }
-
-      for (const pair of pairs) {
-        const combined = `<<<<<<< SEARCH\n${pair.old}\n=======\n${pair.new}\n>>>>>>> REPLACE`
-        const fenced = wrapInFence(combined, `file-replace:${path}`)
+      } else {
+        const code = contentLines.join('\n')
+        const fenced = wrapInFence(code, `file:${path}`)
         result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       }
       continue
     }
 
-    // --- DELETE path ---
-    const deleteMatch = /^--- DELETE (.+) ---$/.exec(line)
+    // [DELETE FILE path]
+    const deleteMatch = /^\[DELETE FILE (.+)\]$/.exec(line)
     if (deleteMatch) {
       const path = deleteMatch[1].trim()
       const fenced = wrapInFence('', `file-delete:${path}`)
@@ -204,8 +195,8 @@ export function preprocess(content: string): string {
       continue
     }
 
-    // --- MOVE old -> new ---
-    const moveMatch = /^--- MOVE (.+?) -> (.+) ---$/.exec(line)
+    // [MOVE FILE FROM old TO new]
+    const moveMatch = /^\[MOVE FILE FROM (.+?) TO (.+)\]$/.exec(line)
     if (moveMatch) {
       const oldPath = moveMatch[1].trim()
       const newPath = moveMatch[2].trim()
