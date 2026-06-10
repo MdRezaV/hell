@@ -5,30 +5,14 @@ import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat
 import ChatHistory from './components/ChatHistory'
 import StatusBar from './components/StatusBar'
 import { WorkspaceContext } from './WorkspaceContext'
+import { useResizableLayout } from './hooks/useResizableLayout'
+import { deriveTitle, joinWithWorkspace } from './utils/appUtils'
 
 type FileStates = Map<string, FileTag>
 
-const MIN_LEFT_WIDTH = 160
-const MAX_LEFT_WIDTH = 520
-const DEFAULT_LEFT_WIDTH = 280
-
-function joinWithWorkspace(workspace: string, relPath: string): string {
-  const sep = workspace.includes('\\') ? '\\' : '/'
-  return workspace + sep + relPath
-}
-
-function deriveTitle(messages: ChatMessage[]): string {
-  const firstUser = messages.find((m) => m.role === 'user')
-  if (!firstUser) return 'New Chat'
-  const content = firstUser.variants[firstUser.activeVariant]?.content ?? ''
-  const trimmed = content.replace(/\s+/g, ' ').trim()
-  if (trimmed.length <= 40) return trimmed
-  return trimmed.slice(0, 40) + '...'
-}
-
 function App(): React.JSX.Element {
-  const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
-  const [rightWidth, setRightWidth] = useState<number>(DEFAULT_LEFT_WIDTH)
+  const { leftWidth, rightWidth, layoutRef, startResizeLeft, startResizeRight } =
+    useResizableLayout()
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
@@ -38,9 +22,6 @@ function App(): React.JSX.Element {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
   const copySnapshotRef = useRef<Set<string>>(new Set())
-  const isResizing = useRef(false)
-  const resizeTarget = useRef<'left' | 'right' | null>(null)
-  const layoutRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<AIChatHandle>(null)
   const activeChatIdRef = useRef<string | null>(null)
   const workspaceRef = useRef<string | null>(null)
@@ -451,51 +432,6 @@ function App(): React.JSX.Element {
       setDirStructureAddedAtIndex(null)
     } catch (e) {
       log.error('Failed to clear database:', e)
-    }
-  }, [])
-
-  const startResizeLeft = useCallback((e: React.MouseEvent): void => {
-    e.preventDefault()
-    resizeTarget.current = 'left'
-    isResizing.current = true
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }, [])
-
-  const startResizeRight = useCallback((e: React.MouseEvent): void => {
-    e.preventDefault()
-    resizeTarget.current = 'right'
-    isResizing.current = true
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }, [])
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent): void => {
-      if (!isResizing.current || !layoutRef.current) return
-      const rect = layoutRef.current.getBoundingClientRect()
-      if (resizeTarget.current === 'left') {
-        const newWidth = e.clientX - rect.left
-        setLeftWidth(Math.min(MAX_LEFT_WIDTH, Math.max(MIN_LEFT_WIDTH, newWidth)))
-      } else if (resizeTarget.current === 'right') {
-        const newWidth = rect.right - e.clientX
-        setRightWidth(Math.min(MAX_LEFT_WIDTH, Math.max(MIN_LEFT_WIDTH, newWidth)))
-      }
-    }
-
-    const handleMouseUp = (): void => {
-      if (!isResizing.current) return
-      isResizing.current = false
-      resizeTarget.current = null
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
     }
   }, [])
 
