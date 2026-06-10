@@ -681,8 +681,7 @@ describe('preprocess — Windows line endings', () => {
   })
 
   it('handles EDIT block with \\r\\n', () => {
-    const input =
-      '--- EDIT a.ts ---\r\n<<<<<<< SEARCH\r\nold\r\n=======\r\nnew\r\n>>>>>>> REPLACE'
+    const input = '--- EDIT a.ts ---\r\n<<<<<<< SEARCH\r\nold\r\n=======\r\nnew\r\n>>>>>>> REPLACE'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
     expect(out).toContain('old')
