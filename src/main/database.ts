@@ -342,6 +342,18 @@ export function deleteChatSession(id: string): void {
   d.prepare('DELETE FROM chat_sessions WHERE id = ?').run(id)
 }
 
+export function clearAllData(): void {
+  const d = getDb()
+  const tx = d.transaction(() => {
+    d.prepare('DELETE FROM chat_sessions').run()
+    d.prepare('DELETE FROM file_states').run()
+    d.prepare('DELETE FROM expanded_dirs').run()
+    d.prepare('DELETE FROM workspace_settings').run()
+    d.prepare('DELETE FROM workspaces').run()
+  })
+  tx()
+}
+
 export function pruneWorkspaceState(
   workspacePath: string,
   validFilePaths: string[],

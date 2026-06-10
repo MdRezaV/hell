@@ -7,6 +7,7 @@ import icon from '../../resources/icon.png?asset'
 import {
   batchRemoveFileStates,
   batchSetFileStates,
+  clearAllData,
   clearFileStates,
   closeDatabase,
   createChatSession,
@@ -376,6 +377,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('db:clear-file-states', async (_, workspacePath: string) => {
     clearFileStates(workspacePath)
+  })
+
+  ipcMain.handle('db:clear-all', async () => {
+    clearAllData()
   })
 
   ipcMain.handle(
