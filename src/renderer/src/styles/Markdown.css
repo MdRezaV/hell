@@ -372,11 +372,11 @@
 }
 
 .md-apply-all {
-  @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover flex-shrink-0;
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-accent-text bg-accent border border-accent rounded-sm cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover flex-shrink-0;
 }
 
 .md-apply-all.warning {
-  @apply bg-ctp-peach border-ctp-peach text-ctp-mantle;
+  @apply bg-ctp-peach border-ctp-peach text-ctp-mantle hover:bg-ctp-peach hover:border-ctp-peach;
 }
 
 .md-apply-all.applied {
