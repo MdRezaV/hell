@@ -27,6 +27,7 @@ function App(): React.JSX.Element {
   const workspaceRef = useRef<string | null>(null)
   const fileStatesRef = useRef<FileStates>(new Map())
   const expandedDirsRef = useRef<Set<string>>(new Set())
+  const isNewChatRef = useRef(false)
 
   useEffect(() => {
     activeChatIdRef.current = activeChatId
@@ -387,14 +388,16 @@ function App(): React.JSX.Element {
   }, [])
 
   const handleNewChat = useCallback(async (): Promise<void> => {
+    isNewChatRef.current = true
     try {
       const currentMessages = chatRef.current?.getMessages() ?? []
       const prevActiveChatId = activeChatIdRef.current
 
+      chatRef.current?.loadChat([])
+
       copySnapshotRef.current = new Set()
       setDirStructureAddedAtIndex(null)
       setActiveChatId(null)
-      chatRef.current?.loadChat([])
 
       const toConvert: string[] = []
       const nextFileStates = new Map(fileStates)
@@ -444,6 +447,8 @@ function App(): React.JSX.Element {
       setChatHistoryKey((k) => k + 1)
     } catch (e) {
       log.error('Failed to create new chat:', e)
+    } finally {
+      isNewChatRef.current = false
     }
   }, [fileStates, serializeCurrentFileStates, serializeExpandedDirs])
 
@@ -485,6 +490,7 @@ function App(): React.JSX.Element {
   const handleMessagesChange = useCallback(
     async (messages: ChatMessage[]) => {
       try {
+        if (isNewChatRef.current) return
         if (messages.length === 0) return
         const title = deriveTitle(messages)
         const ws = workspaceRef.current

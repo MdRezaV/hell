@@ -370,9 +370,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         setEditingId(null)
         setCopiedId(null)
         setIsAwaitingResponse(false)
-        startTransition(() => {
-          setMessages(newMessages)
-        })
+        setMessages(newMessages)
         setTimeout(() => {
           isLoadingRef.current = false
         }, 50)
