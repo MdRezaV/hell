@@ -5,16 +5,16 @@ import { log } from './logger'
 
 const MAX_WORKSPACES = 5
 
+// Increment this whenever the database schema changes in a
+// backwards-incompatible way. On startup, if the stored
+// `PRAGMA user_version` does not match, the database is wiped
+// and recreated from scratch.
+const SCHEMA_VERSION = 1
+
 let db: Database.Database | null = null
 
-export function initDatabase(): void {
-  const dbPath = join(app.getPath('userData'), 'hell.db')
-  log.info('Opening database at', dbPath)
-  db = new Database(dbPath)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
-
-  db.exec(`
+function createTables(d: Database.Database): void {
+  d.exec(`
     CREATE TABLE IF NOT EXISTS workspaces
     (
       path
@@ -124,6 +124,36 @@ export function initDatabase(): void {
       NULL
     );
   `)
+}
+
+function dropAllTables(d: Database.Database): void {
+  d.exec(`
+    DROP TABLE IF EXISTS chat_sessions;
+    DROP TABLE IF EXISTS workspace_settings;
+    DROP TABLE IF EXISTS expanded_dirs;
+    DROP TABLE IF EXISTS file_states;
+    DROP TABLE IF EXISTS workspaces;
+  `)
+}
+
+export function initDatabase(): void {
+  const dbPath = join(app.getPath('userData'), 'hell.db')
+  log.info('Opening database at', dbPath)
+  db = new Database(dbPath)
+  db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
+
+  const storedVersion = (db.pragma('user_version', { simple: true }) as number) ?? 0
+
+  if (storedVersion !== SCHEMA_VERSION) {
+    log.info(
+      `Schema version mismatch (stored=${storedVersion}, current=${SCHEMA_VERSION}). Resetting database.`
+    )
+    dropAllTables(db)
+    db.pragma(`user_version = ${SCHEMA_VERSION}`)
+  }
+
+  createTables(db)
 }
 
 export function closeDatabase(): void {
