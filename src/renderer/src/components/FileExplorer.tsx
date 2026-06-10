@@ -6,7 +6,9 @@ import {
   File,
   Folder,
   Folder as FolderBig,
-  FolderOpen
+  FolderOpen,
+  Loader2,
+  X
 } from 'lucide-react'
 import log from 'electron-log/renderer'
 import '../styles/FileExplorer.css'
@@ -267,11 +269,22 @@ function FileExplorer({
   onIncludeDirStructureChange: (value: boolean) => void
 }): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
+  const [loading, setLoading] = useState(false)
+  const [prevWorkspace, setPrevWorkspace] = useState<string | null>(workspace)
+
+  if (workspace !== prevWorkspace) {
+    setPrevWorkspace(workspace)
+    if (workspace === null) {
+      setTree([])
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+  }
 
   useEffect(() => {
     if (!workspace) {
       queueMicrotask(() => {
-        setTree([])
         onFilePathsChange(new Set())
       })
       return
@@ -279,29 +292,29 @@ function FileExplorer({
 
     let cancelled = false
 
-    const refresh = (): void => {
+    const processFiles = (files: FileNode[]): void => {
+      if (cancelled) return
+      const sorted = sortTree(files)
+      setTree(sorted)
+      const filePaths = collectFilePaths(sorted)
+      const dirPaths = collectDirPaths(sorted)
+      onFilePathsChange(filePaths)
       window.electron.ipcRenderer
-        .invoke('read-directory', workspace)
-        .then((files: FileNode[]) => {
-          if (cancelled) return
-          const sorted = sortTree(files)
-          setTree(sorted)
-          const filePaths = collectFilePaths(sorted)
-          const dirPaths = collectDirPaths(sorted)
-          onFilePathsChange(filePaths)
-          window.electron.ipcRenderer
-            .invoke(
-              'db:prune-workspace-state',
-              workspace,
-              Array.from(filePaths),
-              Array.from(dirPaths)
-            )
-            .catch((e) => log.error('Failed to prune workspace state:', e))
-        })
-        .catch((e) => log.error('Failed to read directory:', e))
+        .invoke('db:prune-workspace-state', workspace, Array.from(filePaths), Array.from(dirPaths))
+        .catch((e) => log.error('Failed to prune workspace state:', e))
     }
 
-    refresh()
+    window.electron.ipcRenderer
+      .invoke('read-directory', workspace)
+      .then((files: FileNode[]) => {
+        if (cancelled) return
+        processFiles(files)
+        setLoading(false)
+      })
+      .catch((e) => {
+        log.error('Failed to read directory:', e)
+        if (!cancelled) setLoading(false)
+      })
 
     let lastRefresh = 0
     const MIN_REFRESH_MS = 300
@@ -309,7 +322,13 @@ function FileExplorer({
       const now = Date.now()
       if (now - lastRefresh < MIN_REFRESH_MS) return
       lastRefresh = now
-      refresh()
+      window.electron.ipcRenderer
+        .invoke('read-directory', workspace)
+        .then((files: FileNode[]) => {
+          if (cancelled) return
+          processFiles(files)
+        })
+        .catch((e) => log.error('Failed to read directory:', e))
     }
     window.electron.ipcRenderer.on('workspace:changed', handleChange)
 
@@ -328,6 +347,10 @@ function FileExplorer({
     } catch (e) {
       log.error('Failed to open workspace:', e)
     }
+  }
+
+  const handleCancelLoad = (): void => {
+    onWorkspaceChange(null)
   }
 
   const filePathSet = useMemo(() => collectFilePaths(tree), [tree])
@@ -361,53 +384,70 @@ function FileExplorer({
           </span>
         </div>
         <div className="explorer-header-actions">
-          <button onClick={onClearSelections} title="Clear selections">
-            <Eraser size={14} strokeWidth={2} />
-          </button>
-          <button onClick={handleOpenWorkspace} title="Open Folder">
-            <FolderOpen size={14} strokeWidth={2} />
-          </button>
+          {!loading && (
+            <button onClick={onClearSelections} title="Clear selections">
+              <Eraser size={14} strokeWidth={2} />
+            </button>
+          )}
+          {loading ? (
+            <button onClick={handleCancelLoad} title="Cancel loading">
+              <X size={14} strokeWidth={2} />
+            </button>
+          ) : (
+            <button onClick={handleOpenWorkspace} title="Open Folder">
+              <FolderOpen size={14} strokeWidth={2} />
+            </button>
+          )}
         </div>
       </div>
-      <div className="explorer-tree">
-        {tree.map((node) => (
-          <TreeNode
-            key={node.path}
-            node={node}
-            level={0}
-            fileStates={fileStates}
-            expandedDirs={expandedDirs}
-            onToggle={onToggleFile}
-            onToggleExpand={onToggleExpand}
-          />
-        ))}
-      </div>
-      <div
-        style={{
-          padding: '8px 12px',
-          borderTop: '1px solid var(--border, #333)',
-          marginTop: 'auto'
-        }}
-      >
-        <label
+      {loading ? (
+        <div className="flex flex-col items-center justify-center flex-1 gap-3 text-text-muted">
+          <Loader2 size={24} className="animate-spin" />
+          <p className="text-[12px]">Loading folder...</p>
+        </div>
+      ) : (
+        <div className="explorer-tree">
+          {tree.map((node) => (
+            <TreeNode
+              key={node.path}
+              node={node}
+              level={0}
+              fileStates={fileStates}
+              expandedDirs={expandedDirs}
+              onToggle={onToggleFile}
+              onToggleExpand={onToggleExpand}
+            />
+          ))}
+        </div>
+      )}
+      {!loading && (
+        <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '12px',
-            cursor: 'pointer',
-            userSelect: 'none'
+            padding: '8px 12px',
+            borderTop: '1px solid var(--border, #333)',
+            marginTop: 'auto'
           }}
         >
-          <input
-            type="checkbox"
-            checked={includeDirStructure}
-            onChange={(e) => onIncludeDirStructureChange(e.target.checked)}
-            disabled={!workspace}
-          />
-          <span>Include directory structure</span>
-        </label>
-      </div>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={includeDirStructure}
+              onChange={(e) => onIncludeDirStructureChange(e.target.checked)}
+              disabled={!workspace}
+            />
+            <span>Include directory structure</span>
+          </label>
+        </div>
+      )}
     </div>
   )
 }

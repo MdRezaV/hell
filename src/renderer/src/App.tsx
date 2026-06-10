@@ -25,6 +25,8 @@ function App(): React.JSX.Element {
   const chatRef = useRef<AIChatHandle>(null)
   const activeChatIdRef = useRef<string | null>(null)
   const workspaceRef = useRef<string | null>(null)
+  const fileStatesRef = useRef<FileStates>(new Map())
+  const expandedDirsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     activeChatIdRef.current = activeChatId
@@ -33,6 +35,14 @@ function App(): React.JSX.Element {
   useEffect(() => {
     workspaceRef.current = workspace
   }, [workspace])
+
+  useEffect(() => {
+    fileStatesRef.current = fileStates
+  }, [fileStates])
+
+  useEffect(() => {
+    expandedDirsRef.current = expandedDirs
+  }, [expandedDirs])
 
   const loadWorkspaceState = useCallback(async (path: string): Promise<void> => {
     try {
@@ -65,32 +75,93 @@ function App(): React.JSX.Element {
     }
   }, [])
 
+  const applyChatSessionState = useCallback(
+    async (
+      session: { workspace_path: string | null; file_states: string; expanded_dirs: string },
+      targetWorkspace: string
+    ): Promise<void> => {
+      try {
+        const savedFileStates = JSON.parse(session.file_states || '[]') as Array<{
+          absolutePath: string
+          tag: string
+        }>
+        const savedExpandedDirs = JSON.parse(session.expanded_dirs || '[]') as string[]
+
+        const fsMap = new Map<string, FileTag>()
+        const batchStates: Array<{ absolutePath: string; tag: string }> = []
+        for (const { absolutePath, tag } of savedFileStates) {
+          fsMap.set(absolutePath, tag as FileTag)
+          batchStates.push({ absolutePath, tag })
+        }
+        if (batchStates.length > 0) {
+          await window.electron.ipcRenderer.invoke(
+            'db:batch-set-file-states',
+            targetWorkspace,
+            batchStates
+          )
+        }
+
+        const expSet = new Set<string>(savedExpandedDirs)
+
+        setFileStates(fsMap)
+        setExpandedDirs(expSet)
+        setDirStructureAddedAtIndex(null)
+      } catch (e) {
+        log.error('Failed to apply chat session state:', e)
+      }
+    },
+    []
+  )
+
+  const serializeCurrentFileStates = useCallback(
+    (currentFileStates: FileStates, ws: string | null): string => {
+      if (!ws) return '[]'
+      const arr: Array<{ absolutePath: string; tag: string }> = []
+      currentFileStates.forEach((tag, path) => {
+        arr.push({ absolutePath: path, tag })
+      })
+      return JSON.stringify(arr)
+    },
+    []
+  )
+
+  const serializeExpandedDirs = useCallback((dirs: Set<string>): string => {
+    return JSON.stringify([...dirs])
+  }, [])
+
   const saveCurrentChat = useCallback(async (): Promise<void> => {
     try {
       if (!chatRef.current) return
       const messages = chatRef.current.getMessages()
       if (messages.length === 0) return
       const title = deriveTitle(messages)
+      const ws = workspaceRef.current
+      const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
+      const ed = serializeExpandedDirs(expandedDirsRef.current)
       if (activeChatIdRef.current) {
         await window.electron.ipcRenderer.invoke(
           'db:update-chat-session',
           activeChatIdRef.current,
           title,
-          JSON.stringify(messages)
+          JSON.stringify(messages),
+          fs,
+          ed
         )
       } else {
         const id = await window.electron.ipcRenderer.invoke(
           'db:create-chat-session',
-          workspaceRef.current,
+          ws,
           title,
-          JSON.stringify(messages)
+          JSON.stringify(messages),
+          fs,
+          ed
         )
         setActiveChatId(id)
       }
     } catch (e) {
       log.error('Failed to save chat:', e)
     }
-  }, [])
+  }, [serializeCurrentFileStates, serializeExpandedDirs])
 
   const handleWorkspaceChange = useCallback(
     async (path: string | null, { restore = true } = {}): Promise<void> => {
@@ -317,31 +388,30 @@ function App(): React.JSX.Element {
 
   const handleNewChat = useCallback(async (): Promise<void> => {
     try {
+      const toConvert: string[] = []
+      const nextFileStates = new Map(fileStates)
+      fileStates.forEach((state, path) => {
+        if (state === 'ADD' || state === 'INQ') {
+          nextFileStates.set(path, 'PND')
+          toConvert.push(path)
+        }
+      })
+
       await saveCurrentChat()
+
       copySnapshotRef.current = new Set()
       setDirStructureAddedAtIndex(null)
       setActiveChatId(null)
       chatRef.current?.loadChat([])
       setChatHistoryKey((k) => k + 1)
 
-      const toConvert: string[] = []
-      setFileStates((prev) => {
-        const next = new Map(prev)
-        let changed = false
-        prev.forEach((state, path) => {
-          if (state === 'ADD' || state === 'INQ') {
-            next.set(path, 'PND')
-            toConvert.push(path)
-            changed = true
-          }
-        })
-        return changed ? next : prev
-      })
-      if (workspace && toConvert.length > 0) {
+      setFileStates(nextFileStates)
+      const currentWorkspace = workspaceRef.current
+      if (currentWorkspace && toConvert.length > 0) {
         window.electron.ipcRenderer
           .invoke(
             'db:batch-set-file-states',
-            workspace,
+            currentWorkspace,
             toConvert.map((p) => ({ absolutePath: p, tag: 'PND' }))
           )
           .catch((e) => log.error('Failed to convert file states to PND on new chat:', e))
@@ -349,7 +419,7 @@ function App(): React.JSX.Element {
     } catch (e) {
       log.error('Failed to create new chat:', e)
     }
-  }, [saveCurrentChat, workspace])
+  }, [saveCurrentChat, fileStates])
 
   const handleSelectChat = useCallback(
     async (id: string): Promise<void> => {
@@ -357,6 +427,18 @@ function App(): React.JSX.Element {
         await saveCurrentChat()
         const session = await window.electron.ipcRenderer.invoke('db:get-chat-session', id)
         if (session) {
+          const sessionWorkspace = session.workspace_path
+          if (sessionWorkspace && sessionWorkspace !== workspace) {
+            setWorkspace(sessionWorkspace)
+            await window.electron.ipcRenderer.invoke('workspace:watch', sessionWorkspace)
+            await window.electron.ipcRenderer.invoke('db:touch-workspace', sessionWorkspace)
+          }
+
+          const targetWorkspace = sessionWorkspace || workspace
+          if (targetWorkspace) {
+            await applyChatSessionState(session, targetWorkspace)
+          }
+
           const messages = JSON.parse(session.messages).map((m: ChatMessage) => ({
             ...m,
             variants: m.variants.map((v: ChatMessage['variants'][number]) => ({
@@ -371,34 +453,44 @@ function App(): React.JSX.Element {
         log.error('Failed to select chat:', e)
       }
     },
-    [saveCurrentChat]
+    [saveCurrentChat, workspace, applyChatSessionState]
   )
 
-  const handleMessagesChange = useCallback(async (messages: ChatMessage[]) => {
-    try {
-      if (messages.length === 0) return
-      const title = deriveTitle(messages)
-      if (activeChatIdRef.current) {
-        await window.electron.ipcRenderer.invoke(
-          'db:update-chat-session',
-          activeChatIdRef.current,
-          title,
-          JSON.stringify(messages)
-        )
-      } else {
-        const id = await window.electron.ipcRenderer.invoke(
-          'db:create-chat-session',
-          workspaceRef.current,
-          title,
-          JSON.stringify(messages)
-        )
-        setActiveChatId(id)
+  const handleMessagesChange = useCallback(
+    async (messages: ChatMessage[]) => {
+      try {
+        if (messages.length === 0) return
+        const title = deriveTitle(messages)
+        const ws = workspaceRef.current
+        const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
+        const ed = serializeExpandedDirs(expandedDirsRef.current)
+        if (activeChatIdRef.current) {
+          await window.electron.ipcRenderer.invoke(
+            'db:update-chat-session',
+            activeChatIdRef.current,
+            title,
+            JSON.stringify(messages),
+            fs,
+            ed
+          )
+        } else {
+          const id = await window.electron.ipcRenderer.invoke(
+            'db:create-chat-session',
+            ws,
+            title,
+            JSON.stringify(messages),
+            fs,
+            ed
+          )
+          setActiveChatId(id)
+        }
+        setChatHistoryKey((k) => k + 1)
+      } catch (e) {
+        log.error('Failed to handle messages change:', e)
       }
-      setChatHistoryKey((k) => k + 1)
-    } catch (e) {
-      log.error('Failed to handle messages change:', e)
-    }
-  }, [])
+    },
+    [serializeCurrentFileStates, serializeExpandedDirs]
+  )
 
   useEffect(() => {
     latestPasteFnRef.current = async (): Promise<void> => {

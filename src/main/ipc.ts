@@ -18,6 +18,7 @@ import {
   setDirExpanded,
   setFileState,
   setIncludeDirStructure,
+  snapshotWorkspaceStateToSession,
   touchWorkspace,
   updateChatSession
 } from './database'
@@ -163,14 +164,54 @@ export function registerIpcHandlers(): void {
 
   safeHandle(
     'db:create-chat-session',
-    async (_, workspacePath: string | null, title: string, messages: string) => {
+    async (
+      _,
+      workspacePath: string | null,
+      title: string,
+      messages: string,
+      fileStates?: string,
+      expandedDirs?: string
+    ) => {
+      if (fileStates !== undefined && expandedDirs !== undefined) {
+        return createChatSession(workspacePath, title, messages, fileStates, expandedDirs)
+      }
+      if (workspacePath) {
+        const snapshot = snapshotWorkspaceStateToSession(workspacePath)
+        return createChatSession(
+          workspacePath,
+          title,
+          messages,
+          snapshot.fileStates,
+          snapshot.expandedDirs
+        )
+      }
       return createChatSession(workspacePath, title, messages)
     }
   )
 
-  safeHandle('db:update-chat-session', async (_, id: string, title: string, messages: string) => {
-    updateChatSession(id, title, messages)
-  })
+  safeHandle(
+    'db:update-chat-session',
+    async (
+      _,
+      id: string,
+      title: string,
+      messages: string,
+      fileStates?: string,
+      expandedDirs?: string
+    ) => {
+      if (fileStates !== undefined && expandedDirs !== undefined) {
+        updateChatSession(id, title, messages, fileStates, expandedDirs)
+      } else {
+        const session = getChatSession(id)
+        if (session?.workspace_path) {
+          const snapshot = snapshotWorkspaceStateToSession(session.workspace_path)
+          updateChatSession(id, title, messages, snapshot.fileStates, snapshot.expandedDirs)
+        } else {
+          updateChatSession(id, title, messages)
+        }
+      }
+    }
+  )
 
   safeHandle('db:get-chat-sessions', async (_, workspacePath: string | null) => {
     return getChatSessions(workspacePath)

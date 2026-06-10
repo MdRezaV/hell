@@ -9,7 +9,7 @@ const MAX_WORKSPACES = 5
 // backwards-incompatible way. On startup, if the stored
 // `PRAGMA user_version` does not match, the database is wiped
 // and recreated from scratch.
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
 let db: Database.Database | null = null
 
@@ -121,7 +121,19 @@ function createTables(d: Database.Database): void {
       updated_at
       INTEGER
       NOT
+      NULL,
+      file_states
+      TEXT
+      NOT
       NULL
+      DEFAULT
+      '[]',
+      expanded_dirs
+      TEXT
+      NOT
+      NULL
+      DEFAULT
+      '[]'
     );
   `)
 }
@@ -326,30 +338,70 @@ export interface ChatSession {
   messages: string
   created_at: number
   updated_at: number
+  file_states: string
+  expanded_dirs: string
 }
 
 export function createChatSession(
   workspacePath: string | null,
   title: string,
-  messages: string
+  messages: string,
+  fileStates: string = '[]',
+  expandedDirs: string = '[]'
 ): string {
   const d = getDb()
   const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   d.prepare(
-    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(id, workspacePath ?? null, title, messages, Date.now(), Date.now())
-  return id
-}
-
-export function updateChatSession(id: string, title: string, messages: string): void {
-  const d = getDb()
-  d.prepare(`UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ? WHERE id = ?`).run(
+    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    id,
+    workspacePath ?? null,
     title,
     messages,
     Date.now(),
-    id
+    Date.now(),
+    fileStates,
+    expandedDirs
   )
+  return id
+}
+
+export function updateChatSession(
+  id: string,
+  title: string,
+  messages: string,
+  fileStates: string = '[]',
+  expandedDirs: string = '[]'
+): void {
+  const d = getDb()
+  d.prepare(
+    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ? WHERE id = ?`
+  ).run(title, messages, Date.now(), fileStates, expandedDirs, id)
+}
+
+export function snapshotWorkspaceStateToSession(workspacePath: string): {
+  fileStates: string
+  expandedDirs: string
+} {
+  const d = getDb()
+  const files = d
+    .prepare('SELECT relative_path, tag FROM file_states WHERE workspace_path = ?')
+    .all(workspacePath) as Array<{ relative_path: string; tag: string }>
+  const dirs = d
+    .prepare('SELECT relative_path FROM expanded_dirs WHERE workspace_path = ?')
+    .all(workspacePath) as Array<{ relative_path: string }>
+
+  const fileStates = files.map((f) => ({
+    absolutePath: join(workspacePath, f.relative_path),
+    tag: f.tag
+  }))
+  const expandedDirs = dirs.map((r) => join(workspacePath, r.relative_path))
+
+  return {
+    fileStates: JSON.stringify(fileStates),
+    expandedDirs: JSON.stringify(expandedDirs)
+  }
 }
 
 export function getChatSessions(workspacePath: string | null): ChatSession[] {

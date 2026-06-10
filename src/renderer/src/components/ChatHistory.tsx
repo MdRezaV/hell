@@ -46,7 +46,7 @@ function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
   const groups = new Map<string, ChatSession[]>()
 
   for (const s of sessions) {
-    const d = new Date(s.updated_at)
+    const d = new Date(s.created_at)
     let key: string
     if (d >= todayStart) key = 'Today'
     else if (d >= yesterdayStart) key = 'Yesterday'
@@ -186,7 +186,7 @@ export default memo(function ChatHistory({
                           {session.title || 'New Chat'}
                         </span>
                         <span className="chat-history-item-date">
-                          {formatItemTime(session.updated_at)}
+                          {formatItemTime(session.created_at)}
                         </span>
                       </div>
                       <button
