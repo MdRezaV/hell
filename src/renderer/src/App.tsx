@@ -388,6 +388,14 @@ function App(): React.JSX.Element {
 
   const handleNewChat = useCallback(async (): Promise<void> => {
     try {
+      const currentMessages = chatRef.current?.getMessages() ?? []
+      const prevActiveChatId = activeChatIdRef.current
+
+      copySnapshotRef.current = new Set()
+      setDirStructureAddedAtIndex(null)
+      setActiveChatId(null)
+      chatRef.current?.loadChat([])
+
       const toConvert: string[] = []
       const nextFileStates = new Map(fileStates)
       fileStates.forEach((state, path) => {
@@ -396,15 +404,6 @@ function App(): React.JSX.Element {
           toConvert.push(path)
         }
       })
-
-      await saveCurrentChat()
-
-      copySnapshotRef.current = new Set()
-      setDirStructureAddedAtIndex(null)
-      setActiveChatId(null)
-      chatRef.current?.loadChat([])
-      setChatHistoryKey((k) => k + 1)
-
       setFileStates(nextFileStates)
       const currentWorkspace = workspaceRef.current
       if (currentWorkspace && toConvert.length > 0) {
@@ -416,10 +415,37 @@ function App(): React.JSX.Element {
           )
           .catch((e) => log.error('Failed to convert file states to PND on new chat:', e))
       }
+
+      if (currentMessages.length > 0) {
+        const title = deriveTitle(currentMessages)
+        const ws = workspaceRef.current
+        const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
+        const ed = serializeExpandedDirs(expandedDirsRef.current)
+        if (prevActiveChatId) {
+          await window.electron.ipcRenderer.invoke(
+            'db:update-chat-session',
+            prevActiveChatId,
+            title,
+            JSON.stringify(currentMessages),
+            fs,
+            ed
+          )
+        } else {
+          await window.electron.ipcRenderer.invoke(
+            'db:create-chat-session',
+            ws,
+            title,
+            JSON.stringify(currentMessages),
+            fs,
+            ed
+          )
+        }
+      }
+      setChatHistoryKey((k) => k + 1)
     } catch (e) {
       log.error('Failed to create new chat:', e)
     }
-  }, [saveCurrentChat, fileStates])
+  }, [fileStates, serializeCurrentFileStates, serializeExpandedDirs])
 
   const handleSelectChat = useCallback(
     async (id: string): Promise<void> => {
