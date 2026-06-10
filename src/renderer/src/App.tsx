@@ -323,10 +323,33 @@ function App(): React.JSX.Element {
       setActiveChatId(null)
       chatRef.current?.loadChat([])
       setChatHistoryKey((k) => k + 1)
+
+      const toConvert: string[] = []
+      setFileStates((prev) => {
+        const next = new Map(prev)
+        let changed = false
+        prev.forEach((state, path) => {
+          if (state === 'ADD' || state === 'INQ') {
+            next.set(path, 'PND')
+            toConvert.push(path)
+            changed = true
+          }
+        })
+        return changed ? next : prev
+      })
+      if (workspace && toConvert.length > 0) {
+        window.electron.ipcRenderer
+          .invoke(
+            'db:batch-set-file-states',
+            workspace,
+            toConvert.map((p) => ({ absolutePath: p, tag: 'PND' }))
+          )
+          .catch((e) => log.error('Failed to convert file states to PND on new chat:', e))
+      }
     } catch (e) {
       log.error('Failed to create new chat:', e)
     }
-  }, [saveCurrentChat])
+  }, [saveCurrentChat, workspace])
 
   const handleSelectChat = useCallback(
     async (id: string): Promise<void> => {
