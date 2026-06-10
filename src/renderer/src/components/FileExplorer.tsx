@@ -9,7 +9,7 @@ import {
   FolderOpen
 } from 'lucide-react'
 import log from 'electron-log/renderer'
-import './FileExplorer.css'
+import '../styles/FileExplorer.css'
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'
 

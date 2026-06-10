@@ -21,7 +21,7 @@ import {
   X
 } from 'lucide-react'
 import Markdown from './Markdown'
-import './AIChat.css'
+import '../styles/AIChat.css'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
 import { buildPrompt, type FileContext } from '../utils/PromptEngine'

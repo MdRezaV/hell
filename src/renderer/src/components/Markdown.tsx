@@ -47,7 +47,7 @@ import docker from 'react-syntax-highlighter/dist/esm/languages/prism/docker'
 import hljs from 'highlight.js/lib/common'
 import { ArrowRight, Check, Copy, Play, X } from 'lucide-react'
 import log from 'electron-log/renderer'
-import './Markdown.css'
+import '../styles/Markdown.css'
 import { getActiveParser, normalizeLineEndings, parseReplaceBlock } from '../utils/markdownParser'
 import {
   applyFileDelete,

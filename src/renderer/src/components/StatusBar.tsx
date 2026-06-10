@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import './StatusBar.css'
+import '../styles/StatusBar.css'
 
 interface StatusBarProps {
   onCopy: () => void
