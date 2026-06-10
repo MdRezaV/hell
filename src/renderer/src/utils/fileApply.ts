@@ -1,5 +1,6 @@
 import log from 'electron-log/renderer'
 import { normalizeLineEndings } from './markdownParser'
+import { findLooseMatch } from './looseMatch'
 
 export interface ApplyResult {
   success: boolean
@@ -95,11 +96,24 @@ export async function applyFileReplace(
     const content = normalizeLineEndings(fileResult.content)
     const normalizedOldCode = normalizeLineEndings(oldCode)
     const normalizedNewCode = normalizeLineEndings(newCode)
-    if (!content.includes(normalizedOldCode)) {
-      return { success: false, error: 'Search text not found in file' }
+
+    const exactIdx = content.indexOf(normalizedOldCode)
+    if (exactIdx !== -1) {
+      const newContent =
+        content.slice(0, exactIdx) +
+        normalizedNewCode +
+        content.slice(exactIdx + normalizedOldCode.length)
+      return applyFileWrite(workspace, path, newContent)
     }
-    const newContent = content.replace(normalizedOldCode, normalizedNewCode)
-    return applyFileWrite(workspace, path, newContent)
+
+    const loose = findLooseMatch(content, normalizedOldCode)
+    if (loose) {
+      const newContent =
+        content.slice(0, loose.start) + normalizedNewCode + content.slice(loose.end)
+      return applyFileWrite(workspace, path, newContent)
+    }
+
+    return { success: false, error: 'Search text not found in file' }
   } catch (e) {
     log.error('Failed to apply replace:', e)
     return { success: false, error: String(e) }
