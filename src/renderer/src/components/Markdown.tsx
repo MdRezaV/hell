@@ -45,10 +45,21 @@ import php from 'react-syntax-highlighter/dist/esm/languages/prism/php'
 import ruby from 'react-syntax-highlighter/dist/esm/languages/prism/ruby'
 import docker from 'react-syntax-highlighter/dist/esm/languages/prism/docker'
 import hljs from 'highlight.js/lib/common'
-import { Check, Copy, Play, X } from 'lucide-react'
+import { ArrowRight, Check, Copy, Play, X } from 'lucide-react'
 import log from 'electron-log/renderer'
 import './Markdown.css'
 import { getActiveParser, normalizeLineEndings, parseReplaceBlock } from '../utils/markdownParser'
+import {
+  applyFileDelete,
+  applyFileMove,
+  applyFileReplace,
+  applyFileWrite,
+  FILE_CACHE_MAX,
+  fileContentCache,
+  invalidateFileContentCache,
+  ipcThrottle,
+  type FileState
+} from '../utils/fileApply'
 import { useWorkspace } from '../WorkspaceContext'
 
 SyntaxHighlighter.registerLanguage('javascript', javascript)
@@ -232,59 +243,10 @@ const LinesDisplay = memo(function LinesDisplay({
   )
 })
 
-interface FileState {
-  exists: boolean
-  content: string | null
-}
-
 interface FileStateCache {
   data: FileState
   path: string
   workspace: string
-}
-
-const FILE_CACHE_MAX = 256
-const IPC_CONCURRENCY_LIMIT = 4
-
-const fileContentCache = new Map<string, Promise<FileState>>()
-
-let ipcInFlight = 0
-const ipcQueue: Array<() => void> = []
-
-function processIpcQueue(): void {
-  while (ipcQueue.length > 0 && ipcInFlight < IPC_CONCURRENCY_LIMIT) {
-    ipcQueue.shift()!()
-  }
-}
-
-function ipcThrottle<T>(fn: () => Promise<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const run = (): void => {
-      ipcInFlight++
-      fn().then(
-        (result) => {
-          ipcInFlight--
-          resolve(result)
-          processIpcQueue()
-        },
-        (err) => {
-          ipcInFlight--
-          reject(err)
-          processIpcQueue()
-        }
-      )
-    }
-    if (ipcInFlight < IPC_CONCURRENCY_LIMIT) {
-      run()
-    } else {
-      ipcQueue.push(run)
-    }
-  })
-}
-
-function invalidateFileContentCache(workspace: string, path: string): void {
-  fileContentCache.delete(`${workspace}::${path}`)
-  window.dispatchEvent(new CustomEvent('file-content-invalidated', { detail: { workspace, path } }))
 }
 
 function useFileContent(path: string): FileState | null {
@@ -376,36 +338,9 @@ const FileReplaceBlock = memo(function FileReplaceBlock({
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
-    try {
-      const fileResult: FileState = await window.electron.ipcRenderer.invoke(
-        'read-file',
-        workspace,
-        path
-      )
-      if (!fileResult.exists || fileResult.content === null) {
-        setApplyState('error')
-        return
-      }
-      const content = normalizeLineEndings(fileResult.content)
-      const normalizedOldCode = normalizeLineEndings(oldCode)
-      const normalizedNewCode = normalizeLineEndings(newCode)
-      if (!content.includes(normalizedOldCode)) {
-        setApplyState('error')
-        return
-      }
-      const newContent = content.replace(normalizedOldCode, normalizedNewCode)
-      const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
-        'write-file',
-        workspace,
-        path,
-        newContent
-      )
-      if (result.success) invalidateFileContentCache(workspace, path)
-      setApplyState(result.success ? 'applied' : 'error')
-    } catch (e) {
-      log.error('Failed to apply replace block:', e)
-      setApplyState('error')
-    }
+    const result = await applyFileReplace(workspace, path, oldCode, newCode)
+    if (result.success) invalidateFileContentCache(workspace, path)
+    setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, oldCode, newCode])
 
   return (
@@ -513,38 +448,12 @@ const FileMoveBlock = memo(function FileMoveBlock({
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
-    try {
-      const readResult: FileState = await window.electron.ipcRenderer.invoke(
-        'read-file',
-        workspace,
-        oldPath
-      )
-      if (!readResult.exists || readResult.content === null) {
-        setApplyState('error')
-        return
-      }
-      const writeResult: { success: boolean; error?: string } =
-        await window.electron.ipcRenderer.invoke(
-          'write-file',
-          workspace,
-          newPath,
-          readResult.content
-        )
-      if (!writeResult.success) {
-        setApplyState('error')
-        return
-      }
-      const deleteResult: { success: boolean; error?: string } =
-        await window.electron.ipcRenderer.invoke('delete-file', workspace, oldPath)
-      if (deleteResult.success) {
-        invalidateFileContentCache(workspace, oldPath)
-        invalidateFileContentCache(workspace, newPath)
-      }
-      setApplyState(deleteResult.success ? 'applied' : 'error')
-    } catch (e) {
-      log.error('Failed to apply move block:', e)
-      setApplyState('error')
+    const result = await applyFileMove(workspace, oldPath, newPath)
+    if (result.success) {
+      invalidateFileContentCache(workspace, oldPath)
+      invalidateFileContentCache(workspace, newPath)
     }
+    setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, oldPath, newPath])
 
   return (
@@ -553,9 +462,11 @@ const FileMoveBlock = memo(function FileMoveBlock({
         <div className="md-file-header-left">
           <span className="md-file-status-label moved">MOVED</span>
           <FilePathDisplay path={oldPath} />
-          <span className="md-file-move-arrow" style={{ margin: '0 8px', opacity: 0.6 }}>
-            →
-          </span>
+          <ArrowRight
+            size={16}
+            className="md-file-move-arrow"
+            style={{ margin: '0 8px', opacity: 0.6 }}
+          />
           <FilePathDisplay path={newPath} />
         </div>
         <div className="md-file-header-actions">
@@ -608,18 +519,9 @@ const FileDeleteBlock = memo(function FileDeleteBlock({
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
-    try {
-      const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
-        'delete-file',
-        workspace,
-        path
-      )
-      if (result.success) invalidateFileContentCache(workspace, path)
-      setApplyState(result.success ? 'applied' : 'error')
-    } catch (e) {
-      log.error('Failed to apply delete block:', e)
-      setApplyState('error')
-    }
+    const result = await applyFileDelete(workspace, path)
+    if (result.success) invalidateFileContentCache(workspace, path)
+    setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path])
 
   if (fileState === null) {
@@ -720,19 +622,9 @@ const FileBlock = memo(function FileBlock({
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
-    try {
-      const result: { success: boolean; error?: string } = await window.electron.ipcRenderer.invoke(
-        'write-file',
-        workspace,
-        path,
-        code
-      )
-      if (result.success) invalidateFileContentCache(workspace, path)
-      setApplyState(result.success ? 'applied' : 'error')
-    } catch (e) {
-      log.error('Failed to apply file block:', e)
-      setApplyState('error')
-    }
+    const result = await applyFileWrite(workspace, path, code)
+    if (result.success) invalidateFileContentCache(workspace, path)
+    setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, code])
 
   const isCreated = fileState !== null && !fileState.exists
