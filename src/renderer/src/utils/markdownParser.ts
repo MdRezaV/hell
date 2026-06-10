@@ -25,20 +25,22 @@ export function wrapInFence(code: string, lang: string): string {
  *   [REPLACE]
  *   (new code)
  *   [END]
+ *
+ * Tags must be alone on their line (optional leading/trailing whitespace allowed).
  */
 export function parseReplaceBlock(code: string): { oldCode: string; newCode: string } | null {
   const lines = normalizeLineEndings(code).split('\n')
   if (lines.length === 0) return null
 
   let i = 0
-  while (i < lines.length && !/^\[SEARCH\]\s*$/.test(lines[i])) {
+  while (i < lines.length && !/^\s*\[SEARCH]\s*$/.test(lines[i])) {
     i++
   }
   if (i >= lines.length) return null
   i++
 
   const searchLines: string[] = []
-  while (i < lines.length && !/^\[REPLACE\]\s*$/.test(lines[i])) {
+  while (i < lines.length && !/^\s*\[REPLACE]\s*$/.test(lines[i])) {
     searchLines.push(lines[i])
     i++
   }
@@ -46,7 +48,7 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
   i++
 
   const replaceLines: string[] = []
-  while (i < lines.length && !/^\[END\]\s*$/.test(lines[i])) {
+  while (i < lines.length && !/^\s*\[END]\s*$/.test(lines[i])) {
     replaceLines.push(lines[i])
     i++
   }
@@ -55,10 +57,10 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
 }
 
 const BLOCK_MARKER_RE =
-  /^\[FILE .+\]$|^\[DELETE FILE .+\]$|^\[MOVE FILE FROM .+ TO .+\]$|^COMMIT: .+$/
-const FILE_END_RE = /^\[END\]\s*$/
-const SEARCH_RE = /^\[SEARCH\]\s*$/
-const REPLACE_RE = /^\[REPLACE\]\s*$/
+  /^\s*\[FILE .+]\s*$|^\s*\[DELETE FILE .+]\s*$|^\s*\[MOVE FILE FROM .+ TO .+]\s*$|^\s*COMMIT: .+\s*$/
+const FILE_END_RE = /^\s*\[END]\s*$/
+const SEARCH_RE = /^\s*\[SEARCH]\s*$/
+const REPLACE_RE = /^\s*\[REPLACE]\s*$/
 
 function isCodeFenceOpen(line: string): { char: string; len: number } | null {
   const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
@@ -82,17 +84,23 @@ function parseSearchReplacePairs(lines: string[]): Array<{ old: string; new: str
     if (SEARCH_RE.test(lines[i])) {
       i++
       const searchLines: string[] = []
-      while (i < lines.length && !REPLACE_RE.test(lines[i])) {
+      while (i < lines.length && !REPLACE_RE.test(lines[i]) && !FILE_END_RE.test(lines[i])) {
         searchLines.push(lines[i])
         i++
       }
-      if (i < lines.length) i++
-      const replaceLines: string[] = []
-      while (i < lines.length && !FILE_END_RE.test(lines[i]) && !SEARCH_RE.test(lines[i])) {
-        replaceLines.push(lines[i])
+
+      // Only create a pair when a valid [REPLACE] tag was actually found.
+      // If [END] (or EOF) is reached first, this [SEARCH] was incomplete —
+      // discard it so the caller can fall back to a regular file block.
+      if (i < lines.length && REPLACE_RE.test(lines[i])) {
         i++
+        const replaceLines: string[] = []
+        while (i < lines.length && !FILE_END_RE.test(lines[i]) && !SEARCH_RE.test(lines[i])) {
+          replaceLines.push(lines[i])
+          i++
+        }
+        pairs.push({ old: searchLines.join('\n'), new: replaceLines.join('\n') })
       }
-      pairs.push({ old: searchLines.join('\n'), new: replaceLines.join('\n') })
     } else {
       i++
     }
@@ -120,6 +128,9 @@ function parseSearchReplacePairs(lines: string[]): Array<{ old: string; new: str
  *   [DELETE FILE path]       -> ```file-delete:path```
  *   [MOVE FILE FROM a TO b]  -> ```file-move:a->b```
  *   COMMIT: msg              -> ```commit\nmsg\n```
+ *
+ * Tags must be alone on their line (optional leading/trailing whitespace allowed).
+ * Tags with surrounding text are treated as content.
  */
 export function preprocess(content: string): string {
   const lines = normalizeLineEndings(content).split('\n')
@@ -153,7 +164,7 @@ export function preprocess(content: string): string {
     }
 
     // [FILE path]
-    const fileMatch = /^\[FILE (.+)\]$/.exec(line)
+    const fileMatch = /^\s*\[FILE (.+)]\s*$/.exec(line)
     if (fileMatch) {
       const path = fileMatch[1].trim()
       i++
@@ -172,10 +183,31 @@ export function preprocess(content: string): string {
 
       if (hasSearch) {
         const pairs = parseSearchReplacePairs(contentLines)
-        for (const pair of pairs) {
-          const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
-          const fenced = wrapInFence(combined, `file-replace:${path}`)
-          result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+        if (pairs.length > 0) {
+          for (const pair of pairs) {
+            const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
+            const fenced = wrapInFence(combined, `file-replace:${path}`)
+            result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+          }
+        } else {
+          const hasReplaceLiteral = contentLines.some((l) => l.includes('[REPLACE]'))
+          if (hasReplaceLiteral) {
+            const searchContent: string[] = []
+            let j = 0
+            while (j < contentLines.length && !SEARCH_RE.test(contentLines[j])) j++
+            j++
+            while (j < contentLines.length) {
+              searchContent.push(contentLines[j])
+              j++
+            }
+            const combined = `[SEARCH]\n${searchContent.join('\n')}\n[REPLACE]\n\n[END]`
+            const fenced = wrapInFence(combined, `file-replace:${path}`)
+            result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+          } else {
+            const code = contentLines.join('\n')
+            const fenced = wrapInFence(code, `file:${path}`)
+            result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+          }
         }
       } else {
         const code = contentLines.join('\n')
@@ -186,7 +218,7 @@ export function preprocess(content: string): string {
     }
 
     // [DELETE FILE path]
-    const deleteMatch = /^\[DELETE FILE (.+)\]$/.exec(line)
+    const deleteMatch = /^\s*\[DELETE FILE (.+)]\s*$/.exec(line)
     if (deleteMatch) {
       const path = deleteMatch[1].trim()
       const fenced = wrapInFence('', `file-delete:${path}`)
@@ -196,7 +228,7 @@ export function preprocess(content: string): string {
     }
 
     // [MOVE FILE FROM old TO new]
-    const moveMatch = /^\[MOVE FILE FROM (.+?) TO (.+)\]$/.exec(line)
+    const moveMatch = /^\s*\[MOVE FILE FROM (.+?) TO (.+)]\s*$/.exec(line)
     if (moveMatch) {
       const oldPath = moveMatch[1].trim()
       const newPath = moveMatch[2].trim()
@@ -207,9 +239,9 @@ export function preprocess(content: string): string {
     }
 
     // COMMIT: message
-    const commitMatch = /^COMMIT: (.+)$/.exec(line)
+    const commitMatch = /^\s*COMMIT: (.+)\s*$/.exec(line)
     if (commitMatch) {
-      const message = commitMatch[1]
+      const message = commitMatch[1].trim()
       const fenced = wrapInFence(message, 'commit')
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       i++

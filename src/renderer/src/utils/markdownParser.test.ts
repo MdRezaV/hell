@@ -97,8 +97,7 @@ describe('parseReplaceBlock', () => {
   })
 
   it('treats [END] as content when not alone on line', () => {
-    const code =
-      '[SEARCH]\noriginal\n[REPLACE]\nconst y = "[END]"\nreplaced\n[END]'
+    const code = '[SEARCH]\noriginal\n[REPLACE]\nconst y = "[END]"\nreplaced\n[END]'
     const result = parseReplaceBlock(code)
     expect(result).toEqual({ oldCode: 'original', newCode: 'const y = "[END]"\nreplaced' })
   })
@@ -141,8 +140,7 @@ describe('preprocess — FILE blocks', () => {
   })
 
   it('terminates at next FILE marker with SEARCH content', () => {
-    const input =
-      '[FILE a.ts]\ncode\n[FILE b.ts]\n[SEARCH]\nx\n[REPLACE]\ny\n[END]'
+    const input = '[FILE a.ts]\ncode\n[FILE b.ts]\n[SEARCH]\nx\n[REPLACE]\ny\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file:a.ts')
     expect(out).toContain('code')
@@ -215,10 +213,11 @@ describe('preprocess — FILE blocks', () => {
     expect(out).toBe(input)
   })
 
-  it('does not match FILE marker with leading whitespace', () => {
+  it('recognizes FILE marker with leading whitespace', () => {
     const input = '  [FILE a.ts]\ncode\n[END]'
     const out = preprocess(input)
-    expect(out).not.toContain('```file:')
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('code')
   })
 
   it('does not match FILE marker without closing bracket', () => {
@@ -270,8 +269,7 @@ describe('preprocess — FILE blocks with SEARCH/REPLACE (edits)', () => {
   })
 
   it('handles multi-line SEARCH and REPLACE', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nline1\nline2\nline3\n[REPLACE]\nnew1\nnew2\n[END]'
+    const input = '[FILE a.ts]\n[SEARCH]\nline1\nline2\nline3\n[REPLACE]\nnew1\nnew2\n[END]'
     const out = preprocess(input)
     expect(out).toContain('line1\nline2\nline3')
     expect(out).toContain('new1\nnew2')
@@ -290,8 +288,7 @@ describe('preprocess — FILE blocks with SEARCH/REPLACE (edits)', () => {
   })
 
   it('treats [REPLACE] inside code as content when not alone on line', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nHello("[REPLACE]");\n[REPLACE]\nHello("[END]");\n[END]'
+    const input = '[FILE a.ts]\n[SEARCH]\nHello("[REPLACE]");\n[REPLACE]\nHello("[END]");\n[END]'
     const out = preprocess(input)
     expect(out).toContain('Hello("[REPLACE]");')
     expect(out).toContain('Hello("[END]");')
@@ -306,16 +303,14 @@ describe('preprocess — FILE blocks with SEARCH/REPLACE (edits)', () => {
   })
 
   it('handles [SEARCH] inside content when not alone on line', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nconst x = "[SEARCH]"\n[REPLACE]\nconst x = "new"\n[END]'
+    const input = '[FILE a.ts]\n[SEARCH]\nconst x = "[SEARCH]"\n[REPLACE]\nconst x = "new"\n[END]'
     const out = preprocess(input)
     expect(out).toContain('const x = "[SEARCH]"')
     expect(out).toContain('const x = "new"')
   })
 
   it('edit FILE block ends at next FILE block', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\n[FILE b.ts]\ncode\n[END]'
+    const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\n[FILE b.ts]\ncode\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
     expect(out).toContain('```file:b.ts')
@@ -330,23 +325,20 @@ describe('preprocess — FILE blocks with SEARCH/REPLACE (edits)', () => {
   })
 
   it('edit FILE block followed by COMMIT line', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\nCOMMIT: done'
+    const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\nCOMMIT: done'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
     expect(out).toContain('```commit')
   })
 
   it('skips non-SEARCH text before the first SEARCH', () => {
-    const input =
-      '[FILE a.ts]\nSome description\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+    const input = '[FILE a.ts]\nSome description\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
   })
 
   it('trailing text after REPLACE is included in new content', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\nextra\n[END]'
+    const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\nextra\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
     expect(out).toContain('new\nextra')
@@ -361,23 +353,20 @@ describe('preprocess — FILE blocks with SEARCH/REPLACE (edits)', () => {
   })
 
   it('ignores FILE marker with SEARCH inside a code fence', () => {
-    const input =
-      '```\n[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\n```\n'
+    const input = '```\n[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\n```\n'
     const out = preprocess(input)
     expect(out).toBe(input)
   })
 
   it('captures code fences inside SEARCH/REPLACE content', () => {
-    const input =
-      '[FILE a.md]\n[SEARCH]\n```js\nold\n```\n[REPLACE]\n```js\nnew\n```\n[END]'
+    const input = '[FILE a.md]\n[SEARCH]\n```js\nold\n```\n[REPLACE]\n```js\nnew\n```\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```js\nold\n```')
     expect(out).toContain('```js\nnew\n```')
   })
 
   it('handles FILE path with special characters', () => {
-    const input =
-      '[FILE src/components/App.tsx]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+    const input = '[FILE src/components/App.tsx]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:src/components/App.tsx')
   })
@@ -415,10 +404,10 @@ describe('preprocess — DELETE blocks', () => {
     expect(out).not.toContain('```file-delete')
   })
 
-  it('does not match DELETE with leading whitespace', () => {
+  it('recognizes DELETE with leading whitespace', () => {
     const input = '  [DELETE FILE a.ts]'
     const out = preprocess(input)
-    expect(out).not.toContain('```file-delete')
+    expect(out).toContain('```file-delete:a.ts')
   })
 
   it('preserves surrounding text', () => {
@@ -468,10 +457,10 @@ describe('preprocess — MOVE blocks', () => {
     expect(out).not.toContain('```file-move')
   })
 
-  it('does not match MOVE with leading whitespace', () => {
+  it('recognizes MOVE with leading whitespace', () => {
     const input = '  [MOVE FILE FROM a.ts TO b.ts]'
     const out = preprocess(input)
-    expect(out).not.toContain('```file-move')
+    expect(out).toContain('```file-move:a.ts->b.ts')
   })
 
   it('preserves surrounding text', () => {
@@ -511,10 +500,11 @@ describe('preprocess — COMMIT lines', () => {
     expect(out).not.toContain('```commit')
   })
 
-  it('does not match COMMIT: with leading whitespace', () => {
+  it('recognizes COMMIT: with leading whitespace', () => {
     const input = '  COMMIT: indented'
     const out = preprocess(input)
-    expect(out).not.toContain('```commit')
+    expect(out).toContain('```commit')
+    expect(out).toContain('indented')
   })
 
   it('handles multiple COMMIT lines', () => {
@@ -579,8 +569,7 @@ describe('preprocess — mixed operations', () => {
   })
 
   it('handles edit FILE block followed by regular FILE block', () => {
-    const input =
-      '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\n\n[FILE b.ts]\ncode\n[END]'
+    const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]\n\n[FILE b.ts]\ncode\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
     expect(out).toContain('```file:b.ts')
@@ -675,8 +664,7 @@ describe('preprocess — Windows line endings', () => {
   })
 
   it('handles edit FILE block with \\r\\n', () => {
-    const input =
-      '[FILE a.ts]\r\n[SEARCH]\r\nold\r\n[REPLACE]\r\nnew\r\n[END]'
+    const input = '[FILE a.ts]\r\n[SEARCH]\r\nold\r\n[REPLACE]\r\nnew\r\n[END]'
     const out = preprocess(input)
     expect(out).toContain('```file-replace:a.ts')
     expect(out).toContain('old')
@@ -708,5 +696,575 @@ describe('parseReplaceBlock — Windows line endings', () => {
     const code = '[SEARCH]\r\nold\r\n[REPLACE]\r\nnew\r\n[END]'
     const result = parseReplaceBlock(code)
     expect(result).toEqual({ oldCode: 'old', newCode: 'new' })
+  })
+})
+
+describe('tag detection hardening', () => {
+  describe('leading/trailing whitespace on tags', () => {
+    it('recognizes [FILE] with leading spaces', () => {
+      const input = '  [FILE a.ts]\nconst x = 1\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1')
+    })
+
+    it('recognizes [FILE] with leading tabs', () => {
+      const input = '\t\t[FILE a.ts]\nconst x = 1\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+    })
+
+    it('recognizes [FILE] with trailing spaces', () => {
+      const input = '[FILE a.ts]   \nconst x = 1\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+    })
+
+    it('recognizes [FILE] with both leading and trailing spaces', () => {
+      const input = '   [FILE a.ts]   \nconst x = 1\n   [END]   '
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1')
+    })
+
+    it('recognizes [END] with leading spaces', () => {
+      const input = '[FILE a.ts]\nconst x = 1\n   [END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1')
+    })
+
+    it('recognizes [END] with trailing spaces', () => {
+      const input = '[FILE a.ts]\nconst x = 1\n[END]   '
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+    })
+
+    it('recognizes [SEARCH] with leading spaces', () => {
+      const input = '[FILE a.ts]\n   [SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old')
+      expect(out).toContain('new')
+    })
+
+    it('recognizes [SEARCH] with trailing spaces', () => {
+      const input = '[FILE a.ts]\n[SEARCH]   \nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+    })
+
+    it('recognizes [SEARCH] with both leading and trailing spaces', () => {
+      const input = '[FILE a.ts]\n   [SEARCH]   \nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+    })
+
+    it('recognizes [REPLACE] with leading spaces', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n   [REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old')
+      expect(out).toContain('new')
+    })
+
+    it('recognizes [REPLACE] with trailing spaces', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]   \nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+    })
+
+    it('recognizes [DELETE FILE] with leading spaces', () => {
+      const input = '   [DELETE FILE a.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-delete:a.ts')
+    })
+
+    it('recognizes [DELETE FILE] with trailing spaces', () => {
+      const input = '[DELETE FILE a.ts]   '
+      const out = preprocess(input)
+      expect(out).toContain('```file-delete:a.ts')
+    })
+
+    it('recognizes [MOVE FILE] with leading spaces', () => {
+      const input = '   [MOVE FILE FROM a.ts TO b.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-move:a.ts->b.ts')
+    })
+
+    it('recognizes [MOVE FILE] with trailing spaces', () => {
+      const input = '[MOVE FILE FROM a.ts TO b.ts]   '
+      const out = preprocess(input)
+      expect(out).toContain('```file-move:a.ts->b.ts')
+    })
+
+    it('recognizes COMMIT: with leading spaces', () => {
+      const input = '   COMMIT: fix bug'
+      const out = preprocess(input)
+      expect(out).toContain('```commit')
+      expect(out).toContain('fix bug')
+    })
+
+    it('recognizes COMMIT: with trailing spaces', () => {
+      const input = 'COMMIT: fix bug   '
+      const out = preprocess(input)
+      expect(out).toContain('```commit')
+    })
+  })
+
+  describe('tags with surrounding text are treated as content', () => {
+    it('ignores [SEARCH] with text before it', () => {
+      const input = '[FILE a.ts]\nsome text [SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('some text [SEARCH]')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('ignores [SEARCH] with text after it', () => {
+      const input = '[FILE a.ts]\n[SEARCH] some text\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('[SEARCH] some text')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('ignores [SEARCH] with text before and after', () => {
+      const input = '[FILE a.ts]\nbefore [SEARCH] after\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('before [SEARCH] after')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('ignores [REPLACE] with text before it', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\ntext [REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old\ntext [REPLACE]')
+    })
+
+    it('ignores [REPLACE] with text after it', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE] text\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old')
+    })
+
+    it('ignores [END] with text before it', () => {
+      const input = '[FILE a.ts]\nconst x = 1\ntext [END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1')
+      expect(out).toContain('text [END]')
+    })
+
+    it('ignores [END] with text after it', () => {
+      const input = '[FILE a.ts]\nconst x = 1\n[END] text'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('const x = 1')
+      expect(out).toContain('[END] text')
+    })
+
+    it('ignores [FILE] with text before it', () => {
+      const input = 'some text [FILE a.ts]\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('some text [FILE a.ts]')
+      expect(out).not.toContain('```file:')
+    })
+
+    it('ignores [FILE] with text after it', () => {
+      const input = '[FILE a.ts] extra\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('[FILE a.ts] extra')
+      expect(out).not.toContain('```file:')
+    })
+
+    it('ignores [DELETE FILE] with text before it', () => {
+      const input = 'text [DELETE FILE a.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('text [DELETE FILE a.ts]')
+      expect(out).not.toContain('file-delete')
+    })
+
+    it('ignores [DELETE FILE] with text after it', () => {
+      const input = '[DELETE FILE a.ts] text'
+      const out = preprocess(input)
+      expect(out).toContain('[DELETE FILE a.ts] text')
+      expect(out).not.toContain('file-delete')
+    })
+
+    it('ignores [MOVE FILE] with text before it', () => {
+      const input = 'text [MOVE FILE FROM a.ts TO b.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('text [MOVE FILE FROM a.ts TO b.ts]')
+      expect(out).not.toContain('file-move')
+    })
+
+    it('ignores [MOVE FILE] with text after it', () => {
+      const input = '[MOVE FILE FROM a.ts TO b.ts] text'
+      const out = preprocess(input)
+      expect(out).toContain('[MOVE FILE FROM a.ts TO b.ts] text')
+      expect(out).not.toContain('file-move')
+    })
+
+    it('ignores COMMIT: with text before it', () => {
+      const input = 'text COMMIT: fix bug'
+      const out = preprocess(input)
+      expect(out).toContain('text COMMIT: fix bug')
+      expect(out).not.toContain('```commit')
+    })
+
+    it('ignores COMMIT: with text after it', () => {
+      const input = 'COMMIT: fix bug extra'
+      const out = preprocess(input)
+      expect(out).toContain('```commit')
+      expect(out).toContain('fix bug extra')
+    })
+  })
+
+  describe('extra/duplicate tags', () => {
+    it('treats second [SEARCH] as content when inside search section', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[SEARCH]\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old\n[SEARCH]')
+      expect(out).toContain('new')
+    })
+
+    it('treats second [SEARCH] as content when multiple appear consecutively', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\n[SEARCH]\n[SEARCH]\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('[SEARCH]\n[SEARCH]')
+    })
+
+    it('treats [REPLACE] inside search section as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold [REPLACE] here\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old [REPLACE] here')
+    })
+
+    it('treats [END] inside search section as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold [END] here\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old [END] here')
+    })
+
+    it('treats extra [REPLACE] inside replace section as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew\n[REPLACE]\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('new\n[REPLACE]')
+    })
+
+    it('treats extra [END] inside replace section as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew [END] here\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('new [END] here')
+    })
+
+    it('handles multiple valid SEARCH/REPLACE pairs with extras mixed in', () => {
+      const input =
+        '[FILE a.ts]\n[SEARCH]\nold1\n[REPLACE]\nnew1\n[SEARCH]\n[SEARCH]\nold2\n[REPLACE]\nnew2\n[END]'
+      const out = preprocess(input)
+      const matches = out.match(/```file-replace:a\.ts/g)
+      expect(matches?.length).toBe(2)
+      expect(out).toContain('[SEARCH]\nold2')
+    })
+  })
+
+  describe('out-of-context tags', () => {
+    it('treats [SEARCH] outside [FILE] block as regular text', () => {
+      const input = '[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('treats [REPLACE] outside [FILE] block as regular text', () => {
+      const input = 'some text\n[REPLACE]\nmore text'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('treats [END] outside [FILE] block as regular text', () => {
+      const input = 'some text\n[END]\nmore text'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('treats standalone [SEARCH] as regular text', () => {
+      const input = 'before\n[SEARCH]\nafter'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('treats standalone [END] as regular text', () => {
+      const input = 'before\n[END]\nafter'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('handles [SEARCH] before any [FILE] block', () => {
+      const input = '[SEARCH]\nignored\n[FILE a.ts]\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('[SEARCH]')
+      expect(out).toContain('ignored')
+      expect(out).toContain('```file:a.ts')
+    })
+
+    it('handles [END] after [FILE] block is closed', () => {
+      const input = '[FILE a.ts]\ncode\n[END]\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('code')
+      const endMatches = out.match(/\[END]/g)
+      expect(endMatches?.length).toBe(1)
+    })
+  })
+
+  describe('[FILE] inside content sections', () => {
+    it('treats [FILE] inside search content as content (not a new block)', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold [FILE b.ts] here\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old [FILE b.ts] here')
+    })
+
+    it('treats [FILE] inside replace content as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew [FILE b.ts] here\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('new [FILE b.ts] here')
+    })
+
+    it('terminates FILE content when [FILE] appears alone on a line', () => {
+      const input = '[FILE a.ts]\ncodeA\n[FILE b.ts]\ncodeB\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('codeA')
+      expect(out).toContain('```file:b.ts')
+      expect(out).toContain('codeB')
+    })
+
+    it('treats [DELETE FILE] inside search content as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold [DELETE FILE b.ts]\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old [DELETE FILE b.ts]')
+    })
+
+    it('treats [MOVE FILE] inside search content as content', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold [MOVE FILE FROM x TO y]\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file-replace:a.ts')
+      expect(out).toContain('old [MOVE FILE FROM x TO y]')
+    })
+  })
+
+  describe('case sensitivity', () => {
+    it('does not match lowercase [search]', () => {
+      const input = '[FILE a.ts]\n[search]\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('[search]')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('falls back to file block when only lowercase [replace] is present (no valid [REPLACE])', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[replace]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('[SEARCH]')
+      expect(out).toContain('[replace]')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('does not match lowercase [end]', () => {
+      const input = '[FILE a.ts]\ncode\n[end]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('code')
+      expect(out).toContain('[end]')
+    })
+
+    it('does not match lowercase [file]', () => {
+      const input = '[file a.ts]\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('[file a.ts]')
+      expect(out).not.toContain('```file:')
+    })
+
+    it('does not match lowercase [delete file]', () => {
+      const input = '[delete file a.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('[delete file a.ts]')
+      expect(out).not.toContain('file-delete')
+    })
+
+    it('does not match lowercase [move file]', () => {
+      const input = '[move file from a.ts to b.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('[move file from a.ts to b.ts]')
+      expect(out).not.toContain('file-move')
+    })
+
+    it('does not match lowercase commit:', () => {
+      const input = 'commit: fix bug'
+      const out = preprocess(input)
+      expect(out).toContain('commit: fix bug')
+      expect(out).not.toContain('```commit')
+    })
+
+    it('does not match mixed case [Search]', () => {
+      const input = '[FILE a.ts]\n[Search]\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).not.toContain('file-replace')
+    })
+  })
+
+  describe('incomplete/malformed tags', () => {
+    it('does not match [FILE] without closing bracket', () => {
+      const input = '[FILE a.ts\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('[FILE a.ts')
+      expect(out).not.toContain('```file:')
+    })
+
+    it('does not match [FILE without path', () => {
+      const input = '[FILE]\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('[FILE]')
+      expect(out).not.toContain('```file:')
+    })
+
+    it('does not match [DELETE FILE] without closing bracket', () => {
+      const input = '[DELETE FILE a.ts'
+      const out = preprocess(input)
+      expect(out).toContain('[DELETE FILE a.ts')
+      expect(out).not.toContain('file-delete')
+    })
+
+    it('does not match [DELETE FILE] without path', () => {
+      const input = '[DELETE FILE]'
+      const out = preprocess(input)
+      expect(out).toContain('[DELETE FILE]')
+      expect(out).not.toContain('file-delete')
+    })
+
+    it('does not match [MOVE FILE] without TO keyword', () => {
+      const input = '[MOVE FILE FROM a.ts b.ts]'
+      const out = preprocess(input)
+      expect(out).toContain('[MOVE FILE FROM a.ts b.ts]')
+      expect(out).not.toContain('file-move')
+    })
+
+    it('does not match [MOVE FILE] without closing bracket', () => {
+      const input = '[MOVE FILE FROM a.ts TO b.ts'
+      const out = preprocess(input)
+      expect(out).toContain('[MOVE FILE FROM a.ts TO b.ts')
+      expect(out).not.toContain('file-move')
+    })
+
+    it('does not match [SEARCH without closing bracket', () => {
+      const input = '[FILE a.ts]\n[SEARCH\nold\n[REPLACE]\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('[SEARCH')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('does not match [REPLACE without closing bracket', () => {
+      const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE\nnew\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('[SEARCH]')
+      expect(out).toContain('[REPLACE')
+      expect(out).not.toContain('file-replace')
+    })
+
+    it('does not match [END without closing bracket', () => {
+      const input = '[FILE a.ts]\ncode\n[END'
+      const out = preprocess(input)
+      expect(out).toContain('```file:a.ts')
+      expect(out).toContain('[END')
+    })
+
+    it('does not match empty brackets []', () => {
+      const input = '[]\ncode\n[]'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('does not match [FILE ] with only space', () => {
+      const input = '[FILE ]\ncode\n[END]'
+      const out = preprocess(input)
+      expect(out).toContain('[FILE ]')
+      expect(out).not.toContain('```file:')
+    })
+  })
+
+  describe('tags inside code fences are never processed', () => {
+    it('ignores all tags inside backtick fence', () => {
+      const input = '```\n[FILE a.ts]\n[SEARCH]\n[REPLACE]\n[END]\n[DELETE FILE b.ts]\n```\n'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('ignores all tags inside tilde fence', () => {
+      const input = '~~~\n[FILE a.ts]\n[SEARCH]\n[REPLACE]\n[END]\n[MOVE FILE FROM a TO b]\n~~~\n'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+
+    it('ignores COMMIT inside code fence', () => {
+      const input = '```\nCOMMIT: should be ignored\n```\n'
+      const out = preprocess(input)
+      expect(out).toBe(input)
+    })
+  })
+
+  describe('parseReplaceBlock with whitespace-tolerant tags', () => {
+    it('parses with leading spaces on all tags', () => {
+      const code = '  [SEARCH]\nold\n  [REPLACE]\nnew\n  [END]'
+      const result = parseReplaceBlock(code)
+      expect(result).toEqual({ oldCode: 'old', newCode: 'new' })
+    })
+
+    it('parses with trailing spaces on all tags', () => {
+      const code = '[SEARCH]   \nold\n[REPLACE]   \nnew\n[END]   '
+      const result = parseReplaceBlock(code)
+      expect(result).toEqual({ oldCode: 'old', newCode: 'new' })
+    })
+
+    it('parses with mixed whitespace on tags', () => {
+      const code = '  [SEARCH]  \nold\n   [REPLACE]\nnew\n[END]   '
+      const result = parseReplaceBlock(code)
+      expect(result).toEqual({ oldCode: 'old', newCode: 'new' })
+    })
+
+    it('returns null when [SEARCH] has surrounding text', () => {
+      const code = 'text [SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+      const result = parseReplaceBlock(code)
+      expect(result).toBeNull()
+    })
+
+    it('returns null when [REPLACE] has surrounding text', () => {
+      const code = '[SEARCH]\nold\n[REPLACE] text\nnew\n[END]'
+      const result = parseReplaceBlock(code)
+      expect(result).toBeNull()
+    })
+
+    it('returns null when [END] has surrounding text', () => {
+      const code = '[SEARCH]\nold\n[REPLACE]\nnew\n[END] text'
+      const result = parseReplaceBlock(code)
+      expect(result).toEqual({ oldCode: 'old', newCode: 'new\n[END] text' })
+    })
   })
 })
