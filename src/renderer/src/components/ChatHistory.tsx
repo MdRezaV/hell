@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Clock, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react'
+import log from 'electron-log/renderer'
 import './ChatHistory.css'
 
 export interface ChatSession {
@@ -80,6 +81,7 @@ export default memo(function ChatHistory({
           setSessions(result || [])
         }
       })
+      .catch((e) => log.error('Failed to get chat sessions:', e))
     return () => {
       ignore = true
     }
@@ -88,14 +90,18 @@ export default memo(function ChatHistory({
   const handleDelete = useCallback(
     async (e: React.MouseEvent, id: string) => {
       e.stopPropagation()
-      await window.electron.ipcRenderer.invoke('db:delete-chat-session', id)
-      const result: ChatSession[] = await window.electron.ipcRenderer.invoke(
-        'db:get-chat-sessions',
-        workspace
-      )
-      setSessions(result || [])
-      if (activeChatId === id) {
-        onNewChat()
+      try {
+        await window.electron.ipcRenderer.invoke('db:delete-chat-session', id)
+        const result: ChatSession[] = await window.electron.ipcRenderer.invoke(
+          'db:get-chat-sessions',
+          workspace
+        )
+        setSessions(result || [])
+        if (activeChatId === id) {
+          onNewChat()
+        }
+      } catch (err) {
+        log.error('Failed to delete chat session:', err)
       }
     },
     [activeChatId, onNewChat, workspace]

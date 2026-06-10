@@ -114,10 +114,8 @@ const BINARY_CACHE_MAX = 1024
 async function isBinaryFile(filePath: string): Promise<boolean> {
   const ext = filePath.split('.').pop()?.toLowerCase()
   if (ext && TEXT_EXTENSIONS.has(ext)) return false
-
   const cached = binaryCheckCache.get(filePath)
   if (cached !== undefined) return cached
-
   try {
     const fd = await fsp.open(filePath, 'r')
     const buffer = Buffer.alloc(8192)
@@ -136,7 +134,8 @@ async function isBinaryFile(filePath: string): Promise<boolean> {
     }
     binaryCheckCache.set(filePath, isBin)
     return isBin
-  } catch {
+  } catch (e) {
+    log.error(`Failed to check if file is binary: ${filePath}`, e)
     return false
   }
 }
@@ -195,7 +194,6 @@ async function readDirTree(
       const fullPath = join(path, entry.name)
       return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
     })
-
     const results: FileNode[] = []
     for (const entry of filtered) {
       const fullPath = join(path, entry.name)
@@ -218,7 +216,8 @@ async function readDirTree(
       }
     }
     return results
-  } catch {
+  } catch (e) {
+    log.error(`Failed to read directory tree at ${path}:`, e)
     return []
   }
 }
@@ -299,7 +298,19 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  ipcMain.handle('open-workspace', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function safeHandle(channel: string, fn: (...args: any[]) => any): void {
+    ipcMain.handle(channel, async (event, ...args) => {
+      try {
+        return await fn(event, ...args)
+      } catch (e) {
+        log.error(`IPC handler '${channel}' failed:`, e)
+        throw e
+      }
+    })
+  }
+
+  safeHandle('open-workspace', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory']
     })
@@ -308,7 +319,7 @@ app.whenReady().then(() => {
     return result.filePaths[0]
   })
 
-  ipcMain.handle('read-file', async (_, workspace: string, relativePath: string) => {
+  safeHandle('read-file', async (_, workspace: string, relativePath: string) => {
     const fullPath = join(workspace, relativePath)
     if (!existsSync(fullPath)) {
       return { exists: false, error: false, content: null }
@@ -316,27 +327,25 @@ app.whenReady().then(() => {
     try {
       const content = readFileSync(fullPath, 'utf-8')
       return { exists: true, error: false, content }
-    } catch {
+    } catch (e) {
+      log.error('Failed to read file:', relativePath, e)
       return { exists: true, error: true, content: null }
     }
   })
 
-  ipcMain.handle(
-    'write-file',
-    async (_, workspace: string, relativePath: string, content: string) => {
-      try {
-        const fullPath = join(workspace, relativePath)
-        mkdirSync(dirname(fullPath), { recursive: true })
-        writeFileSync(fullPath, content, 'utf-8')
-        return { success: true }
-      } catch (e: unknown) {
-        log.error('Failed to write file:', relativePath, e)
-        return { success: false, error: e instanceof Error ? e.message : String(e) }
-      }
+  safeHandle('write-file', async (_, workspace: string, relativePath: string, content: string) => {
+    try {
+      const fullPath = join(workspace, relativePath)
+      mkdirSync(dirname(fullPath), { recursive: true })
+      writeFileSync(fullPath, content, 'utf-8')
+      return { success: true }
+    } catch (e: unknown) {
+      log.error('Failed to write file:', relativePath, e)
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
-  )
+  })
 
-  ipcMain.handle('delete-file', async (_, workspace: string, relativePath: string) => {
+  safeHandle('delete-file', async (_, workspace: string, relativePath: string) => {
     try {
       const fullPath = join(workspace, relativePath)
       unlinkSync(fullPath)
@@ -347,61 +356,61 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('db:get-last-workspace', async () => {
+  safeHandle('db:get-last-workspace', async () => {
     const path = getLastWorkspace()
     if (path && existsSync(path)) return path
     return null
   })
 
-  ipcMain.handle('db:touch-workspace', async (_, workspacePath: string) => {
+  safeHandle('db:touch-workspace', async (_, workspacePath: string) => {
     touchWorkspace(workspacePath)
   })
 
-  ipcMain.handle('db:get-workspace-state', async (_, workspacePath: string) => {
+  safeHandle('db:get-workspace-state', async (_, workspacePath: string) => {
     return getWorkspaceState(workspacePath)
   })
 
-  ipcMain.handle(
+  safeHandle(
     'db:set-file-state',
     async (_, workspacePath: string, absolutePath: string, tag: string) => {
       setFileState(workspacePath, absolutePath, tag)
     }
   )
 
-  ipcMain.handle('db:remove-file-state', async (_, workspacePath: string, absolutePath: string) => {
+  safeHandle('db:remove-file-state', async (_, workspacePath: string, absolutePath: string) => {
     removeFileState(workspacePath, absolutePath)
   })
 
-  ipcMain.handle(
+  safeHandle(
     'db:batch-set-file-states',
     async (_, workspacePath: string, states: Array<{ absolutePath: string; tag: string }>) => {
       batchSetFileStates(workspacePath, states)
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'db:batch-remove-file-states',
     async (_, workspacePath: string, absolutePaths: string[]) => {
       batchRemoveFileStates(workspacePath, absolutePaths)
     }
   )
 
-  ipcMain.handle('db:clear-file-states', async (_, workspacePath: string) => {
+  safeHandle('db:clear-file-states', async (_, workspacePath: string) => {
     clearFileStates(workspacePath)
   })
 
-  ipcMain.handle('db:clear-all', async () => {
+  safeHandle('db:clear-all', async () => {
     clearAllData()
   })
 
-  ipcMain.handle(
+  safeHandle(
     'db:set-dir-expanded',
     async (_, workspacePath: string, absolutePath: string, expanded: boolean) => {
       setDirExpanded(workspacePath, absolutePath, expanded)
     }
   )
 
-  ipcMain.handle('workspace:watch', async (event, workspacePath: string | null) => {
+  safeHandle('workspace:watch', async (event, workspacePath: string | null) => {
     if (!workspacePath) {
       stopWatching()
       return
@@ -414,55 +423,49 @@ app.whenReady().then(() => {
     })
   })
 
-  ipcMain.handle(
+  safeHandle(
     'db:prune-workspace-state',
     async (_, workspacePath: string, validFilePaths: string[], validDirPaths: string[]) => {
       pruneWorkspaceState(workspacePath, validFilePaths, validDirPaths)
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'db:create-chat-session',
     async (_, workspacePath: string | null, title: string, messages: string) => {
       return createChatSession(workspacePath, title, messages)
     }
   )
 
-  ipcMain.handle(
-    'db:update-chat-session',
-    async (_, id: string, title: string, messages: string) => {
-      updateChatSession(id, title, messages)
-    }
-  )
+  safeHandle('db:update-chat-session', async (_, id: string, title: string, messages: string) => {
+    updateChatSession(id, title, messages)
+  })
 
-  ipcMain.handle('db:get-chat-sessions', async (_, workspacePath: string | null) => {
+  safeHandle('db:get-chat-sessions', async (_, workspacePath: string | null) => {
     return getChatSessions(workspacePath)
   })
 
-  ipcMain.handle('db:get-chat-session', async (_, id: string) => {
+  safeHandle('db:get-chat-session', async (_, id: string) => {
     return getChatSession(id)
   })
 
-  ipcMain.handle('db:delete-chat-session', async (_, id: string) => {
+  safeHandle('db:delete-chat-session', async (_, id: string) => {
     deleteChatSession(id)
   })
 
-  ipcMain.handle('db:get-include-dir-structure', async (_, workspacePath: string) => {
+  safeHandle('db:get-include-dir-structure', async (_, workspacePath: string) => {
     return getIncludeDirStructure(workspacePath)
   })
 
-  ipcMain.handle(
-    'db:set-include-dir-structure',
-    async (_, workspacePath: string, value: boolean) => {
-      setIncludeDirStructure(workspacePath, value)
-    }
-  )
+  safeHandle('db:set-include-dir-structure', async (_, workspacePath: string, value: boolean) => {
+    setIncludeDirStructure(workspacePath, value)
+  })
 
-  ipcMain.handle('read-directory', async (_, dirPath: string) => {
+  safeHandle('read-directory', async (_, dirPath: string) => {
     return await readDirTree(dirPath, [], true)
   })
 
-  ipcMain.handle('read-directory-tree', async (_, dirPath: string) => {
+  safeHandle('read-directory-tree', async (_, dirPath: string) => {
     const nodes = await readDirTree(dirPath, [], true)
     const dirName = dirPath.split(/[/\\]/).pop() || dirPath
     return formatTreeText(dirName, nodes)

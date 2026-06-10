@@ -8,6 +8,7 @@ import {
   Folder as FolderBig,
   FolderOpen
 } from 'lucide-react'
+import log from 'electron-log/renderer'
 import './FileExplorer.css'
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'
@@ -279,20 +280,25 @@ function FileExplorer({
     let cancelled = false
 
     const refresh = (): void => {
-      window.electron.ipcRenderer.invoke('read-directory', workspace).then((files: FileNode[]) => {
-        if (cancelled) return
-        const sorted = sortTree(files)
-        setTree(sorted)
-        const filePaths = collectFilePaths(sorted)
-        const dirPaths = collectDirPaths(sorted)
-        onFilePathsChange(filePaths)
-        window.electron.ipcRenderer.invoke(
-          'db:prune-workspace-state',
-          workspace,
-          Array.from(filePaths),
-          Array.from(dirPaths)
-        )
-      })
+      window.electron.ipcRenderer
+        .invoke('read-directory', workspace)
+        .then((files: FileNode[]) => {
+          if (cancelled) return
+          const sorted = sortTree(files)
+          setTree(sorted)
+          const filePaths = collectFilePaths(sorted)
+          const dirPaths = collectDirPaths(sorted)
+          onFilePathsChange(filePaths)
+          window.electron.ipcRenderer
+            .invoke(
+              'db:prune-workspace-state',
+              workspace,
+              Array.from(filePaths),
+              Array.from(dirPaths)
+            )
+            .catch((e) => log.error('Failed to prune workspace state:', e))
+        })
+        .catch((e) => log.error('Failed to read directory:', e))
     }
 
     refresh()
@@ -314,9 +320,13 @@ function FileExplorer({
   }, [workspace, onFilePathsChange])
 
   const handleOpenWorkspace = async (): Promise<void> => {
-    const path = await window.electron.ipcRenderer.invoke('open-workspace')
-    if (path) {
-      onWorkspaceChange(path)
+    try {
+      const path = await window.electron.ipcRenderer.invoke('open-workspace')
+      if (path) {
+        onWorkspaceChange(path)
+      }
+    } catch (e) {
+      log.error('Failed to open workspace:', e)
     }
   }
 
