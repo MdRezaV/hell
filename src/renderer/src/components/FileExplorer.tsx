@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -8,6 +8,7 @@ import {
   Folder as FolderBig,
   FolderOpen,
   Loader2,
+  Search,
   X
 } from 'lucide-react'
 import log from 'electron-log/renderer'
@@ -245,6 +246,24 @@ function collectDirPaths(nodes: FileNode[]): Set<string> {
   return paths
 }
 
+function filterTree(nodes: FileNode[], q: string, contentMatches?: Set<string>): FileNode[] {
+  if (!q) return nodes
+  const result: FileNode[] = []
+  for (const node of nodes) {
+    const nameMatch = node.name.toLowerCase().includes(q)
+    const contentMatch = contentMatches?.has(node.path) ?? false
+    const match = nameMatch || contentMatch
+    let filteredChildren: FileNode[] | undefined
+    if (node.children) {
+      filteredChildren = filterTree(node.children, q, contentMatches)
+    }
+    if (match || (filteredChildren && filteredChildren.length > 0)) {
+      result.push({ ...node, children: filteredChildren ?? node.children })
+    }
+  }
+  return result
+}
+
 function FileExplorer({
   workspace,
   onWorkspaceChange,
@@ -271,6 +290,11 @@ function FileExplorer({
   const [tree, setTree] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
   const [prevWorkspace, setPrevWorkspace] = useState<string | null>(workspace)
+  const [search, setSearch] = useState('')
+  const [contentMatches, setContentMatches] = useState<Set<string>>(new Set())
+  const [searchLoading, setSearchLoading] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const cancelRef = useRef(false)
 
   if (workspace !== prevWorkspace) {
     setPrevWorkspace(workspace)
@@ -364,6 +388,52 @@ function FileExplorer({
     return count
   }, [filePathSet, fileStates])
 
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value)
+      const q = value.trim().toLowerCase()
+      if (!q || !workspace) {
+        setContentMatches(new Set())
+        setSearchLoading(false)
+        cancelRef.current = true
+        clearTimeout(debounceRef.current)
+        return
+      }
+      setSearchLoading(true)
+      cancelRef.current = false
+      clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const results: string[] = await window.electron.ipcRenderer.invoke(
+            'search-file-content',
+            workspace,
+            q
+          )
+          if (!cancelRef.current) {
+            setContentMatches(new Set(results))
+            setSearchLoading(false)
+          }
+        } catch (e) {
+          log.error('File content search failed', e)
+          if (!cancelRef.current) setSearchLoading(false)
+        }
+      }, 300)
+    },
+    [workspace]
+  )
+
+  useEffect(() => {
+    return () => {
+      cancelRef.current = true
+      clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  const filteredTree = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return filterTree(tree, q, contentMatches)
+  }, [tree, search, contentMatches])
+
   if (!workspace) {
     return (
       <div className="explorer-empty">
@@ -400,6 +470,22 @@ function FileExplorer({
           )}
         </div>
       </div>
+      <div className="explorer-search">
+        <Search size={13} className="explorer-search-icon" />
+        <input
+          type="text"
+          placeholder="Search files..."
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="explorer-search-input"
+        />
+        {searchLoading && <Loader2 size={12} className="animate-spin text-text-faint" />}
+        {search && !searchLoading && (
+          <button className="explorer-search-clear" onClick={() => setSearch('')} title="Clear">
+            <X size={12} />
+          </button>
+        )}
+      </div>
       {loading ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-3 text-text-muted">
           <Loader2 size={24} className="animate-spin" />
@@ -407,7 +493,7 @@ function FileExplorer({
         </div>
       ) : (
         <div className="explorer-tree">
-          {tree.map((node) => (
+          {filteredTree.map((node) => (
             <TreeNode
               key={node.path}
               node={node}

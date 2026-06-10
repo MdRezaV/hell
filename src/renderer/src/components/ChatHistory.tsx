@@ -7,6 +7,7 @@ export interface ChatSession {
   id: string
   workspace_path: string | null
   title: string
+  messages: string
   created_at: number
   updated_at: number
 }
@@ -110,7 +111,9 @@ export default memo(function ChatHistory({
   const filtered = useMemo(() => {
     if (!search.trim()) return sessions
     const q = search.toLowerCase()
-    return sessions.filter((s) => s.title.toLowerCase().includes(q))
+    return sessions.filter(
+      (s) => s.title.toLowerCase().includes(q) || s.messages.toLowerCase().includes(q)
+    )
   }, [sessions, search])
 
   const grouped = useMemo(() => groupByTime(filtered), [filtered])

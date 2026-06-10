@@ -46,6 +46,26 @@
   @apply text-[11px] text-text-faint font-medium px-1;
 }
 
+.explorer-search {
+  @apply flex items-center gap-1.5 p-[5px] border-b border-border-subtle flex-shrink-0;
+}
+
+.explorer-search-icon {
+  @apply flex-shrink-0 text-text-faint;
+}
+
+.explorer-search-input {
+  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0 px-0 leading-none;
+}
+
+.explorer-search-input:focus {
+  @apply outline-none border-none shadow-none;
+}
+
+.explorer-search-clear {
+  @apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-sm text-text-faint cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+}
+
 .explorer-tree {
   @apply flex-1 overflow-y-auto py-1 text-[13px];
 }

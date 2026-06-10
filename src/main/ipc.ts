@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { formatTreeText, readDirTree } from './fsUtils'
 import {
   batchRemoveFileStates,
   batchSetFileStates,
@@ -24,7 +25,6 @@ import {
 } from './database'
 import { startWatching, stopWatching } from './watcher'
 import { log } from './logger'
-import { formatTreeText, readDirTree } from './fsUtils'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safeHandle(channel: string, fn: (...args: any[]) => any): void {
@@ -235,6 +235,30 @@ export function registerIpcHandlers(): void {
 
   safeHandle('read-directory', async (_, dirPath: string) => {
     return await readDirTree(dirPath, [], true)
+  })
+
+  safeHandle('search-file-content', async (_, workspace: string, query: string) => {
+    const q = query.toLowerCase()
+    const tree = await readDirTree(workspace, [], true)
+    const result: string[] = []
+
+    function walk(nodes: typeof tree): void {
+      for (const node of nodes) {
+        if (node.type === 'file' && !node.isBinary) {
+          try {
+            const content = readFileSync(node.path, 'utf-8')
+            if (content.toLowerCase().includes(q)) {
+              result.push(node.path)
+            }
+          } catch {
+            /* skip unreadable files */
+          }
+        }
+        if (node.children) walk(node.children)
+      }
+    }
+    walk(tree)
+    return result
   })
 
   safeHandle('read-directory-tree', async (_, dirPath: string) => {

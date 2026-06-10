@@ -19,7 +19,7 @@
 }
 
 .chat-history-search {
-  @apply flex items-center gap-1.5 px-2 py-1.5 border-b border-border-subtle flex-shrink-0;
+  @apply flex items-center gap-1.5 p-[5px] border-b border-border-subtle flex-shrink-0;
 }
 
 .chat-history-search-icon {
@@ -27,7 +27,7 @@
 }
 
 .chat-history-search-input {
-  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0.5 px-0;
+  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0 px-0 leading-none;
 }
 
 .chat-history-search-input:focus {
