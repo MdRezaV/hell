@@ -1,0 +1,69 @@
+.explorer-empty {
+@apply flex flex-col items-center justify-center h-full gap-3;
+}
+.explorer-empty-icon {
+@apply w-12 h-12 text-ctp-overlay0 opacity-50;
+}
+.explorer-empty p {
+@apply text-[13px] text-text-muted mb-1;
+}
+.file-explorer {
+@apply flex flex-col h-full overflow-hidden;
+}
+.explorer-header {
+@apply flex items-center justify-between px-2 h-7 leading-none border-b border-border bg-background-mute;
+}
+.explorer-header * {
+@apply leading-none;
+}
+.explorer-header-left {
+@apply flex items-center gap-2 min-w-0;
+}
+.explorer-header-title {
+@apply text-[11px] font-bold uppercase tracking-wider text-text-muted overflow-hidden text-ellipsis whitespace-nowrap;
+}
+.explorer-header-actions {
+@apply flex items-center gap-0.5;
+}
+.explorer-header-actions button {
+@apply p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+}
+.explorer-header-actions button svg {
+@apply w-4 h-4;
+}
+.explorer-count {
+@apply text-[11px] text-text-faint font-medium px-1;
+}
+.explorer-tree {
+@apply flex-1 overflow-y-auto py-1 text-[13px];
+}
+.tree-node {
+@apply flex items-center py-0.5 pr-2 pl-0 cursor-pointer whitespace-nowrap overflow-hidden text-[12px] leading-5 transition-colors duration-fast rounded-none hover:bg-surface-0 active:bg-surface-1;
+}
+.tree-chevron {
+@apply inline-flex items-center justify-center w-4 h-5 flex-shrink-0 text-text-faint transition-colors duration-fast;
+}
+.tree-node:hover .tree-chevron {
+@apply text-text-subtle;
+}
+.tree-checkbox {
+@apply inline-flex items-center justify-center w-[18px] h-5 flex-shrink-0 mr-1;
+}
+.tree-icon {
+@apply inline-flex items-center justify-center w-4 flex-shrink-0 mr-1.5;
+}
+.tree-icon.folder {
+@apply text-ctp-blue;
+}
+.tree-icon.file {
+@apply text-ctp-subtext0;
+}
+.tree-label {
+@apply overflow-hidden text-ellipsis text-text text-[12px];
+}
+.tree-node:hover .tree-label {
+@apply text-ctp-text;
+}
+.tree-tag {
+@apply ml-1.5 px-1 py-0 text-[10px] font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
+}

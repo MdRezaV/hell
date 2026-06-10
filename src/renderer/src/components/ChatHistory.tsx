@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Clock, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react'
+import './ChatHistory.css'
 
 export interface ChatSession {
   id: string

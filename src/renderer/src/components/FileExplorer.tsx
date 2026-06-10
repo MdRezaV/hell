@@ -8,6 +8,7 @@ import {
   Folder as FolderBig,
   FolderOpen
 } from 'lucide-react'
+import './FileExplorer.css'
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'
 

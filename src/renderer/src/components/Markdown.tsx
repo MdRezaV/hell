@@ -46,6 +46,7 @@ import ruby from 'react-syntax-highlighter/dist/esm/languages/prism/ruby'
 import docker from 'react-syntax-highlighter/dist/esm/languages/prism/docker'
 import hljs from 'highlight.js/lib/common'
 import { Check, Copy, Play, X } from 'lucide-react'
+import './Markdown.css'
 import { getActiveParser, normalizeLineEndings, parseReplaceBlock } from '../utils/markdownParser'
 import { useWorkspace } from '../WorkspaceContext'
 

@@ -1,0 +1,9 @@
+.statusbar {
+@apply flex items-center h-5 m-0 px-2.5 bg-accent flex-shrink-0 gap-3 leading-none;
+}
+.statusbar-item {
+@apply text-[11px] font-medium text-accent-text opacity-85 leading-none;
+}
+.statusbar-spacer {
+@apply flex-1;
+}
