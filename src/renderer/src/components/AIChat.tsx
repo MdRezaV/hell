@@ -1,7 +1,6 @@
 import React, {
   forwardRef,
   memo,
-  startTransition,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -381,20 +380,19 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         dirStructure?: string
       ): Promise<boolean> {
         let currentMessages = messagesRef.current
+        const trimmedInput = inputValueRef.current.trim()
 
-        const userMessages = currentMessages.filter((m) => m.role === 'user')
-        if (userMessages.length === 0) {
-          const trimmed = inputValueRef.current.trim()
-          if (!trimmed) return false
+        if (trimmedInput) {
           const userMessage: ChatMessage = {
             id: generateId(),
             role: 'user',
-            variants: [{ content: trimmed, timestamp: new Date() }],
+            variants: [{ content: trimmedInput, timestamp: new Date() }],
             activeVariant: 0
           }
           currentMessages = [...currentMessages, userMessage]
           setMessages(currentMessages)
           setInput('')
+          inputValueRef.current = ''
           if (inputRef.current) {
             inputRef.current.style.height = 'auto'
           }
@@ -422,29 +420,28 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           const text = await navigator.clipboard.readText()
           if (!text) return false
           setIsAwaitingResponse(false)
-          startTransition(() => {
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (last && last.role === 'assistant') {
-                const updated = [...prev]
-                const updatedLast = { ...last }
-                updatedLast.variants = [
-                  ...updatedLast.variants,
-                  { content: text, timestamp: new Date() }
-                ]
-                updatedLast.activeVariant = updatedLast.variants.length - 1
-                updated[updated.length - 1] = updatedLast
-                return updated
-              }
-              const aiMessage: ChatMessage = {
-                id: generateId(),
-                role: 'assistant',
-                variants: [{ content: text, timestamp: new Date() }],
-                activeVariant: 0
-              }
-              return [...prev, aiMessage]
-            })
+          setMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (last && last.role === 'assistant') {
+              const updated = [...prev]
+              const updatedLast = { ...last }
+              updatedLast.variants = [
+                ...updatedLast.variants,
+                { content: text, timestamp: new Date() }
+              ]
+              updatedLast.activeVariant = updatedLast.variants.length - 1
+              updated[updated.length - 1] = updatedLast
+              return updated
+            }
+            const aiMessage: ChatMessage = {
+              id: generateId(),
+              role: 'assistant',
+              variants: [{ content: text, timestamp: new Date() }],
+              activeVariant: 0
+            }
+            return [...prev, aiMessage]
           })
+          setTimeout(() => inputRef.current?.focus(), 0)
           return true
         } catch {
           return false
@@ -469,9 +466,8 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       inputRef.current.style.height = 'auto'
     }
     setIsAwaitingResponse(true)
-    startTransition(() => {
-      setMessages((prev) => [...prev, userMessage])
-    })
+    inputValueRef.current = ''
+    setMessages((prev) => [...prev, userMessage])
   }
 
   const handleEditSave = useCallback((messageId: string, newContent: string): void => {
@@ -480,17 +476,15 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
     setEditingId(null)
     setIsAwaitingResponse(true)
-    startTransition(() => {
-      setMessages((prev) => {
-        const idx = prev.findIndex((m) => m.id === messageId)
-        if (idx === -1) return prev
-        const updated = prev.slice(0, idx + 1)
-        const msg = { ...updated[idx] }
-        msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
-        msg.activeVariant = msg.variants.length - 1
-        updated[idx] = msg
-        return updated
-      })
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === messageId)
+      if (idx === -1) return prev
+      const updated = prev.slice(0, idx + 1)
+      const msg = { ...updated[idx] }
+      msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
+      msg.activeVariant = msg.variants.length - 1
+      updated[idx] = msg
+      return updated
     })
   }, [])
 
