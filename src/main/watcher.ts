@@ -1,9 +1,11 @@
 import { type FSWatcher, watch } from 'chokidar'
+import type { Stats } from 'fs'
 import { log } from './logger'
+import { type IgnoreRule, isEntryIgnored, loadIgnoreRules } from './fsUtils'
 
 const DEBOUNCE_MS = 200
 const WRITE_STABILITY_MS = 200
-const WRITE_POLL_MS = 50
+const WRITE_POLL_MS = 100
 
 let currentWatcher: FSWatcher | null = null
 let debounceTimer: NodeJS.Timeout | null = null
@@ -26,12 +28,22 @@ export function stopWatching(): void {
   }
 }
 
-export function startWatching(workspacePath: string, onChange: () => void): void {
+export async function startWatching(workspacePath: string, onChange: () => void): Promise<void> {
   stopWatching()
   log.info('Starting file watcher for', workspacePath)
 
+  let rules: IgnoreRule[] = []
+  try {
+    rules = await loadIgnoreRules(workspacePath, [], true)
+  } catch (e) {
+    log.warn('Failed to load ignore rules for watcher', e)
+  }
+
   currentWatcher = watch(workspacePath, {
-    ignored: [/(^|[/\\])\.git([/\\]|$)/],
+    ignored: (path: string, stats: Stats | undefined) => {
+      if (!stats) return false
+      return isEntryIgnored(path, stats.isDirectory(), rules)
+    },
     persistent: true,
     ignoreInitial: true,
     awaitWriteFinish: {
