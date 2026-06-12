@@ -143,7 +143,6 @@ rename the main stylesheet for clarity.
 [END]
 
 [DELETE FILE js/legacy.js]
---- DELETE js/legacy.js ---
 
 [MOVE FILE FROM css/style.css TO css/main.css]
 

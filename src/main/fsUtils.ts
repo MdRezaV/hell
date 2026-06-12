@@ -145,7 +145,7 @@ export function isEntryIgnored(
 ): boolean {
   for (const rule of rules) {
     const rel = relative(rule.dir, entryPath).replace(/\\/g, '/')
-    if (rel.startsWith('..')) continue
+    if (!rel || rel.startsWith('..')) continue
     const testPath = isDirectory ? `${rel}/` : rel
     if (rule.ig.ignores(testPath)) return true
   }
