@@ -11,6 +11,7 @@ import {
   Search,
   X
 } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import log from 'electron-log/renderer'
 import '../styles/FileExplorer.css'
 
@@ -66,130 +67,113 @@ function getNodeTags(node: FileNode, fileStates: Map<string, FileTag>): FileTag[
   return TAG_ORDER.filter((t) => tagSet.has(t))
 }
 
-const TreeNode = memo(
-  function TreeNode({
-    node,
-    level,
-    fileStates,
-    expandedDirs,
-    onToggle,
-    onToggleExpand
-  }: {
-    node: FileNode
-    level: number
-    fileStates: Map<string, FileTag>
-    expandedDirs: Set<string>
-    onToggle: (paths: string[], checked: boolean) => void
-    onToggleExpand: (path: string, expanded: boolean) => void
-  }): React.JSX.Element {
-    const isOpen = expandedDirs.has(node.path)
+interface FlatNode {
+  node: FileNode
+  level: number
+  isOpen: boolean
+  hasChildren: boolean
+}
+
+function flattenTree(nodes: FileNode[], expandedDirs: Set<string>, level: number = 0): FlatNode[] {
+  const result: FlatNode[] = []
+  for (const node of nodes) {
+    const isOpen = node.type === 'directory' && expandedDirs.has(node.path)
     const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
-    const checkState = getCheckState(node, fileStates)
-    const tags = getNodeTags(node, fileStates)
-    const isBinary = node.type === 'file' && !!node.isBinary
-
-    const selectablePaths = node.leafPaths
-    const isDisabled = selectablePaths.length === 0
-    const showCheckbox = !isBinary
-
-    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-      e.stopPropagation()
-      const paths = node.leafPaths
-      if (paths.length === 0) return
-      onToggle(paths, e.target.checked)
+    result.push({ node, level, isOpen, hasChildren })
+    if (isOpen && node.children) {
+      result.push(...flattenTree(node.children, expandedDirs, level + 1))
     }
-
-    const handleCheckboxClick = (e: React.MouseEvent): void => {
-      e.stopPropagation()
-    }
-
-    const handleRowClick = (): void => {
-      if (hasChildren && node.type === 'directory') {
-        onToggleExpand(node.path, !isOpen)
-      } else if (node.type === 'file' && !isDisabled) {
-        if (node.leafPaths.length > 0) {
-          onToggle(node.leafPaths, checkState !== 'checked')
-        }
-      }
-    }
-
-    return (
-      <div>
-        <div
-          className="tree-node"
-          style={{ paddingLeft: `${level * 16}px` }}
-          onClick={handleRowClick}
-        >
-          <span className="tree-chevron">
-            {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
-          </span>
-          {showCheckbox && (
-            <span className="tree-checkbox" onClick={handleCheckboxClick}>
-              <input
-                type="checkbox"
-                checked={checkState === 'checked'}
-                disabled={isDisabled}
-                ref={(el) => {
-                  if (el) {
-                    el.indeterminate = checkState === 'indeterminate'
-                  }
-                }}
-                onChange={handleCheckboxChange}
-              />
-            </span>
-          )}
-          <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
-            {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
-          </span>
-          <span className="tree-label" style={isBinary ? { opacity: 0.5 } : undefined}>
-            {node.name}
-          </span>
-          {isBinary && (
-            <span
-              className="tree-tag"
-              style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
-            >
-              BIN
-            </span>
-          )}
-          {tags.map((tag) => (
-            <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
-              {node.type === 'file' ? tag : TAG_CHARS[tag]}
-            </span>
-          ))}
-        </div>
-        {isOpen && hasChildren && (
-          <div>
-            {node.children!.map((child) => (
-              <TreeNode
-                key={child.path}
-                node={child}
-                level={level + 1}
-                fileStates={fileStates}
-                expandedDirs={expandedDirs}
-                onToggle={onToggle}
-                onToggleExpand={onToggleExpand}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  },
-  (prevProps, nextProps) => {
-    if (prevProps.node !== nextProps.node) return false
-    if (prevProps.level !== nextProps.level) return false
-    if (prevProps.onToggle !== nextProps.onToggle) return false
-    if (prevProps.onToggleExpand !== nextProps.onToggleExpand) return false
-    if (prevProps.expandedDirs !== nextProps.expandedDirs) return false
-    if (prevProps.fileStates !== nextProps.fileStates) {
-      for (const p of prevProps.node.leafPaths) {
-        if (prevProps.fileStates.get(p) !== nextProps.fileStates.get(p)) return false
-      }
-    }
-    return true
   }
-)
+  return result
+}
+
+function VirtualTreeNode({
+  node,
+  level,
+  isOpen,
+  hasChildren,
+  fileStates,
+  onToggle,
+  onToggleExpand
+}: {
+  node: FileNode
+  level: number
+  isOpen: boolean
+  hasChildren: boolean
+  fileStates: Map<string, FileTag>
+  onToggle: (paths: string[], checked: boolean) => void
+  onToggleExpand: (path: string, expanded: boolean) => void
+}): React.JSX.Element {
+  const checkState = getCheckState(node, fileStates)
+  const tags = getNodeTags(node, fileStates)
+  const isBinary = node.type === 'file' && !!node.isBinary
+  const selectablePaths = node.leafPaths
+  const isDisabled = selectablePaths.length === 0
+  const showCheckbox = !isBinary
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    e.stopPropagation()
+    const paths = node.leafPaths
+    if (paths.length === 0) return
+    onToggle(paths, e.target.checked)
+  }
+
+  const handleCheckboxClick = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+  }
+
+  const handleRowClick = (): void => {
+    if (hasChildren && node.type === 'directory') {
+      onToggleExpand(node.path, !isOpen)
+    } else if (node.type === 'file' && !isDisabled) {
+      if (node.leafPaths.length > 0) {
+        onToggle(node.leafPaths, checkState !== 'checked')
+      }
+    }
+  }
+
+  return (
+    <div className="tree-node" style={{ paddingLeft: `${level * 16}px` }} onClick={handleRowClick}>
+      <span className="tree-chevron">
+        {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
+      </span>
+      {showCheckbox && (
+        <span className="tree-checkbox" onClick={handleCheckboxClick}>
+          <input
+            type="checkbox"
+            checked={checkState === 'checked'}
+            disabled={isDisabled}
+            ref={(el) => {
+              if (el) {
+                el.indeterminate = checkState === 'indeterminate'
+              }
+            }}
+            onChange={handleCheckboxChange}
+          />
+        </span>
+      )}
+      <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
+        {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
+      </span>
+      <span className="tree-label" style={isBinary ? { opacity: 0.5 } : undefined}>
+        {node.name}
+      </span>
+      {isBinary && (
+        <span
+          className="tree-tag"
+          style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
+        >
+          BIN
+        </span>
+      )}
+      {tags.map((tag) => (
+        <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
+          {node.type === 'file' ? tag : TAG_CHARS[tag]}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 function sortTree(nodes: FileNode[]): FileNode[] {
   const sorted = [...nodes]
@@ -434,6 +418,21 @@ function FileExplorer({
     return filterTree(tree, q, contentMatches)
   }, [tree, search, contentMatches])
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const flatNodes = useMemo(
+    () => flattenTree(filteredTree, expandedDirs),
+    [filteredTree, expandedDirs]
+  )
+
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe to use
+  const rowVirtualizer = useVirtualizer({
+    count: flatNodes.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 24,
+    overscan: 10
+  })
+
   if (!workspace) {
     return (
       <div className="explorer-empty">
@@ -492,18 +491,43 @@ function FileExplorer({
           <p className="text-[12px]">Loading folder...</p>
         </div>
       ) : (
-        <div className="explorer-tree">
-          {filteredTree.map((node) => (
-            <TreeNode
-              key={node.path}
-              node={node}
-              level={0}
-              fileStates={fileStates}
-              expandedDirs={expandedDirs}
-              onToggle={onToggleFile}
-              onToggleExpand={onToggleExpand}
-            />
-          ))}
+        <div ref={scrollRef} className="explorer-tree">
+          {flatNodes.length > 0 && (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative'
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const flatNode = flatNodes[virtualRow.index]
+                return (
+                  <div
+                    key={flatNode.node.path}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`
+                    }}
+                  >
+                    <VirtualTreeNode
+                      node={flatNode.node}
+                      level={flatNode.level}
+                      isOpen={flatNode.isOpen}
+                      hasChildren={flatNode.hasChildren}
+                      fileStates={fileStates}
+                      onToggle={onToggleFile}
+                      onToggleExpand={onToggleExpand}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
       {!loading && (
