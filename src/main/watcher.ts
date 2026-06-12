@@ -1,7 +1,7 @@
-import { type FSWatcher, watch } from 'chokidar'
+import { type FSWatcher, watch, type WatchOptions } from 'chokidar'
 import type { Stats } from 'fs'
 import { log } from './logger'
-import { type IgnoreRule, isEntryIgnored, loadIgnoreRules } from './fsUtils'
+import { loadIgnoreRules, isEntryIgnored, type IgnoreRule } from './fsUtils'
 
 const DEBOUNCE_MS = 200
 const WRITE_STABILITY_MS = 200
@@ -39,18 +39,20 @@ export async function startWatching(workspacePath: string, onChange: () => void)
     log.warn('Failed to load ignore rules for watcher', e)
   }
 
-  currentWatcher = watch(workspacePath, {
-    ignored: (path: string, stats: Stats | undefined) => {
+  const opts: WatchOptions = {
+    ignored: ((path: string, stats?: Stats) => {
       if (!stats) return false
       return isEntryIgnored(path, stats.isDirectory(), rules)
-    },
+    }) as WatchOptions['ignored'],
     persistent: true,
     ignoreInitial: true,
     awaitWriteFinish: {
       stabilityThreshold: WRITE_STABILITY_MS,
       pollInterval: WRITE_POLL_MS
     }
-  })
+  }
+
+  currentWatcher = watch(workspacePath, opts)
 
   const trigger = (): void => {
     clearDebounce()
