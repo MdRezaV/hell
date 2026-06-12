@@ -1,6 +1,13 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'path'
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync
+} from 'fs'
 import { formatTreeText, readDirTree } from './fsUtils'
 import {
   batchRemoveFileStates,
@@ -242,22 +249,37 @@ export function registerIpcHandlers(): void {
     const tree = await readDirTree(workspace, [], true)
     const result: string[] = []
 
-    function walk(nodes: typeof tree): void {
+    async function walk(nodes: typeof tree): Promise<void> {
       for (const node of nodes) {
         if (node.type === 'file' && !node.isBinary) {
           try {
-            const content = readFileSync(node.path, 'utf-8')
-            if (content.toLowerCase().includes(q)) {
-              result.push(node.path)
+            const stream = createReadStream(node.path, {
+              encoding: 'utf-8',
+              highWaterMark: 64 * 1024
+            })
+            let found = false
+            let overlap = ''
+            const overlapSize = Math.max(0, q.length - 1)
+
+            for await (const chunk of stream) {
+              const text = overlap + chunk
+              if (text.toLowerCase().includes(q)) {
+                found = true
+                stream.destroy()
+                break
+              }
+              overlap = text.length > overlapSize ? text.slice(-overlapSize) : text
             }
+            if (found) result.push(node.path)
           } catch {
             /* skip unreadable files */
           }
         }
-        if (node.children) walk(node.children)
+        if (node.children) await walk(node.children)
       }
     }
-    walk(tree)
+
+    await walk(tree)
     return result
   })
 
