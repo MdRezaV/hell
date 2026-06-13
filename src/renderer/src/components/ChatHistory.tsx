@@ -131,8 +131,8 @@ export default memo(function ChatHistory({
     <div className="chat-history">
       <div className="chat-history-header">
         <span className="chat-history-title">History</span>
-        <button onClick={onNewChat} title="New Chat">
-          <Plus size={14} />
+        <button className="chat-history-header-btn" onClick={onNewChat} title="New Chat">
+          <Plus size={14} className="chat-history-header-btn-icon" />
         </button>
       </div>
       <div className="chat-history-search">
@@ -154,11 +154,13 @@ export default memo(function ChatHistory({
         {filtered.length === 0 && (
           <div className="chat-history-empty">
             {search ? (
-              <Search size={24} strokeWidth={1.5} />
+              <Search size={24} strokeWidth={1.5} className="chat-history-empty-icon" />
             ) : (
-              <Clock size={24} strokeWidth={1.5} />
+              <Clock size={24} strokeWidth={1.5} className="chat-history-empty-icon" />
             )}
-            <p>{search ? 'No matching chats' : 'No chat history'}</p>
+            <p className="chat-history-empty-text">
+              {search ? 'No matching chats' : 'No chat history'}
+            </p>
           </div>
         )}
         {GROUP_ORDER.map((groupKey) => {

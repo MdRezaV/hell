@@ -6,11 +6,11 @@
   @apply flex items-center justify-between px-3 h-7 border-b border-border bg-background-mute flex-shrink-0;
 }
 
-.chat-history-header button {
+.chat-history-header-btn {
   @apply p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
 }
 
-.chat-history-header button svg {
+.chat-history-header-btn-icon {
   @apply w-3.5 h-3.5;
 }
 
@@ -46,11 +46,11 @@
   @apply flex flex-col items-center justify-center gap-2 py-8 text-text-muted;
 }
 
-.chat-history-empty svg {
+.chat-history-empty-icon {
   @apply opacity-50;
 }
 
-.chat-history-empty p {
+.chat-history-empty-text {
   @apply text-[12px];
 }
 
