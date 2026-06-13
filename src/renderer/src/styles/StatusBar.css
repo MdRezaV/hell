@@ -9,3 +9,19 @@
 .statusbar-spacer {
   @apply flex-1;
 }
+
+.statusbar-btn-group {
+  @apply flex gap-0;
+}
+
+.statusbar-btn {
+  @apply inline-flex items-center justify-center px-2 h-[18px] text-[10px] font-bold tracking-wider text-white bg-[rgba(0,0,0,0.15)] border border-[rgba(255,255,255,0.2)] rounded-none cursor-pointer leading-none hover:bg-[rgba(0,0,0,0.3)] active:bg-[rgba(0,0,0,0.4)];
+}
+
+.statusbar-btn:not(:last-child) {
+  @apply border-r-0;
+}
+
+.statusbar-btn-danger {
+  @apply hover:bg-[rgba(180,40,40,0.5)] active:bg-[rgba(180,40,40,0.7)];
+}

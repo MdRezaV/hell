@@ -310,6 +310,10 @@
   @apply text-ctp-peach bg-[rgba(250,179,135,0.15)];
 }
 
+.md-file-move-arrow {
+  @apply mx-2 opacity-60 flex-shrink-0;
+}
+
 .md-file-error {
   @apply px-4 py-3 text-[12px] text-ctp-peach bg-[rgba(250,179,135,0.05)];
 }

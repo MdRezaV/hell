@@ -109,3 +109,40 @@
 .tree-tag {
   @apply ml-1.5 px-1 py-0 text-[10px] font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
 }
+
+.tree-tag--PND {
+  background-color: rgba(249, 226, 175, 0.45);
+  color: #f9e2af;
+}
+
+.tree-tag--INQ {
+  background-color: rgba(203, 166, 247, 0.45);
+  color: #cba6f7;
+}
+
+.tree-tag--ADD {
+  background-color: rgba(166, 227, 161, 0.45);
+  color: #a6e3a1;
+}
+
+.tree-tag--BIN {
+  background-color: rgba(150, 150, 150, 0.3);
+  color: #888;
+}
+
+.tree-label--binary {
+  opacity: 0.5;
+}
+
+.explorer-footer {
+  @apply py-2 px-3 mt-auto border-t border-border;
+}
+
+.explorer-footer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}

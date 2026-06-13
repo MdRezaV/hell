@@ -175,10 +175,7 @@ function formatContext(files: FileContext[], dirStructure?: string): string {
   }
   if (files.length > 0) {
     result += files
-      .map(
-        (f) =>
-          `<file path="${f.path}">\n<![CDATA[\n${normalizeLineEndings(f.content)}\n]]>\n</file>`
-      )
+      .map((f) => `<file path="${f.path}">\n${normalizeLineEndings(f.content)}\n</file>`)
       .join('\n')
   }
   return result

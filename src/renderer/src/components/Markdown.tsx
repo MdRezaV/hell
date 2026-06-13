@@ -649,11 +649,7 @@ const FileMoveBlock = memo(function FileMoveBlock({
         <div className="md-file-header-left">
           <span className="md-file-status-label moved">MOVED</span>
           <FilePathDisplay path={oldPath} />
-          <ArrowRight
-            size={16}
-            className="md-file-move-arrow"
-            style={{ margin: '0 8px', opacity: 0.6 }}
-          />
+          <ArrowRight size={16} className="md-file-move-arrow" />
           <FilePathDisplay path={newPath} />
         </div>
         <div className="md-file-header-actions">

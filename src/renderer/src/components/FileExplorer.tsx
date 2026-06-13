@@ -17,12 +17,6 @@ import '../styles/FileExplorer.css'
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'
 
-const TAG_STYLES: Record<FileTag, React.CSSProperties> = {
-  PND: { backgroundColor: 'rgba(249, 226, 175, 0.45)', color: '#f9e2af' },
-  INQ: { backgroundColor: 'rgba(203, 166, 247, 0.45)', color: '#cba6f7' },
-  ADD: { backgroundColor: 'rgba(166, 227, 161, 0.45)', color: '#a6e3a1' }
-}
-
 interface FileNode {
   name: string
   path: string
@@ -155,19 +149,10 @@ function VirtualTreeNode({
       <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
         {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
       </span>
-      <span className="tree-label" style={isBinary ? { opacity: 0.5 } : undefined}>
-        {node.name}
-      </span>
-      {isBinary && (
-        <span
-          className="tree-tag"
-          style={{ backgroundColor: 'rgba(150, 150, 150, 0.3)', color: '#888' }}
-        >
-          BIN
-        </span>
-      )}
+      <span className={`tree-label${isBinary ? ' tree-label--binary' : ''}`}>{node.name}</span>
+      {isBinary && <span className="tree-tag tree-tag--BIN">BIN</span>}
       {tags.map((tag) => (
-        <span key={tag} className="tree-tag" style={TAG_STYLES[tag]}>
+        <span key={tag} className={`tree-tag tree-tag--${tag}`}>
           {node.type === 'file' ? tag : TAG_CHARS[tag]}
         </span>
       ))}
@@ -531,13 +516,7 @@ function FileExplorer({
         </div>
       )}
       {!loading && (
-        <div
-          style={{
-            padding: '8px 12px',
-            borderTop: '1px solid var(--border, #333)',
-            marginTop: 'auto'
-          }}
-        >
+        <div className="explorer-footer">
           <div
             role="button"
             tabIndex={0}
@@ -548,14 +527,7 @@ function FileExplorer({
                 onDirStructureTagChange(dirStructureTag === null ? 'PND' : null)
               }
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              cursor: 'pointer',
-              userSelect: 'none'
-            }}
+            className="explorer-footer-toggle"
           >
             <span className="tree-checkbox" onClick={(e) => e.stopPropagation()}>
               <input
@@ -567,9 +539,7 @@ function FileExplorer({
             </span>
             <span>Directory Structure</span>
             {dirStructureTag && (
-              <span className="tree-tag" style={TAG_STYLES[dirStructureTag]}>
-                {dirStructureTag}
-              </span>
+              <span className={`tree-tag tree-tag--${dirStructureTag}`}>{dirStructureTag}</span>
             )}
           </div>
         </div>
