@@ -49,7 +49,12 @@ import hljs from 'highlight.js/lib/common'
 import { ArrowRight, Check, Copy, Play, X } from 'lucide-react'
 import log from 'electron-log/renderer'
 import '../styles/Markdown.css'
-import { getActiveParser, normalizeLineEndings, parseReplaceBlock } from '../utils/markdownParser'
+import {
+  getActiveParser,
+  normalizeLineEndings,
+  parseReplaceBlock,
+  segmentContent
+} from '../utils/markdownParser'
 import {
   applyFileDelete,
   applyFileMove,
@@ -122,12 +127,30 @@ type CustomBlockRenderer = (code: string) => React.JSX.Element
 const autoLanguageCache = new Map<string, string>()
 const AUTO_LANG_CACHE_MAX = 512
 
+function codeFingerprint(code: string): string {
+  // For short code the full string is a collision-free key.
+  // For longer code use length + a hash of the first 256 chars so Map keys
+  // stay small and lookups avoid O(code_length) string comparisons.
+  if (code.length <= 256) return code
+  let h = code.length
+  for (let i = 0; i < 256; i++) {
+    h = ((h << 5) - h + code.charCodeAt(i)) | 0
+  }
+  return `${code.length}:${(h >>> 0).toString(36)}`
+}
+
 function detectLanguage(code: string): string {
-  const cached = autoLanguageCache.get(code)
+  // Skip expensive hljs auto-detection for tiny snippets — they are almost
+  // always incomplete tokens arriving during streaming.
+  if (code.length < 20) return 'text'
+
+  const key = codeFingerprint(code)
+  const cached = autoLanguageCache.get(key)
   if (cached !== undefined) return cached
+
   const sample = code.length > 2048 ? code.slice(0, 2048) : code
   const detected = hljs.highlightAuto(sample).language || 'text'
-  autoLanguageCache.set(code, detected)
+  autoLanguageCache.set(key, detected)
   if (autoLanguageCache.size > AUTO_LANG_CACHE_MAX) {
     const firstKey = autoLanguageCache.keys().next().value
     if (firstKey !== undefined) autoLanguageCache.delete(firstKey)
@@ -1104,15 +1127,32 @@ const markdownComponents: Components = {
   }
 }
 
+// Each segment is an independent, memoized ReactMarkdown instance.
+// During streaming only the last segment's content changes, so all
+// previous segments are skipped by React.memo — no re-parsing, no
+// re-highlighting.
+const MarkdownSegment = memo(function MarkdownSegment({
+  content
+}: {
+  content: string
+}): React.JSX.Element {
+  return (
+    <ReactMarkdown remarkPlugins={markdownRemarkPlugins} components={markdownComponents}>
+      {content}
+    </ReactMarkdown>
+  )
+})
+
 const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.Element {
   const processedContent = useMemo(() => getActiveParser().preprocess(content), [content])
+  const segments = useMemo(() => segmentContent(processedContent), [processedContent])
 
   return (
     <ApplyAllProvider>
       <div className="md-content">
-        <ReactMarkdown remarkPlugins={markdownRemarkPlugins} components={markdownComponents}>
-          {processedContent}
-        </ReactMarkdown>
+        {segments.map((segment, i) => (
+          <MarkdownSegment key={i} content={segment} />
+        ))}
         <ApplyAllBar />
       </div>
     </ApplyAllProvider>

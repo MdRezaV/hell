@@ -1,4 +1,5 @@
 export function normalizeLineEndings(text: string): string {
+  if (text.indexOf('\r') === -1) return text
   return text.replace(/\r\n?/g, '\n')
 }
 
@@ -132,7 +133,7 @@ function parseSearchReplacePairs(lines: string[]): Array<{ old: string; new: str
  * Tags must be alone on their line (optional leading/trailing whitespace allowed).
  * Tags with surrounding text are treated as content.
  */
-export function preprocess(content: string): string {
+function preprocessImpl(content: string): string {
   const lines = normalizeLineEndings(content).split('\n')
   const result: string[] = []
   let i = 0
@@ -255,10 +256,140 @@ export function preprocess(content: string): string {
   return result.join('\n')
 }
 
+/**
+ * Split preprocessed markdown into segments at code-fence boundaries.
+ * Each segment is rendered by an independent, memoized ReactMarkdown
+ * instance so that during streaming only the last (active) segment
+ * re-parses — eliminating the O(N²) cost of re-parsing the entire
+ * accumulated document on every token.
+ */
+export function segmentContent(content: string): string[] {
+  if (!content) return ['']
+
+  const lines = content.split('\n')
+  const segments: string[] = []
+  let segStart = 0
+  let inFence = false
+  let fenceChar = ''
+  let fenceLen = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (!inFence) {
+      const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
+      if (m) {
+        inFence = true
+        fenceChar = m[2][0]
+        fenceLen = m[2].length
+      }
+    } else {
+      const closeRe =
+        fenceChar === '`'
+          ? new RegExp(`^\\s{0,3}\`{${fenceLen},}\\s*$`)
+          : new RegExp(`^\\s{0,3}~{${fenceLen},}\\s*$`)
+      if (closeRe.test(line)) {
+        inFence = false
+        if (i < lines.length - 1) {
+          segments.push(lines.slice(segStart, i + 1).join('\n'))
+          segStart = i + 1
+        }
+      }
+    }
+  }
+
+  if (segStart < lines.length) {
+    segments.push(lines.slice(segStart).join('\n'))
+  }
+
+  return segments.length > 0 ? segments : ['']
+}
+
 export interface MarkdownParser {
   id: string
   name: string
   preprocess: (content: string) => string
+}
+
+/**
+ * Character position immediately after the last "safe" boundary in raw
+ * (pre-preprocessing) content. Safe = no open code fence and no open
+ * [FILE …]…[END] block, so the prefix can be preprocessed independently.
+ */
+function _findLastSafeBoundary(content: string): number {
+  const lines = content.split('\n')
+  let lastSafeEnd = 0
+  let charPos = 0
+  let inFence = false
+  let fenceChar = ''
+  let fenceLen = 0
+  let inFileBlock = false
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (!inFence && !inFileBlock) {
+      if (/^\s*\[FILE .+]\s*$/.test(line)) {
+        inFileBlock = true
+      } else {
+        const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
+        if (m) {
+          inFence = true
+          fenceChar = m[2][0]
+          fenceLen = m[2].length
+        }
+      }
+    } else if (inFileBlock) {
+      if (/^\s*\[END]\s*$/.test(line)) {
+        inFileBlock = false
+        lastSafeEnd = charPos + line.length + 1
+      }
+    } else {
+      const closeRe =
+        fenceChar === '`'
+          ? new RegExp(`^\\s{0,3}\`{${fenceLen},}\\s*$`)
+          : new RegExp(`^\\s{0,3}~{${fenceLen},}\\s*$`)
+      if (closeRe.test(line)) {
+        inFence = false
+        lastSafeEnd = charPos + line.length + 1
+      }
+    }
+
+    charPos += line.length + 1
+  }
+
+  return lastSafeEnd
+}
+
+let _incRawPrefix = ''
+let _incProcessedPrefix = ''
+
+export function preprocess(content: string): string {
+  const normalized = content.indexOf('\r') === -1 ? content : normalizeLineEndings(content)
+
+  // Fast path: content extends the cached prefix — only preprocess the suffix.
+  // During streaming this is the hot path and drops preprocessing from O(N) to
+  // O(suffix_length) per token.
+  if (_incRawPrefix.length > 0 && normalized.startsWith(_incRawPrefix)) {
+    const suffix = normalized.slice(_incRawPrefix.length)
+    if (!suffix) return _incProcessedPrefix
+    return _incProcessedPrefix + preprocessImpl(suffix)
+  }
+
+  // Slow path: full preprocessing
+  const result = preprocessImpl(normalized)
+
+  // Cache at the last safe boundary so subsequent appends hit the fast path
+  const safeEnd = _findLastSafeBoundary(normalized)
+  if (safeEnd > 0 && safeEnd < normalized.length) {
+    _incRawPrefix = normalized.slice(0, safeEnd)
+    _incProcessedPrefix = preprocessImpl(_incRawPrefix)
+  } else {
+    _incRawPrefix = ''
+    _incProcessedPrefix = ''
+  }
+
+  return result
 }
 
 export const diffParser: MarkdownParser = {
