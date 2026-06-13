@@ -217,14 +217,20 @@ function App(): React.JSX.Element {
   const handleToggleFile = useCallback(
     (paths: string[], checked: boolean): void => {
       try {
+        const filteredPaths = checked
+          ? paths
+          : paths.filter((p) => fileStatesRef.current.get(p) !== 'ADD')
+
+        if (filteredPaths.length === 0) return
+
         setFileStates((prev) => {
           const next = new Map(prev)
           if (checked) {
-            for (const p of paths) {
+            for (const p of filteredPaths) {
               if (!next.has(p)) next.set(p, 'PND')
             }
           } else {
-            for (const p of paths) {
+            for (const p of filteredPaths) {
               next.delete(p)
             }
           }
@@ -236,12 +242,12 @@ function App(): React.JSX.Element {
               .invoke(
                 'db:batch-set-file-states',
                 workspace,
-                paths.map((p) => ({ absolutePath: p, tag: 'PND' }))
+                filteredPaths.map((p) => ({ absolutePath: p, tag: 'PND' }))
               )
               .catch((e) => log.error('Failed to batch set file states:', e))
           } else {
             window.electron.ipcRenderer
-              .invoke('db:batch-remove-file-states', workspace, paths)
+              .invoke('db:batch-remove-file-states', workspace, filteredPaths)
               .catch((e) => log.error('Failed to batch remove file states:', e))
           }
         }
