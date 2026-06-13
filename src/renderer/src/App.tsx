@@ -18,8 +18,7 @@ function App(): React.JSX.Element {
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
-  const [includeDirStructure, setIncludeDirStructure] = useState(true)
-  const [dirStructureAddedAtIndex, setDirStructureAddedAtIndex] = useState<number | null>(null)
+  const [dirStructureTag, setDirStructureTag] = useState<FileTag | null>(null)
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
   const copySnapshotRef = useRef<Set<string>>(new Set())
@@ -28,6 +27,7 @@ function App(): React.JSX.Element {
   const workspaceRef = useRef<string | null>(null)
   const fileStatesRef = useRef<FileStates>(new Map())
   const expandedDirsRef = useRef<Set<string>>(new Set())
+  const dirStructureTagRef = useRef<FileTag | null>(null)
   const isNewChatRef = useRef(false)
 
   useEffect(() => {
@@ -46,15 +46,14 @@ function App(): React.JSX.Element {
     expandedDirsRef.current = expandedDirs
   }, [expandedDirs])
 
+  useEffect(() => {
+    dirStructureTagRef.current = dirStructureTag
+  }, [dirStructureTag])
+
   const loadWorkspaceState = useCallback(async (path: string): Promise<void> => {
     try {
       const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
         await window.electron.ipcRenderer.invoke('db:get-workspace-state', path)
-      const includeDir = (await window.electron.ipcRenderer.invoke(
-        'db:get-include-dir-structure',
-        path
-      )) as boolean
-      setIncludeDirStructure(includeDir)
       const fsMap = new Map<string, FileTag>()
       const batchStates: Array<{ absolutePath: string; tag: string }> = []
       for (const [rel] of state.fileStates) {
@@ -71,7 +70,7 @@ function App(): React.JSX.Element {
       }
       setFileStates(fsMap)
       setExpandedDirs(expSet)
-      setDirStructureAddedAtIndex(null)
+      setDirStructureTag(null)
     } catch (e) {
       log.error('Failed to load workspace state:', e)
     }
@@ -107,7 +106,7 @@ function App(): React.JSX.Element {
 
         setFileStates(fsMap)
         setExpandedDirs(expSet)
-        setDirStructureAddedAtIndex(null)
+        setDirStructureTag(null)
       } catch (e) {
         log.error('Failed to apply chat session state:', e)
       }
@@ -140,6 +139,7 @@ function App(): React.JSX.Element {
       const ws = workspaceRef.current
       const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
       const ed = serializeExpandedDirs(expandedDirsRef.current)
+      const dst = dirStructureTagRef.current ?? ''
       if (activeChatIdRef.current) {
         await window.electron.ipcRenderer.invoke(
           'db:update-chat-session',
@@ -147,7 +147,8 @@ function App(): React.JSX.Element {
           title,
           JSON.stringify(messages),
           fs,
-          ed
+          ed,
+          dst
         )
       } else {
         const id = await window.electron.ipcRenderer.invoke(
@@ -156,7 +157,8 @@ function App(): React.JSX.Element {
           title,
           JSON.stringify(messages),
           fs,
-          ed
+          ed,
+          dst
         )
         setActiveChatId(id)
       }
@@ -361,18 +363,11 @@ function App(): React.JSX.Element {
         )
 
         // 3. Prepare context and copy
-        const currentIndex = chatRef.current?.getResolvedUserIndex() ?? 0
         let dirStructure: string | undefined
-        if (includeDirStructure) {
-          if (dirStructureAddedAtIndex === null || dirStructureAddedAtIndex === currentIndex) {
-            dirStructure = await window.electron.ipcRenderer.invoke(
-              'read-directory-tree',
-              workspace
-            )
-            if (dirStructureAddedAtIndex === null) {
-              setDirStructureAddedAtIndex(currentIndex)
-            }
-          }
+        if (dirStructureTag === 'PND') {
+          dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
+          setDirStructureTag('INQ')
+          dirStructureTagRef.current = 'INQ'
         }
 
         const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
@@ -382,7 +377,7 @@ function App(): React.JSX.Element {
         log.error('Failed to copy context:', e)
       }
     }
-  }, [workspace, fileStates, filePaths, includeDirStructure, dirStructureAddedAtIndex])
+  }, [workspace, fileStates, filePaths, dirStructureTag])
 
   const handleCopy = useCallback(() => {
     latestCopyFnRef.current?.()
@@ -393,11 +388,15 @@ function App(): React.JSX.Element {
     try {
       const currentMessages = chatRef.current?.getMessages() ?? []
       const prevActiveChatId = activeChatIdRef.current
+      const savedDirStructureTag = dirStructureTagRef.current ?? ''
 
       chatRef.current?.loadChat([])
 
       copySnapshotRef.current = new Set()
-      setDirStructureAddedAtIndex(null)
+      if (dirStructureTag === 'ADD' || dirStructureTag === 'INQ') {
+        setDirStructureTag('PND')
+        dirStructureTagRef.current = 'PND'
+      }
       setActiveChatId(null)
 
       const toConvert: string[] = []
@@ -432,7 +431,8 @@ function App(): React.JSX.Element {
             title,
             JSON.stringify(currentMessages),
             fs,
-            ed
+            ed,
+            savedDirStructureTag
           )
         } else {
           await window.electron.ipcRenderer.invoke(
@@ -441,7 +441,8 @@ function App(): React.JSX.Element {
             title,
             JSON.stringify(currentMessages),
             fs,
-            ed
+            ed,
+            savedDirStructureTag
           )
         }
       }
@@ -451,7 +452,7 @@ function App(): React.JSX.Element {
     } finally {
       isNewChatRef.current = false
     }
-  }, [fileStates, serializeCurrentFileStates, serializeExpandedDirs])
+  }, [fileStates, serializeCurrentFileStates, serializeExpandedDirs, dirStructureTag])
 
   const handleSelectChat = useCallback(
     async (id: string): Promise<void> => {
@@ -470,6 +471,12 @@ function App(): React.JSX.Element {
           if (targetWorkspace) {
             await applyChatSessionState(session, targetWorkspace)
           }
+
+          const restoredTag = session.dir_structure_tag
+            ? (session.dir_structure_tag as FileTag)
+            : null
+          setDirStructureTag(restoredTag)
+          dirStructureTagRef.current = restoredTag
 
           const messages = JSON.parse(session.messages).map((m: ChatMessage) => ({
             ...m,
@@ -497,6 +504,7 @@ function App(): React.JSX.Element {
         const ws = workspaceRef.current
         const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
         const ed = serializeExpandedDirs(expandedDirsRef.current)
+        const dst = dirStructureTagRef.current ?? ''
         if (activeChatIdRef.current) {
           await window.electron.ipcRenderer.invoke(
             'db:update-chat-session',
@@ -504,7 +512,8 @@ function App(): React.JSX.Element {
             title,
             JSON.stringify(messages),
             fs,
-            ed
+            ed,
+            dst
           )
         } else {
           const id = await window.electron.ipcRenderer.invoke(
@@ -513,7 +522,8 @@ function App(): React.JSX.Element {
             title,
             JSON.stringify(messages),
             fs,
-            ed
+            ed,
+            dst
           )
           setActiveChatId(id)
         }
@@ -559,15 +569,24 @@ function App(): React.JSX.Element {
           }
           return next
         })
+        if (dirStructureTag === 'INQ') {
+          setDirStructureTag('ADD')
+          dirStructureTagRef.current = 'ADD'
+        }
         copySnapshotRef.current = new Set()
       } catch (e) {
         log.error('Failed to paste:', e)
       }
     }
-  }, [workspace, saveCurrentChat])
+  }, [workspace, saveCurrentChat, dirStructureTag])
 
   const handlePaste = useCallback(() => {
     latestPasteFnRef.current?.()
+  }, [])
+
+  const handleDirStructureTagChange = useCallback((tag: FileTag | null) => {
+    setDirStructureTag(tag)
+    dirStructureTagRef.current = tag
   }, [])
 
   const handleClearDb = useCallback(async (): Promise<void> => {
@@ -580,7 +599,7 @@ function App(): React.JSX.Element {
       copySnapshotRef.current = new Set()
       chatRef.current?.loadChat([])
       setChatHistoryKey((k) => k + 1)
-      setDirStructureAddedAtIndex(null)
+      setDirStructureTag(null)
     } catch (e) {
       log.error('Failed to clear database:', e)
     }
@@ -608,17 +627,8 @@ function App(): React.JSX.Element {
               onToggleExpand={handleToggleExpand}
               onClearSelections={handleClearSelections}
               onFilePathsChange={handleFilePathsChange}
-              includeDirStructure={includeDirStructure}
-              onIncludeDirStructureChange={(value) => {
-                setIncludeDirStructure(value)
-                if (workspace) {
-                  window.electron.ipcRenderer.invoke(
-                    'db:set-include-dir-structure',
-                    workspace,
-                    value
-                  )
-                }
-              }}
+              dirStructureTag={dirStructureTag}
+              onDirStructureTagChange={handleDirStructureTagChange}
             />
           </div>
           <div

@@ -257,8 +257,8 @@ function FileExplorer({
   onToggleExpand,
   onClearSelections,
   onFilePathsChange,
-  includeDirStructure,
-  onIncludeDirStructureChange
+  dirStructureTag,
+  onDirStructureTagChange
 }: {
   workspace: string | null
   onWorkspaceChange: (path: string | null) => void
@@ -268,8 +268,8 @@ function FileExplorer({
   onToggleExpand: (path: string, expanded: boolean) => void
   onClearSelections: () => void
   onFilePathsChange: (paths: Set<string>) => void
-  includeDirStructure: boolean
-  onIncludeDirStructureChange: (value: boolean) => void
+  dirStructureTag: FileTag | null
+  onDirStructureTagChange: (tag: FileTag | null) => void
 }): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
@@ -538,7 +538,16 @@ function FileExplorer({
             marginTop: 'auto'
           }}
         >
-          <label
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onDirStructureTagChange(dirStructureTag === null ? 'PND' : null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onDirStructureTagChange(dirStructureTag === null ? 'PND' : null)
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -548,14 +557,21 @@ function FileExplorer({
               userSelect: 'none'
             }}
           >
-            <input
-              type="checkbox"
-              checked={includeDirStructure}
-              onChange={(e) => onIncludeDirStructureChange(e.target.checked)}
-              disabled={!workspace}
-            />
-            <span>Include directory structure</span>
-          </label>
+            <span className="tree-checkbox" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={dirStructureTag !== null}
+                onChange={() => onDirStructureTagChange(dirStructureTag === null ? 'PND' : null)}
+                disabled={!workspace}
+              />
+            </span>
+            <span>Directory Structure</span>
+            {dirStructureTag && (
+              <span className="tree-tag" style={TAG_STYLES[dirStructureTag]}>
+                {dirStructureTag}
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -9,7 +9,7 @@ const MAX_WORKSPACES = 5
 // backwards-incompatible way. On startup, if the stored
 // `PRAGMA user_version` does not match, the database is wiped
 // and recreated from scratch.
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 4
 
 let db: Database.Database | null = null
 
@@ -78,26 +78,6 @@ function createTables(d: Database.Database): void {
       path
     ) ON DELETE CASCADE
       );
-    CREATE TABLE IF NOT EXISTS workspace_settings
-    (
-      workspace_path
-      TEXT
-      PRIMARY
-      KEY,
-      include_dir_structure
-      INTEGER
-      NOT
-      NULL
-      DEFAULT
-      1,
-      FOREIGN KEY
-    (
-      workspace_path
-    ) REFERENCES workspaces
-    (
-      path
-    ) ON DELETE CASCADE
-      );
     CREATE TABLE IF NOT EXISTS chat_sessions
     (
       id
@@ -133,7 +113,13 @@ function createTables(d: Database.Database): void {
       NOT
       NULL
       DEFAULT
-      '[]'
+      '[]',
+      dir_structure_tag
+      TEXT
+      NOT
+      NULL
+      DEFAULT
+      ''
     );
   `)
 }
@@ -141,7 +127,6 @@ function createTables(d: Database.Database): void {
 function dropAllTables(d: Database.Database): void {
   d.exec(`
     DROP TABLE IF EXISTS chat_sessions;
-    DROP TABLE IF EXISTS workspace_settings;
     DROP TABLE IF EXISTS expanded_dirs;
     DROP TABLE IF EXISTS file_states;
     DROP TABLE IF EXISTS workspaces;
@@ -315,22 +300,6 @@ export function setDirExpanded(
   }
 }
 
-export function getIncludeDirStructure(workspacePath: string): boolean {
-  const d = getDb()
-  const row = d
-    .prepare('SELECT include_dir_structure FROM workspace_settings WHERE workspace_path = ?')
-    .get(workspacePath) as { include_dir_structure: number } | undefined
-  return row ? row.include_dir_structure === 1 : true
-}
-
-export function setIncludeDirStructure(workspacePath: string, value: boolean): void {
-  const d = getDb()
-  d.prepare(
-    `INSERT INTO workspace_settings (workspace_path, include_dir_structure) VALUES (?, ?)
-     ON CONFLICT(workspace_path) DO UPDATE SET include_dir_structure = excluded.include_dir_structure`
-  ).run(workspacePath, value ? 1 : 0)
-}
-
 export interface ChatSession {
   id: string
   workspace_path: string | null
@@ -340,6 +309,7 @@ export interface ChatSession {
   updated_at: number
   file_states: string
   expanded_dirs: string
+  dir_structure_tag: string
 }
 
 export function createChatSession(
@@ -347,13 +317,14 @@ export function createChatSession(
   title: string,
   messages: string,
   fileStates: string = '[]',
-  expandedDirs: string = '[]'
+  expandedDirs: string = '[]',
+  dirStructureTag: string = ''
 ): string {
   const d = getDb()
   const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   d.prepare(
-    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     workspacePath ?? null,
@@ -362,7 +333,8 @@ export function createChatSession(
     Date.now(),
     Date.now(),
     fileStates,
-    expandedDirs
+    expandedDirs,
+    dirStructureTag
   )
   return id
 }
@@ -372,12 +344,13 @@ export function updateChatSession(
   title: string,
   messages: string,
   fileStates: string = '[]',
-  expandedDirs: string = '[]'
+  expandedDirs: string = '[]',
+  dirStructureTag: string = ''
 ): void {
   const d = getDb()
   d.prepare(
-    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ? WHERE id = ?`
-  ).run(title, messages, Date.now(), fileStates, expandedDirs, id)
+    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ? WHERE id = ?`
+  ).run(title, messages, Date.now(), fileStates, expandedDirs, dirStructureTag, id)
 }
 
 export function snapshotWorkspaceStateToSession(workspacePath: string): {
@@ -433,7 +406,6 @@ export function clearAllData(): void {
     d.prepare('DELETE FROM chat_sessions').run()
     d.prepare('DELETE FROM file_states').run()
     d.prepare('DELETE FROM expanded_dirs').run()
-    d.prepare('DELETE FROM workspace_settings').run()
     d.prepare('DELETE FROM workspaces').run()
   })
   tx()

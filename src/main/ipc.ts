@@ -18,14 +18,12 @@ import {
   deleteChatSession,
   getChatSession,
   getChatSessions,
-  getIncludeDirStructure,
   getLastWorkspace,
   getWorkspaceState,
   pruneWorkspaceState,
   removeFileState,
   setDirExpanded,
   setFileState,
-  setIncludeDirStructure,
   snapshotWorkspaceStateToSession,
   touchWorkspace,
   updateChatSession
@@ -177,10 +175,18 @@ export function registerIpcHandlers(): void {
       title: string,
       messages: string,
       fileStates?: string,
-      expandedDirs?: string
+      expandedDirs?: string,
+      dirStructureTag?: string
     ) => {
       if (fileStates !== undefined && expandedDirs !== undefined) {
-        return createChatSession(workspacePath, title, messages, fileStates, expandedDirs)
+        return createChatSession(
+          workspacePath,
+          title,
+          messages,
+          fileStates,
+          expandedDirs,
+          dirStructureTag
+        )
       }
       if (workspacePath) {
         const snapshot = snapshotWorkspaceStateToSession(workspacePath)
@@ -189,10 +195,18 @@ export function registerIpcHandlers(): void {
           title,
           messages,
           snapshot.fileStates,
-          snapshot.expandedDirs
+          snapshot.expandedDirs,
+          dirStructureTag
         )
       }
-      return createChatSession(workspacePath, title, messages)
+      return createChatSession(
+        workspacePath,
+        title,
+        messages,
+        undefined,
+        undefined,
+        dirStructureTag
+      )
     }
   )
 
@@ -204,17 +218,25 @@ export function registerIpcHandlers(): void {
       title: string,
       messages: string,
       fileStates?: string,
-      expandedDirs?: string
+      expandedDirs?: string,
+      dirStructureTag?: string
     ) => {
       if (fileStates !== undefined && expandedDirs !== undefined) {
-        updateChatSession(id, title, messages, fileStates, expandedDirs)
+        updateChatSession(id, title, messages, fileStates, expandedDirs, dirStructureTag)
       } else {
         const session = getChatSession(id)
         if (session?.workspace_path) {
           const snapshot = snapshotWorkspaceStateToSession(session.workspace_path)
-          updateChatSession(id, title, messages, snapshot.fileStates, snapshot.expandedDirs)
+          updateChatSession(
+            id,
+            title,
+            messages,
+            snapshot.fileStates,
+            snapshot.expandedDirs,
+            dirStructureTag
+          )
         } else {
-          updateChatSession(id, title, messages)
+          updateChatSession(id, title, messages, undefined, undefined, dirStructureTag)
         }
       }
     }
@@ -230,14 +252,6 @@ export function registerIpcHandlers(): void {
 
   safeHandle('db:delete-chat-session', async (_, id: string) => {
     deleteChatSession(id)
-  })
-
-  safeHandle('db:get-include-dir-structure', async (_, workspacePath: string) => {
-    return getIncludeDirStructure(workspacePath)
-  })
-
-  safeHandle('db:set-include-dir-structure', async (_, workspacePath: string, value: boolean) => {
-    setIncludeDirStructure(workspacePath, value)
   })
 
   safeHandle('read-directory', async (_, dirPath: string) => {
