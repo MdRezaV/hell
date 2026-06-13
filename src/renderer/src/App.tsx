@@ -7,6 +7,7 @@ import StatusBar from './components/StatusBar'
 import { WorkspaceContext } from './WorkspaceContext'
 import { useResizableLayout } from './hooks/useResizableLayout'
 import { deriveTitle, joinWithWorkspace } from './utils/appUtils'
+import { invalidateWorkspaceFileCache } from './utils/fileApply'
 
 type FileStates = Map<string, FileTag>
 
@@ -527,6 +528,9 @@ function App(): React.JSX.Element {
   useEffect(() => {
     latestPasteFnRef.current = async (): Promise<void> => {
       try {
+        if (workspace) {
+          invalidateWorkspaceFileCache(workspace)
+        }
         await chatRef.current?.pasteAsAssistant()
         await saveCurrentChat()
 

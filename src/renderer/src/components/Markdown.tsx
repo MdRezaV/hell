@@ -286,8 +286,18 @@ function useFileContent(path: string): FileState | null {
         setRefreshKey((k) => k + 1)
       }
     }
+    const wsHandler = (e: Event): void => {
+      const detail = (e as CustomEvent).detail as { workspace: string }
+      if (detail.workspace === workspace) {
+        setRefreshKey((k) => k + 1)
+      }
+    }
     window.addEventListener('file-content-invalidated', handler)
-    return () => window.removeEventListener('file-content-invalidated', handler)
+    window.addEventListener('workspace-files-invalidated', wsHandler)
+    return () => {
+      window.removeEventListener('file-content-invalidated', handler)
+      window.removeEventListener('workspace-files-invalidated', wsHandler)
+    }
   }, [workspace, path])
 
   useEffect(() => {

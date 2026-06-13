@@ -56,6 +56,15 @@ export function invalidateFileContentCache(workspace: string, path: string): voi
   window.dispatchEvent(new CustomEvent('file-content-invalidated', { detail: { workspace, path } }))
 }
 
+export function invalidateWorkspaceFileCache(workspace: string): void {
+  for (const key of fileContentCache.keys()) {
+    if (key.startsWith(`${workspace}::`)) {
+      fileContentCache.delete(key)
+    }
+  }
+  window.dispatchEvent(new CustomEvent('workspace-files-invalidated', { detail: { workspace } }))
+}
+
 export async function readFile(workspace: string, path: string): Promise<FileState> {
   return (await window.electron.ipcRenderer.invoke(
     'read-file',
