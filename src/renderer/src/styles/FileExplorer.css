@@ -71,7 +71,7 @@
 }
 
 .tree-node {
-  @apply flex items-center py-0.5 pr-2 pl-0 cursor-pointer whitespace-nowrap overflow-hidden text-[12px] leading-5 transition-colors duration-fast rounded-none hover:bg-surface-0 active:bg-surface-1;
+  @apply flex items-center h-full py-0 pr-2 pl-0 cursor-pointer whitespace-nowrap overflow-hidden text-[12px] leading-5 transition-colors duration-fast rounded-none hover:bg-surface-0 active:bg-surface-1;
 }
 
 .tree-chevron {

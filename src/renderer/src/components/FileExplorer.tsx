@@ -429,7 +429,7 @@ function FileExplorer({
   const rowVirtualizer = useVirtualizer({
     count: flatNodes.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 24,
+    estimateSize: () => 20,
     overscan: 10
   })
 
