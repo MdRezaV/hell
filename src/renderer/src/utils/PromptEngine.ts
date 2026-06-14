@@ -123,7 +123,9 @@ export const SYSTEM_PROMPT_INITIAL_MIDDLE = `
 </context>
 
 <user_request>`
-export const SYSTEM_PROMPT_INITIAL_END = `</user_request>`
+export const SYSTEM_PROMPT_INITIAL_END = `</user_request>
+
+<system_reminder>Remember the specified output format. they must be STRICTLY followed without deviation.</system_reminder>`
 
 export const SYSTEM_PROMPT_SUBSEQUENT_START = `<context>`
 export const SYSTEM_PROMPT_SUBSEQUENT_MIDDLE = `</context>
