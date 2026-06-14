@@ -8,6 +8,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'fs'
+import { getEncoding } from 'js-tiktoken'
 import { formatTreeText, readDirTree } from './fsUtils'
 import {
   batchRemoveFileStates,
@@ -41,6 +42,14 @@ function safeHandle(channel: string, fn: (...args: any[]) => any): void {
       throw e
     }
   })
+}
+
+let tiktokenEncoder: ReturnType<typeof getEncoding> | null = null
+function getTiktokenEncoder(): ReturnType<typeof getEncoding> {
+  if (!tiktokenEncoder) {
+    tiktokenEncoder = getEncoding('cl100k_base')
+  }
+  return tiktokenEncoder
 }
 
 export function registerIpcHandlers(): void {
@@ -298,7 +307,9 @@ export function registerIpcHandlers(): void {
   })
 
   safeHandle('count-lines', async (_, workspace: string, relativePaths: string[]) => {
-    let total = 0
+    let totalLines = 0
+    let totalTokens = 0
+    const enc = getTiktokenEncoder()
     for (const rel of relativePaths) {
       const fullPath = join(workspace, rel)
       if (!existsSync(fullPath)) continue
@@ -309,12 +320,13 @@ export function registerIpcHandlers(): void {
         for (let i = 0; i < content.length; i++) {
           if (content[i] === '\n') newlines++
         }
-        total += newlines + 1
+        totalLines += newlines + 1
+        totalTokens += enc.encode(content).length
       } catch (e) {
         log.error('Failed to count lines for file:', rel, e)
       }
     }
-    return total
+    return { lines: totalLines, tokens: totalTokens }
   })
 
   safeHandle('read-directory-tree', async (_, dirPath: string) => {

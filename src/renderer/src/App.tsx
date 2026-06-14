@@ -596,6 +596,7 @@ function App(): React.JSX.Element {
   }, [])
 
   const [lineCount, setLineCount] = useState<number | null>(null)
+  const [tokenCount, setTokenCount] = useState<number | null>(null)
 
   useEffect(() => {
     if (!workspace) return
@@ -606,6 +607,7 @@ function App(): React.JSX.Element {
       if (cancelled) return
       if (selectedAbsolute.length === 0) {
         setLineCount(0)
+        setTokenCount(0)
         return
       }
       const relativePaths = selectedAbsolute.map((abs) => {
@@ -617,12 +619,15 @@ function App(): React.JSX.Element {
         return rel
       })
       try {
-        const total = await window.electron.ipcRenderer.invoke(
+        const result = (await window.electron.ipcRenderer.invoke(
           'count-lines',
           workspace,
           relativePaths
-        )
-        if (!cancelled) setLineCount(total as number)
+        )) as { lines: number; tokens: number }
+        if (!cancelled) {
+          setLineCount(result.lines)
+          setTokenCount(result.tokens)
+        }
       } catch (e) {
         log.error('Failed to count lines:', e)
       }
@@ -644,6 +649,8 @@ function App(): React.JSX.Element {
       chatRef.current?.loadChat([])
       setChatHistoryKey((k) => k + 1)
       setDirStructureTag(null)
+      setLineCount(null)
+      setTokenCount(null)
     } catch (e) {
       log.error('Failed to clear database:', e)
     }
@@ -710,6 +717,7 @@ function App(): React.JSX.Element {
         </div>
         <StatusBar
           lineCount={workspace ? (lineCount ?? 0) : null}
+          tokenCount={workspace ? (tokenCount ?? 0) : null}
           onCopy={handleCopy}
           onPaste={handlePaste}
           onClearDb={handleClearDb}
