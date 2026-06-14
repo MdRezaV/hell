@@ -23,7 +23,7 @@ import Markdown from './Markdown'
 import '../styles/AIChat.css'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
-import { buildPrompt, type FileContext } from '../utils/PromptEngine'
+import { buildPrompt, CHAT_MODES, type FileContext, getModeByLabel } from '../utils/PromptEngine'
 
 export interface MessageVariant {
   content: string
@@ -42,9 +42,7 @@ function generateId(): string {
   return `msg-${Date.now()}-${nextId++}`
 }
 
-type ChatMode = 'Coding' | 'Write Tests' | 'Search For Bugs'
-
-const CHAT_MODES: ChatMode[] = ['Coding', 'Write Tests', 'Search For Bugs']
+type ChatMode = string
 
 function ModeSelector({
   mode,
@@ -71,22 +69,25 @@ function ModeSelector({
       </button>
       {isOpen && (
         <div className="ai-chat-mode-menu" role="listbox">
-          {CHAT_MODES.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={`ai-chat-mode-option ${m === mode ? 'active' : ''}`}
-              role="option"
-              aria-selected={m === mode}
-              onClick={() => {
-                onChange(m)
-                setIsOpen(false)
-              }}
-            >
-              <span>{m}</span>
-              <Check size={13} className="mode-check" />
-            </button>
-          ))}
+          {CHAT_MODES.map((m) => {
+            const label = m.label
+            return (
+              <button
+                key={label}
+                type="button"
+                className={`ai-chat-mode-option ${label === mode ? 'active' : ''}`}
+                role="option"
+                aria-selected={label === mode}
+                onClick={() => {
+                  onChange(label)
+                  setIsOpen(false)
+                }}
+              >
+                <span>{label}</span>
+                <Check size={13} className="mode-check" />
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
@@ -278,7 +279,12 @@ const MessageBubble = memo(function MessageBubble({
 })
 
 export interface AIChatHandle {
-  copyByIndex(index?: number, files?: FileContext[], dirStructure?: string): Promise<boolean>
+  copyByIndex(
+    index?: number,
+    files?: FileContext[],
+    dirStructure?: string,
+    modeLabel?: string
+  ): Promise<boolean>
   pasteAsAssistant(): Promise<boolean>
   getResolvedUserIndex(): number
   getMessages(): ChatMessage[]
@@ -298,7 +304,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const [input, setInput] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0])
+  const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0].label)
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -377,7 +383,8 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       async copyByIndex(
         index?: number,
         files: FileContext[] = [],
-        dirStructure?: string
+        dirStructure?: string,
+        modeLabel?: string
       ): Promise<boolean> {
         let currentMessages = messagesRef.current
         const trimmedInput = inputValueRef.current.trim()
@@ -407,7 +414,8 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
             : index
         const userMsg = updatedUserMessages[resolvedIndex]
         const userContent = userMsg.variants[userMsg.activeVariant].content
-        const promptText = buildPrompt(userContent, resolvedIndex, files, dirStructure)
+        const modeConfig = getModeByLabel(modeLabel || mode)
+        const promptText = buildPrompt(userContent, resolvedIndex, modeConfig, files, dirStructure)
         try {
           await navigator.clipboard.writeText(promptText)
           return true
@@ -448,7 +456,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         }
       }
     }
-  }, [])
+  }, [mode])
 
   const handleSend = (): void => {
     const trimmed = input.trim()

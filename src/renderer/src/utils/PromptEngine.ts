@@ -1,4 +1,25 @@
-export const SYSTEM_PROMPT_INITIAL_START = `<role>
+export interface PromptTemplate {
+  indices?: number | number[] | 'all' | 'default'
+  start: string
+  middle: string
+  end: string
+  reminder?: string
+}
+
+export interface ChatModeConfig {
+  id: string
+  label: string
+  prompts: PromptTemplate[]
+}
+
+export const CHAT_MODES: ChatModeConfig[] = [
+  {
+    id: 'coding',
+    label: 'Coding',
+    prompts: [
+      {
+        indices: 0,
+        start: `<role>
 You are an expert code editing assistant pair-programming with the user to solve software engineering tasks. You may create new codebases, modify or debug existing ones, or answer technical questions. Always prioritize the user's explicit requests while utilizing the provided context (e.g., open files, workspace state).
 </role>
 
@@ -118,21 +139,72 @@ COMMIT: Add config, update README, fix title, and remove legacy files
 </example>
 </output_format>
 
-<context>`
-export const SYSTEM_PROMPT_INITIAL_MIDDLE = `
+<context>`,
+        middle: `
 </context>
 
-<user_request>`
-export const SYSTEM_PROMPT_INITIAL_END = `</user_request>
+<user_request>`,
+        end: `</user_request>
 
 <system_reminder>Remember the specified output format. they must be STRICTLY followed without deviation.</system_reminder>`
+      },
+      {
+        indices: 'default',
+        start: `<context>`,
+        middle: `</context>
 
-export const SYSTEM_PROMPT_SUBSEQUENT_START = `<context>`
-export const SYSTEM_PROMPT_SUBSEQUENT_MIDDLE = `</context>
-<user_request>`
-export const SYSTEM_PROMPT_SUBSEQUENT_END = `</user_request>`
+<user_request>`,
+        end: `</user_request>
 
-export const SYSTEM_REMINDER_OUTPUT_FORMAT = `<system_reminder>Remember the specified output format. they must be STRICTLY followed without deviation.</system_reminder>`
+<system_reminder>Remember the specified output format. they must be STRICTLY followed without deviation.</system_reminder>`
+      }
+    ]
+  }
+]
+
+/*
+
+Examples of flexible configurations:
+
+// Mode with one prompt for all messages
+{
+  id: 'simple',
+  label: 'Simple',
+  prompts: [
+    { start: '...', middle: '...', end: '...' }
+  ]
+}
+
+// Mode with different prompts per index
+{
+  id: 'detailed',
+  label: 'Detailed',
+  prompts: [
+    { indices: 0, start: '...', middle: '...', end: '...' },
+    { indices: 1, start: '...', middle: '...', end: '...' },
+    { indices: 'default', start: '...', middle: '...', end: '...' }
+  ]
+}
+
+// Mode with grouped indices
+{
+  id: 'grouped',
+  label: 'Grouped',
+  prompts: [
+    { indices: 0, start: '...', middle: '...', end: '...' },
+    { indices: [1, 2, 3], start: '...', middle: '...', end: '...' },
+    { indices: 'default', start: '...', middle: '...', end: '...' }
+  ]
+}
+ */
+
+export function getModeByLabel(label: string): ChatModeConfig {
+  const mode = CHAT_MODES.find((m) => m.label === label)
+  if (!mode) {
+    throw new Error(`Unknown chat mode: ${label}`)
+  }
+  return mode
+}
 
 export interface FileContext {
   path: string
@@ -156,18 +228,39 @@ function formatContext(files: FileContext[], dirStructure?: string): string {
   return result
 }
 
+function findPromptTemplate(templates: PromptTemplate[], index: number): PromptTemplate {
+  for (const template of templates) {
+    if (template.indices === undefined || template.indices === 'all') {
+      return template
+    }
+    if (template.indices === index) {
+      return template
+    }
+    if (Array.isArray(template.indices) && template.indices.includes(index)) {
+      return template
+    }
+  }
+
+  const defaultTemplate = templates.find(
+    (t) => t.indices === 'default' || t.indices === undefined || t.indices === 'all'
+  )
+
+  if (!defaultTemplate) {
+    throw new Error('No default prompt template found')
+  }
+
+  return defaultTemplate
+}
+
 export function buildPrompt(
   userMessage: string,
   index: number,
+  mode: ChatModeConfig,
   files: FileContext[] = [],
   dirStructure?: string
 ): string {
   const contextSection = formatContext(files, dirStructure)
-  if (index === 0) {
-    return `${SYSTEM_PROMPT_INITIAL_START}\n${contextSection}\n${SYSTEM_PROMPT_INITIAL_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_INITIAL_END}`
-  }
-  //if (index % 1 == 0) {
-  return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}\n${SYSTEM_REMINDER_OUTPUT_FORMAT}`
-  //}
-  //return `${SYSTEM_PROMPT_SUBSEQUENT_START}\n${contextSection}\n${SYSTEM_PROMPT_SUBSEQUENT_MIDDLE}\n${userMessage}\n${SYSTEM_PROMPT_SUBSEQUENT_END}`
+  const template = findPromptTemplate(mode.prompts, index)
+
+  return `${template.start}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
 }
