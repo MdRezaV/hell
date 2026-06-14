@@ -297,6 +297,26 @@ export function registerIpcHandlers(): void {
     return result
   })
 
+  safeHandle('count-lines', async (_, workspace: string, relativePaths: string[]) => {
+    let total = 0
+    for (const rel of relativePaths) {
+      const fullPath = join(workspace, rel)
+      if (!existsSync(fullPath)) continue
+      try {
+        const content = readFileSync(fullPath, 'utf-8')
+        if (content.length === 0) continue
+        let newlines = 0
+        for (let i = 0; i < content.length; i++) {
+          if (content[i] === '\n') newlines++
+        }
+        total += newlines + 1
+      } catch (e) {
+        log.error('Failed to count lines for file:', rel, e)
+      }
+    }
+    return total
+  })
+
   safeHandle('read-directory-tree', async (_, dirPath: string) => {
     const nodes = await readDirTree(dirPath, [], true)
     const dirName = dirPath.split(/[/\\]/).pop() || dirPath

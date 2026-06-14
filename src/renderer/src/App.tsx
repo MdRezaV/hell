@@ -595,6 +595,44 @@ function App(): React.JSX.Element {
     dirStructureTagRef.current = tag
   }, [])
 
+  const [lineCount, setLineCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!workspace) return
+
+    const selectedAbsolute = [...fileStates.keys()].filter((p) => filePaths.has(p))
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      if (cancelled) return
+      if (selectedAbsolute.length === 0) {
+        setLineCount(0)
+        return
+      }
+      const relativePaths = selectedAbsolute.map((abs) => {
+        let rel = abs
+        if (rel.startsWith(workspace)) {
+          rel = rel.substring(workspace.length)
+          if (rel.startsWith('/') || rel.startsWith('\\')) rel = rel.substring(1)
+        }
+        return rel
+      })
+      try {
+        const total = await window.electron.ipcRenderer.invoke(
+          'count-lines',
+          workspace,
+          relativePaths
+        )
+        if (!cancelled) setLineCount(total as number)
+      } catch (e) {
+        log.error('Failed to count lines:', e)
+      }
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [workspace, fileStates, filePaths])
+
   const handleClearDb = useCallback(async (): Promise<void> => {
     try {
       await window.electron.ipcRenderer.invoke('db:clear-all')
@@ -670,7 +708,12 @@ function App(): React.JSX.Element {
             />
           </div>
         </div>
-        <StatusBar onCopy={handleCopy} onPaste={handlePaste} onClearDb={handleClearDb} />
+        <StatusBar
+          lineCount={workspace ? (lineCount ?? 0) : null}
+          onCopy={handleCopy}
+          onPaste={handlePaste}
+          onClearDb={handleClearDb}
+        />
       </div>
     </WorkspaceContext.Provider>
   )
