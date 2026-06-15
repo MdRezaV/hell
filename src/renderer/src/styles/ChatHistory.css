@@ -31,7 +31,7 @@
 }
 
 .chat-history-search-input:focus {
-  @apply outline-none border-none shadow-none;
+  @apply shadow-none;
 }
 
 .chat-history-search-clear {
@@ -64,10 +64,10 @@
 
 .chat-history-group-chevron {
   @apply flex-shrink-0 text-text-faint transition-transform duration-fast;
-}
 
-.chat-history-group-chevron.collapsed {
-  @apply -rotate-90;
+  &.collapsed {
+    @apply -rotate-90;
+  }
 }
 
 .chat-history-group-title {
@@ -84,18 +84,26 @@
 
 .chat-history-item {
   @apply flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors duration-fast hover:bg-surface-0 text-[12px] min-w-0 border-l-2 border-transparent;
-}
 
-.chat-history-item.active {
-  @apply bg-surface-0 border-l-accent;
+  &.active {
+    @apply bg-surface-0 border-l-accent;
+
+    .chat-history-icon {
+      @apply text-accent;
+    }
+
+    .chat-history-item-title {
+      @apply text-text font-medium;
+    }
+  }
+
+  &:hover .chat-history-delete {
+    @apply opacity-100;
+  }
 }
 
 .chat-history-icon {
   @apply flex-shrink-0 text-text-faint;
-}
-
-.chat-history-item.active .chat-history-icon {
-  @apply text-accent;
 }
 
 .chat-history-item-content {
@@ -104,10 +112,6 @@
 
 .chat-history-item-title {
   @apply text-text-secondary truncate text-[12px] leading-snug;
-}
-
-.chat-history-item.active .chat-history-item-title {
-  @apply text-text font-medium;
 }
 
 .chat-history-item-meta {
@@ -137,10 +141,6 @@
 
 .chat-history-delete {
   @apply inline-flex items-center justify-center p-1 bg-transparent border-none rounded-sm text-text-faint cursor-pointer opacity-0 transition-all duration-fast hover:text-error hover:bg-[rgba(243,139,168,0.1)] flex-shrink-0;
-}
-
-.chat-history-item:hover .chat-history-delete {
-  @apply opacity-100;
 }
 
 @keyframes chat-history-expand {

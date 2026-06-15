@@ -100,12 +100,12 @@
 
 .ai-chat-input-bar-floating .ai-chat-input-wrapper,
 .ai-chat-input-floating {
-  @apply bg-surface-0 border border-border-subtle shadow-sm p-2 px-3 gap-0 rounded-lg transition-colors duration-normal;
+  @apply bg-surface-0 border border-border-subtle shadow-sm p-2 px-3 gap-0 rounded-lg;
 }
 
 .ai-chat-input-bar-floating .ai-chat-input-wrapper:focus-within,
 .ai-chat-input-floating:focus-within {
-  @apply bg-surface-0 border-accent shadow-[0_0_0_var(--focus-ring-width)_rgba(137,180,250,0.15)];
+  @apply bg-surface-0;
 }
 
 .ai-chat-input-bar-floating .ai-chat-input {
@@ -132,12 +132,29 @@
   @apply flex items-center gap-0.5;
 }
 
+.ai-chat-header-actions button,
+.chat-action-btn,
+.chat-variant-nav button {
+  @apply inline-flex items-center justify-center bg-transparent border-none cursor-pointer transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+}
+
 .ai-chat-header-actions button {
-  @apply inline-flex items-center justify-center gap-1 p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer text-[11px] leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply gap-1 p-1 rounded-sm text-text-subtle text-[11px] leading-none;
+}
+
+.ai-chat-header-actions button svg,
+.chat-action-btn svg,
+.chat-variant-nav button svg {
+  @apply flex-shrink-0;
 }
 
 .ai-chat-header-actions button svg {
   @apply w-3.5 h-3.5;
+}
+
+.chat-action-btn svg,
+.chat-variant-nav button svg {
+  @apply w-3 h-3;
 }
 
 .ai-chat-messages {
@@ -207,19 +224,11 @@
 }
 
 .chat-variant-nav button {
-  @apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-xs text-text-faint cursor-pointer transition-colors duration-fast hover:bg-surface-1 hover:text-text disabled:opacity-30 disabled:cursor-not-allowed;
-}
-
-.chat-variant-nav button svg {
-  @apply w-3 h-3;
+  @apply p-0.5 rounded-xs text-text-faint disabled:opacity-30 disabled:cursor-not-allowed;
 }
 
 .chat-action-btn {
-  @apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-xs text-text-faint cursor-pointer transition-colors duration-fast hover:bg-surface-1 hover:text-text;
-}
-
-.chat-action-btn svg {
-  @apply w-3 h-3;
+  @apply p-0.5 rounded-xs text-text-faint;
 }
 
 .chat-edit-area {

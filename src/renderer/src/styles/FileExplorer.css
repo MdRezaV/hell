@@ -34,8 +34,13 @@
   @apply flex items-center gap-0.5;
 }
 
+.explorer-header-actions button,
+.explorer-search-clear {
+  @apply bg-transparent border-none rounded-sm cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+}
+
 .explorer-header-actions button {
-  @apply p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply p-1 text-text-subtle;
 }
 
 .explorer-header-actions button svg {
@@ -59,11 +64,11 @@
 }
 
 .explorer-search-input:focus {
-  @apply outline-none border-none shadow-none;
+  @apply shadow-none;
 }
 
 .explorer-search-clear {
-  @apply inline-flex items-center justify-center p-0.5 bg-transparent border-none rounded-sm text-text-faint cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply inline-flex items-center justify-center p-0.5 text-text-faint;
 }
 
 .explorer-tree {
@@ -74,8 +79,14 @@
   @apply flex items-center h-full py-0 pr-2 pl-0 cursor-pointer whitespace-nowrap overflow-hidden text-[12px] leading-5 transition-colors duration-fast rounded-none hover:bg-surface-0 active:bg-surface-1;
 }
 
+.tree-chevron,
+.tree-checkbox,
+.tree-icon {
+  @apply inline-flex items-center justify-center flex-shrink-0;
+}
+
 .tree-chevron {
-  @apply inline-flex items-center justify-center w-4 h-5 flex-shrink-0 text-text-faint transition-colors duration-fast;
+  @apply w-4 h-5 text-text-faint transition-colors duration-fast;
 }
 
 .tree-node:hover .tree-chevron {
@@ -83,11 +94,11 @@
 }
 
 .tree-checkbox {
-  @apply inline-flex items-center justify-center w-[18px] h-5 flex-shrink-0 mr-1;
+  @apply w-[18px] h-5 mr-1;
 }
 
 .tree-icon {
-  @apply inline-flex items-center justify-center w-4 flex-shrink-0 mr-1.5;
+  @apply w-4 mr-1.5;
 }
 
 .tree-icon.folder {
@@ -99,7 +110,7 @@
 }
 
 .tree-label {
-  @apply overflow-hidden text-ellipsis text-text text-[12px];
+  @apply overflow-hidden text-ellipsis text-text;
 }
 
 .tree-node:hover .tree-label {

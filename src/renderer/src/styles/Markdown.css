@@ -94,17 +94,6 @@
   @apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border-b border-border-subtle;
 }
 
-.md-command-label {
-  @apply inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug
-    bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)];
-}
-
-.md-command-run {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
-    bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
-    hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
-}
-
 .md-command-pre {
   @apply m-0 px-3.5 py-2.5 bg-transparent border-none rounded-none overflow-x-auto text-[12.5px] leading-snug;
 }
@@ -149,6 +138,67 @@
   @apply bg-black/20;
 }
 
+.md-command-label, .md-file-replace-label, .md-file-status-label {
+  @apply inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug;
+}
+
+.md-file-status-label {
+  @apply flex-shrink-0 whitespace-nowrap;
+}
+
+.md-command-label, .md-file-replace-label.new, .md-file-status-label.created {
+  @apply bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)];
+}
+
+.md-file-replace-label.old, .md-file-status-label.deleted {
+  @apply bg-[rgba(243,139,168,0.12)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)];
+}
+
+.md-file-status-label.error {
+  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border border-[rgba(250,179,135,0.3)];
+}
+
+.md-file-status-label.moved {
+  @apply bg-[rgba(137,180,250,0.12)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)];
+}
+
+.md-file-status-label.task {
+  @apply bg-[rgba(168,85,247,0.12)] text-[#a855f7] border border-[rgba(168,85,247,0.3)];
+}
+
+.md-command-run, .md-file-apply, .md-apply-all {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
+    bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
+    hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
+}
+
+.md-file-apply.applied, .md-apply-all.applied, .md-file-include-add.added {
+  @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
+}
+
+.md-file-apply.error {
+  @apply bg-[rgba(243,139,168,0.15)] text-[#f38ba8] border-[rgba(243,139,168,0.4)] cursor-default;
+}
+
+.md-apply-all.warning {
+  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border-[rgba(250,179,135,0.3)]
+    hover:bg-[rgba(250,179,135,0.2)] hover:border-[rgba(250,179,135,0.5)];
+}
+
+.md-apply-all:disabled {
+  @apply opacity-60 cursor-default;
+}
+
+.md-file-copy, .md-commit-copy {
+  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
+    bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
+    hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
+}
+
+.md-file-copy.copied, .md-commit-copy.copied {
+  @apply bg-[rgba(34,197,94,0.15)] text-[#22c55e] border-[rgba(34,197,94,0.4)];
+}
+
 .md-file-block {
   @apply bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
 }
@@ -183,30 +233,6 @@
 
 .md-file-path-segment:last-child {
   @apply text-text font-bold;
-}
-
-.md-file-copy {
-  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
-    bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
-    hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
-}
-
-.md-file-copy.copied {
-  @apply bg-[rgba(34,197,94,0.15)] text-[#22c55e] border-[rgba(34,197,94,0.4)];
-}
-
-.md-file-apply {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
-    bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
-    hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
-}
-
-.md-file-apply.applied {
-  @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
-}
-
-.md-file-apply.error {
-  @apply bg-[rgba(243,139,168,0.15)] text-[#f38ba8] border-[rgba(243,139,168,0.4)] cursor-default;
 }
 
 .md-file-code {
@@ -249,16 +275,6 @@
   @apply flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-text;
 }
 
-.md-commit-copy {
-  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
-    bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
-    hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
-}
-
-.md-commit-copy.copied {
-  @apply bg-[rgba(34,197,94,0.15)] text-[#22c55e] border-[rgba(34,197,94,0.4)];
-}
-
 .md-file-replace-block {
   @apply w-full min-w-0;
 }
@@ -271,56 +287,12 @@
   @apply flex-1 min-w-0 flex flex-col bg-background-mute;
 }
 
-.md-file-diff-side.old {
-  @apply bg-[rgba(243,139,168,0.05)];
-}
-
-.md-file-diff-side.new {
-  @apply bg-[rgba(166,227,161,0.05)];
-}
-
 .md-file-diff-divider {
   @apply w-px flex-shrink-0 bg-border-subtle self-stretch;
 }
 
 .md-file-diff-header {
   @apply flex items-center justify-between p-1.5 gap-2 border-b border-dashed border-border-subtle;
-}
-
-.md-file-replace-label {
-  @apply inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug;
-}
-
-.md-file-replace-label.old {
-  @apply text-[#f38ba8] bg-[rgba(243,139,168,0.12)] border border-[rgba(243,139,168,0.3)];
-}
-
-.md-file-replace-label.new {
-  @apply text-[#22c55e] bg-[rgba(34,197,94,0.12)] border border-[rgba(34,197,94,0.3)];
-}
-
-.md-file-status-label {
-  @apply inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug flex-shrink-0 whitespace-nowrap;
-}
-
-.md-file-status-label.created {
-  @apply bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)];
-}
-
-.md-file-status-label.deleted {
-  @apply bg-[rgba(243,139,168,0.12)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)];
-}
-
-.md-file-status-label.error {
-  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border border-[rgba(250,179,135,0.3)];
-}
-
-.md-file-status-label.moved {
-  @apply bg-[rgba(137,180,250,0.12)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)];
-}
-
-.md-file-status-label.task {
-  @apply bg-[rgba(168,85,247,0.12)] text-[#a855f7] border border-[rgba(168,85,247,0.3)];
 }
 
 .md-file-move-arrow {
@@ -344,6 +316,7 @@
   @apply bg-transparent;
 }
 
+.md-file-diff-side.old,
 .md-file-diff-side.old .md-file-diff-code {
   @apply bg-[rgba(243,139,168,0.05)];
 }
@@ -352,6 +325,7 @@
   @apply bg-[rgba(243,139,168,0.05)] border-r-[rgba(243,139,168,0.2)];
 }
 
+.md-file-diff-side.new,
 .md-file-diff-side.new .md-file-diff-code {
   @apply bg-[rgba(166,227,161,0.05)];
 }
@@ -372,39 +346,16 @@
   @apply !m-0 !px-3.5 !py-2.5 !bg-transparent !border-none !rounded-none text-[12.5px] leading-snug;
 }
 
-.md-command-syntax code {
-  @apply !font-[inherit] !text-inherit !leading-[inherit];
-}
-
 .md-syntax-block {
   @apply !m-0 !px-3.5 !py-3 !bg-background-mute !border !border-border-subtle !rounded-md text-[12px] leading-snug;
 }
 
-.md-syntax-block code {
+.md-command-syntax code, .md-syntax-block code {
   @apply !font-[inherit] !text-inherit !leading-[inherit];
 }
 
 .md-apply-all-bar {
   @apply flex justify-end mt-3 pt-2 border-t border-border-subtle;
-}
-
-.md-apply-all {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
-    bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
-    hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
-}
-
-.md-apply-all.warning {
-  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border-[rgba(250,179,135,0.3)]
-    hover:bg-[rgba(250,179,135,0.2)] hover:border-[rgba(250,179,135,0.5)];
-}
-
-.md-apply-all.applied {
-  @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
-}
-
-.md-apply-all:disabled {
-  @apply opacity-60 cursor-default;
 }
 
 .md-file-include {
@@ -421,10 +372,6 @@
     hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
 }
 
-.md-file-include-add.added {
-  @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
-}
-
 .md-file-include-add.not-found {
   @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border-[rgba(250,179,135,0.3)] cursor-default;
 }
@@ -436,8 +383,6 @@
 .md-task-block {
   @apply border-border bg-background-soft;
 }
-
-
 
 .md-task-file-count {
   @apply text-[11px] text-text-muted ml-2 font-mono;
