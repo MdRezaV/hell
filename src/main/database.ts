@@ -121,6 +121,12 @@ function createTables(d: Database.Database): void {
       DEFAULT
       ''
     );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_sessions_ws_updated
+      ON chat_sessions(workspace_path, updated_at);
+
+    CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated
+      ON chat_sessions(updated_at);
   `)
 }
 
