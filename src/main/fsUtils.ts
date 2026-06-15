@@ -172,14 +172,18 @@ export interface FileNode {
 export async function readDirTree(
   path: string,
   parentRules: IgnoreRule[],
-  isRoot: boolean
+  isRoot: boolean,
+  rootDir: string = path
 ): Promise<FileNode[]> {
   const currentRules = await loadIgnoreRules(path, parentRules, isRoot)
   const mergedIg = mergeIgnoreRules(currentRules)
   try {
     const entries = await fsp.readdir(path, { withFileTypes: true })
     const filtered = entries.filter((entry) => {
-      const testPath = entry.isDirectory() ? `${entry.name}/` : entry.name
+      const fullPath = join(path, entry.name)
+      const rel = relative(rootDir, fullPath).replace(/\\/g, '/')
+      if (!rel || rel.startsWith('..')) return true
+      const testPath = entry.isDirectory() ? `${rel}/` : rel
       return !mergedIg.ignores(testPath)
     })
 
@@ -187,7 +191,7 @@ export async function readDirTree(
       limit(async () => {
         const fullPath = join(path, entry.name)
         if (entry.isDirectory()) {
-          const children = await readDirTree(fullPath, currentRules, false)
+          const children = await readDirTree(fullPath, currentRules, false, rootDir)
           return {
             name: entry.name,
             path: fullPath,

@@ -270,8 +270,8 @@ export function registerIpcHandlers(): void {
     deleteChatSession(id)
   })
 
-  safeHandle('read-directory', async (_, dirPath: string) => {
-    return await readDirTree(dirPath, [], true)
+  safeHandle('read-directory', async (_, dirPath: string, rootDir?: string) => {
+    return await readDirTree(dirPath, [], true, rootDir ?? dirPath)
   })
 
   safeHandle('search-file-content', async (_, filePaths: string[], query: string) => {
@@ -373,8 +373,9 @@ export function registerIpcHandlers(): void {
     return { lines: totalLines, tokens: totalTokens }
   })
 
-  safeHandle('read-directory-tree', async (_, dirPath: string) => {
-    const nodes = await readDirTree(dirPath, [], true)
+  safeHandle('read-directory-tree', async (_, dirPath: string, rootDir?: string) => {
+    const effectiveRoot = rootDir ?? dirPath
+    const nodes = await readDirTree(dirPath, [], true, effectiveRoot)
     const dirName = dirPath.split(/[/\\]/).pop() || dirPath
     return formatTreeText(dirName, nodes)
   })
