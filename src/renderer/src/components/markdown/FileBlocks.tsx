@@ -1,5 +1,19 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, Copy, Play, X } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  CircleAlert,
+  Copy,
+  FilePlus,
+  ListChecks,
+  MoveRight,
+  Play,
+  Plus,
+  Replace,
+  Search,
+  Trash2,
+  X
+} from 'lucide-react'
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { useScrollSync } from '../../hooks/useScrollSync'
 import { useFileContent } from '../../hooks/useFileContent'
@@ -43,7 +57,14 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
       onClick={handleClick}
       disabled={status === 'added'}
     >
-      {label}
+      {status === 'added' ? (
+        <Check size={10} />
+      ) : status === 'notFound' ? (
+        <X size={10} />
+      ) : (
+        <Plus size={10} />
+      )}
+      <span>{label}</span>
     </button>
   )
 }
@@ -113,7 +134,12 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
     <div className="md-file-block md-file-replace-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          {notFound && <span className="md-file-status-label error">NOT FOUND</span>}
+          {notFound && (
+            <span className="md-file-status-label error">
+              <CircleAlert size={12} />
+              NOT FOUND
+            </span>
+          )}
           <FilePathDisplay path={path} />
         </div>
         <div className="md-file-header-actions">
@@ -140,7 +166,10 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
                 <span>Error</span>
               </>
             ) : (
-              <span>Apply</span>
+              <>
+                <Check size={12} />
+                <span>Apply</span>
+              </>
             )}
           </button>
         </div>
@@ -148,7 +177,10 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
       <div className="md-file-diff">
         <div className="md-file-diff-side old">
           <div className="md-file-diff-header">
-            <span className="md-file-replace-label old">SEARCH</span>
+            <span className="md-file-replace-label old">
+              <Search size={12} />
+              SEARCH
+            </span>
             <button
               type="button"
               className={`md-file-copy${copiedOld ? ' copied' : ''}`}
@@ -174,7 +206,10 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
         <div className="md-file-diff-divider" />
         <div className="md-file-diff-side new">
           <div className="md-file-diff-header">
-            <span className="md-file-replace-label new">REPLACE</span>
+            <span className="md-file-replace-label new">
+              <Replace size={12} />
+              REPLACE
+            </span>
             <button
               type="button"
               className={`md-file-copy${copiedNew ? ' copied' : ''}`}
@@ -228,7 +263,10 @@ export const FileMoveBlock = memo(function FileMoveBlock({
     <div className="md-file-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          <span className="md-file-status-label moved">MOVED</span>
+          <span className="md-file-status-label moved">
+            <MoveRight size={12} />
+            MOVED
+          </span>
           <FilePathDisplay path={oldPath} />
           <ArrowRight size={16} className="md-file-move-arrow" />
           <FilePathDisplay path={newPath} />
@@ -257,7 +295,10 @@ export const FileMoveBlock = memo(function FileMoveBlock({
                 <span>Error</span>
               </>
             ) : (
-              <span>Apply</span>
+              <>
+                <Check size={12} />
+                <span>Apply</span>
+              </>
             )}
           </button>
         </div>
@@ -312,7 +353,10 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
       <div className="md-file-block">
         <div className="md-file-header">
           <div className="md-file-header-left">
-            <span className="md-file-status-label error">NOT FOUND</span>
+            <span className="md-file-status-label error">
+              <CircleAlert size={12} />
+              NOT FOUND
+            </span>
             <FilePathDisplay path={path} />
           </div>
         </div>
@@ -327,7 +371,10 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
     <div className="md-file-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          <span className="md-file-status-label deleted">DELETED</span>
+          <span className="md-file-status-label deleted">
+            <Trash2 size={12} />
+            DELETED
+          </span>
           <FilePathDisplay path={path} />
         </div>
         <div className="md-file-header-actions">
@@ -338,7 +385,7 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
             title={copied ? 'Copied' : 'Copy content'}
             aria-label={copied ? 'Copied' : 'Copy content'}
           >
-            {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+            {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>
           <button
             type="button"
@@ -363,7 +410,10 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
                 <span>Error</span>
               </>
             ) : (
-              <span>Apply</span>
+              <>
+                <Check size={12} />
+                <span>Apply</span>
+              </>
             )}
           </button>
         </div>
@@ -406,7 +456,12 @@ export const FileBlock = memo(function FileBlock({
     <div className="md-file-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          {isCreated && <span className="md-file-status-label created">CREATED</span>}
+          {isCreated && (
+            <span className="md-file-status-label created">
+              <FilePlus size={12} />
+              CREATED
+            </span>
+          )}
           <FilePathDisplay path={path} />
         </div>
         <div className="md-file-header-actions">
@@ -417,7 +472,7 @@ export const FileBlock = memo(function FileBlock({
             title={copied ? 'Copied' : 'Copy code'}
             aria-label={copied ? 'Copied' : 'Copy code'}
           >
-            {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+            {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>
           <button
             type="button"
@@ -442,7 +497,10 @@ export const FileBlock = memo(function FileBlock({
                 <span>Error</span>
               </>
             ) : (
-              <span>Apply</span>
+              <>
+                <Check size={12} />
+                <span>Apply</span>
+              </>
             )}
           </button>
         </div>
@@ -520,7 +578,10 @@ export const TaskBlock = memo(function TaskBlock({
       ))}
       <div className="md-file-header">
         <div className="md-file-header-left">
-          <span className="md-file-status-label task">TASK {taskId}</span>
+          <span className="md-file-status-label task">
+            <ListChecks size={12} />
+            TASK {taskId}
+          </span>
           <span className="md-task-file-count" title={files.join(', ')}>
             {files.length} file{files.length !== 1 ? 's' : ''}
           </span>

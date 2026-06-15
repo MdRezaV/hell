@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useRef } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Check, Copy, Play } from 'lucide-react'
+import { Check, Copy, Play, Terminal } from 'lucide-react'
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { normalizeLineEndings } from '../../utils/markdownParser'
 
@@ -82,7 +82,10 @@ export const CommandBlock = memo(function CommandBlock({
   return (
     <div className="md-command-block">
       <div className="md-command-header">
-        <span className="md-command-label">Command</span>
+        <span className="md-command-label">
+          <Terminal size={12} />
+          Command
+        </span>
         <button
           type="button"
           className="md-command-run"
@@ -126,12 +129,12 @@ export const CommitBlock = memo(function CommitBlock({
       </span>
       <button
         type="button"
-        className="md-commit-copy"
+        className={`md-commit-copy${copied ? ' copied' : ''}`}
         onClick={handleCopy}
         title={copied ? 'Copied' : 'Copy commit message'}
         aria-label={copied ? 'Copied' : 'Copy commit message'}
       >
-        {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+        {copied ? <Check size={12} /> : <Copy size={12} />}
       </button>
     </div>
   )

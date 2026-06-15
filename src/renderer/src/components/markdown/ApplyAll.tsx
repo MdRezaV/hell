@@ -96,7 +96,7 @@ export function ApplyAllBar(): React.JSX.Element | null {
         onClick={handleApplyAll}
         disabled={disabled}
       >
-        {allApplied && <Check size={12} />}
+        <Check size={12} />
         <span>{label}</span>
       </button>
     </div>
