@@ -417,35 +417,38 @@ export function pruneWorkspaceState(
   validDirPaths: string[]
 ): void {
   const d = getDb()
-  const validRelFiles = new Set(validFilePaths.map((p) => toRelative(workspacePath, p)))
-  const validRelDirs = new Set(validDirPaths.map((p) => toRelative(workspacePath, p)))
-
-  const fileStates = d
-    .prepare('SELECT relative_path FROM file_states WHERE workspace_path = ?')
-    .all(workspacePath) as Array<{ relative_path: string }>
-  const expandedDirs = d
-    .prepare('SELECT relative_path FROM expanded_dirs WHERE workspace_path = ?')
-    .all(workspacePath) as Array<{ relative_path: string }>
+  const validRelFiles = validFilePaths.map((p) => toRelative(workspacePath, p))
+  const validRelDirs = validDirPaths.map((p) => toRelative(workspacePath, p))
 
   const tx = d.transaction(() => {
-    const delFile = d.prepare(
-      'DELETE FROM file_states WHERE workspace_path = ? AND relative_path = ?'
-    )
-    const delDir = d.prepare(
-      'DELETE FROM expanded_dirs WHERE workspace_path = ? AND relative_path = ?'
-    )
+    d.exec(`CREATE TEMP TABLE temp_valid_files (relative_path TEXT PRIMARY KEY)`)
+    d.exec(`CREATE TEMP TABLE temp_valid_dirs (relative_path TEXT PRIMARY KEY)`)
 
-    for (const row of fileStates) {
-      if (!validRelFiles.has(row.relative_path)) {
-        delFile.run(workspacePath, row.relative_path)
-      }
+    const insertFile = d.prepare('INSERT INTO temp_valid_files (relative_path) VALUES (?)')
+    for (const rel of validRelFiles) {
+      insertFile.run(rel)
     }
 
-    for (const row of expandedDirs) {
-      if (!validRelDirs.has(row.relative_path)) {
-        delDir.run(workspacePath, row.relative_path)
-      }
+    const insertDir = d.prepare('INSERT INTO temp_valid_dirs (relative_path) VALUES (?)')
+    for (const rel of validRelDirs) {
+      insertDir.run(rel)
     }
+
+    d.prepare(
+      `DELETE FROM file_states 
+       WHERE workspace_path = ? 
+       AND relative_path NOT IN (SELECT relative_path FROM temp_valid_files)`
+    ).run(workspacePath)
+
+    d.prepare(
+      `DELETE FROM expanded_dirs 
+       WHERE workspace_path = ? 
+       AND relative_path NOT IN (SELECT relative_path FROM temp_valid_dirs)`
+    ).run(workspacePath)
+
+    d.exec(`DROP TABLE temp_valid_files`)
+    d.exec(`DROP TABLE temp_valid_dirs`)
   })
+
   tx()
 }
