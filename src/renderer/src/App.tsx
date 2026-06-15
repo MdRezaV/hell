@@ -603,6 +603,150 @@ function App(): React.JSX.Element {
     dirStructureTagRef.current = tag
   }, [])
 
+  useEffect(() => {
+    const handleTaskRun = async (e: Event): Promise<void> => {
+      const detail = (e as CustomEvent).detail as { files: string[]; description: string }
+      if (!detail || !workspace) return
+
+      const { files: taskFiles, description } = detail
+
+      // 1. Match files
+      const matchedPaths: string[] = []
+      for (const tf of taskFiles) {
+        const normTf = tf.replace(/\\/g, '/').replace(/^\//, '')
+        let bestMatch: string | null = null
+        let bestLen = -1
+        for (const p of filePaths) {
+          const normP = p.replace(/\\/g, '/')
+          if (normP === normTf || normP.endsWith('/' + normTf) || normP.endsWith('\\' + normTf)) {
+            if (normP.length > bestLen) {
+              bestMatch = p
+              bestLen = normP.length
+            }
+          }
+        }
+        if (bestMatch) matchedPaths.push(bestMatch)
+      }
+
+      // 2. Reset chat & states (similar to handleNewChat)
+      isNewChatRef.current = true
+      try {
+        const currentMessages = chatRef.current?.getMessages() ?? []
+        const prevActiveChatId = activeChatIdRef.current
+        const savedDirStructureTag = dirStructureTagRef.current ?? ''
+        chatRef.current?.loadChat([])
+        copySnapshotRef.current = new Set()
+        setDirStructureTag('PND')
+        dirStructureTagRef.current = 'PND'
+        setActiveChatId(null)
+
+        if (currentMessages.length > 0) {
+          const title = deriveTitle(currentMessages)
+          const ws = workspaceRef.current
+          const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
+          const ed = serializeExpandedDirs(expandedDirsRef.current)
+          if (prevActiveChatId) {
+            await window.electron.ipcRenderer.invoke(
+              'db:update-chat-session',
+              prevActiveChatId,
+              title,
+              JSON.stringify(currentMessages),
+              fs,
+              ed,
+              savedDirStructureTag
+            )
+          } else {
+            await window.electron.ipcRenderer.invoke(
+              'db:create-chat-session',
+              ws,
+              title,
+              JSON.stringify(currentMessages),
+              fs,
+              ed,
+              savedDirStructureTag
+            )
+          }
+        }
+        setChatHistoryKey((k) => k + 1)
+
+        // 3. Set file states
+        if (filePaths.size > 0) {
+          await window.electron.ipcRenderer.invoke('db:batch-remove-file-states', workspace, [
+            ...filePaths
+          ])
+        }
+
+        const nextFileStates = new Map<string, FileTag>()
+        for (const p of matchedPaths) {
+          nextFileStates.set(p, 'PND')
+        }
+        setFileStates(nextFileStates)
+
+        if (matchedPaths.length > 0) {
+          await window.electron.ipcRenderer.invoke(
+            'db:batch-set-file-states',
+            workspace,
+            matchedPaths.map((p) => ({ absolutePath: p, tag: 'PND' }))
+          )
+        }
+
+        // 4. Read files and run task
+        const pendingFilesPromises = matchedPaths.map(async (absolutePath) => {
+          let relativePath = absolutePath
+          if (relativePath.startsWith(workspace)) {
+            relativePath = relativePath.substring(workspace.length)
+            if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+              relativePath = relativePath.substring(1)
+            }
+          }
+          const res: { exists: boolean; error: boolean; content: string | null } =
+            await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
+          if (!res.exists) return null
+          if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
+          if (res.content !== null) return { path: relativePath, content: res.content }
+          return null
+        })
+        const results = await Promise.all(pendingFilesPromises)
+        const pendingFiles = results.filter(
+          (f): f is { path: string; content: string } => f !== null
+        )
+
+        const dirStructure = await window.electron.ipcRenderer.invoke(
+          'read-directory-tree',
+          workspace
+        )
+
+        await chatRef.current?.runTask(description, pendingFiles, dirStructure)
+        copySnapshotRef.current = new Set(matchedPaths)
+
+        // Transition to INQ
+        setFileStates((prev) => {
+          const next = new Map(prev)
+          for (const p of matchedPaths) next.set(p, 'INQ')
+          return next
+        })
+        if (matchedPaths.length > 0) {
+          await window.electron.ipcRenderer.invoke(
+            'db:batch-set-file-states',
+            workspace,
+            matchedPaths.map((p) => ({ absolutePath: p, tag: 'INQ' }))
+          )
+        }
+        setDirStructureTag('INQ')
+        dirStructureTagRef.current = 'INQ'
+      } catch (err) {
+        log.error('Failed to run task:', err)
+      } finally {
+        isNewChatRef.current = false
+      }
+    }
+
+    window.addEventListener('task-run', handleTaskRun)
+    return () => {
+      window.removeEventListener('task-run', handleTaskRun)
+    }
+  }, [workspace, filePaths, serializeCurrentFileStates, serializeExpandedDirs])
+
   const [lineCount, setLineCount] = useState<number | null>(null)
   const [tokenCount, setTokenCount] = useState<number | null>(null)
 

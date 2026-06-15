@@ -58,7 +58,7 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
 }
 
 const BLOCK_MARKER_RE =
-  /^\s*\[FILE .+]\s*$|^\s*\[DELETE FILE .+]\s*$|^\s*\[MOVE FILE FROM .+ TO .+]\s*$|^\s*COMMIT: .+\s*$/
+  /^\s*\[FILE .+]\s*$|^\s*\[DELETE FILE .+]\s*$|^\s*\[MOVE FILE FROM .+ TO .+]\s*$|^\s*\[TASK\s+[^\]]+]\s*$|^\s*COMMIT: .+\s*$/
 const FILE_END_RE = /^\s*\[END]\s*$/
 const SEARCH_RE = /^\s*\[SEARCH]\s*$/
 const REPLACE_RE = /^\s*\[REPLACE]\s*$/
@@ -253,6 +253,27 @@ function preprocessImpl(
       continue
     }
 
+    // [TASK id]
+    const taskMatch = /^\s*\[TASK\s+([^\]]+)]\s*$/.exec(line)
+    if (taskMatch) {
+      const taskId = taskMatch[1].trim()
+      i++
+      const contentLines: string[] = []
+      while (i < lines.length) {
+        if (FILE_END_RE.test(lines[i])) {
+          i++
+          break
+        }
+        if (BLOCK_MARKER_RE.test(lines[i])) break
+        contentLines.push(lines[i])
+        i++
+      }
+      const code = contentLines.join('\n')
+      const fenced = wrapInFence(code, `task:${taskId}`)
+      result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+      continue
+    }
+
     // COMMIT: message
     const commitMatch = /^\s*COMMIT: (.+)\s*$/.exec(line)
     if (commitMatch) {
@@ -374,7 +395,7 @@ function _findLastSafeBoundary(content: string): number {
     const line = lines[i]
 
     if (!inFence && !inFileBlock && !inOrphanSearch) {
-      if (/^\s*\[FILE .+]\s*$/.test(line)) {
+      if (/^\s*\[FILE .+]\s*$/.test(line) || /^\s*\[TASK\s+[^\]]+]\s*$/.test(line)) {
         inFileBlock = true
       } else if (/^\s*\[SEARCH]\s*$/.test(line)) {
         inOrphanSearch = true

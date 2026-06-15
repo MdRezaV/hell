@@ -289,6 +289,7 @@ export interface AIChatHandle {
   getResolvedUserIndex(): number
   getMessages(): ChatMessage[]
   loadChat(messages: ChatMessage[]): void
+  runTask(description: string, files: FileContext[], dirStructure?: string): Promise<boolean>
 }
 
 interface AIChatProps {
@@ -416,6 +417,33 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         const userContent = userMsg.variants[userMsg.activeVariant].content
         const modeConfig = getModeByLabel(modeLabel || mode)
         const promptText = buildPrompt(userContent, resolvedIndex, modeConfig, files, dirStructure)
+        try {
+          await navigator.clipboard.writeText(promptText)
+          return true
+        } catch {
+          return false
+        }
+      },
+      async runTask(
+        description: string,
+        files: FileContext[],
+        dirStructure?: string
+      ): Promise<boolean> {
+        setMode('Coding')
+        const userMessage: ChatMessage = {
+          id: generateId(),
+          role: 'user',
+          variants: [{ content: description, timestamp: new Date() }],
+          activeVariant: 0
+        }
+        const newMessages = [...messagesRef.current, userMessage]
+        setMessages(newMessages)
+        messagesRef.current = newMessages
+        setIsAwaitingResponse(true)
+
+        const modeConfig = getModeByLabel('Coding')
+        const userCount = newMessages.filter((m) => m.role === 'user').length
+        const promptText = buildPrompt(description, userCount - 1, modeConfig, files, dirStructure)
         try {
           await navigator.clipboard.writeText(promptText)
           return true

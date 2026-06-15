@@ -1043,6 +1043,80 @@ function getLanguageFromPath(filePath: string): string {
   return result
 }
 
+const TaskBlock = memo(function TaskBlock({
+  taskId,
+  files,
+  description
+}: {
+  taskId: string
+  files: string[]
+  description: string
+}): React.JSX.Element {
+  const { copied, copy } = useCopyToClipboard()
+
+  const handleCopy = useCallback(async (): Promise<void> => {
+    await copy(description)
+  }, [copy, description])
+
+  const handleRun = useCallback((): void => {
+    window.dispatchEvent(new CustomEvent('task-run', { detail: { files, description } }))
+  }, [files, description])
+
+  return (
+    <div className="md-file-block border-border bg-background-soft overflow-hidden">
+      <div className="md-file-header">
+        <div className="md-file-header-left">
+          <span
+            className="md-file-status-label"
+            style={{
+              background: 'rgba(168, 85, 247, 0.15)',
+              color: '#a855f7',
+              border: '1px solid rgba(168, 85, 247, 0.3)'
+            }}
+          >
+            TASK {taskId}
+          </span>
+          <span className="text-[11px] text-text-muted ml-2 font-mono" title={files.join(', ')}>
+            {files.length} file{files.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div className="md-file-header-actions">
+          <button
+            type="button"
+            className={`md-file-copy${copied ? ' copied' : ''}`}
+            onClick={handleCopy}
+            title={copied ? 'Copied' : 'Copy description'}
+            aria-label={copied ? 'Copied' : 'Copy description'}
+          >
+            {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+          </button>
+          <button
+            type="button"
+            className="md-file-apply"
+            style={{
+              background: 'rgba(34, 197, 94, 0.1)',
+              color: '#22c55e',
+              border: '1px solid rgba(34, 197, 94, 0.2)'
+            }}
+            onClick={handleRun}
+            title="Run task"
+          >
+            <Play size={12} />
+            <span>Run</span>
+          </button>
+        </div>
+      </div>
+      <div className="p-3 text-[13px] leading-relaxed text-text-primary border-t border-border bg-background">
+        {description.split('\n').map((line, i) => (
+          <p key={i} className={i === 0 ? '' : 'mt-2'}>
+            {line || '\u00A0'}
+          </p>
+        ))}
+      </div>
+    </div>
+  )
+})
+
 const CommitBlock = memo(function CommitBlock({ code }: { code: string }): React.JSX.Element {
   const { copied, copy } = useCopyToClipboard()
   const handleCopy = useCallback(async (): Promise<void> => {
@@ -1105,6 +1179,9 @@ const markdownComponents: Components = {
           } else if (childProps.className.startsWith('language-file:')) {
             filePath = childProps.className.slice('language-file:'.length)
             language = 'file'
+          } else if (childProps.className.startsWith('language-task:')) {
+            filePath = childProps.className.slice('language-task:'.length)
+            language = 'task'
           } else {
             const match = /language-(\w+)/.exec(childProps.className)
             if (match) language = match[1]
@@ -1113,6 +1190,30 @@ const markdownComponents: Components = {
         codeText = extractText(childProps.children).replace(/\n$/, '')
       }
     })
+
+    if (filePath && language === 'task') {
+      const lines = codeText.split('\n')
+      let filesStr = ''
+      const descLines: string[] = []
+      for (const l of lines) {
+        if (/^Files\s*:/i.test(l)) {
+          filesStr = l.replace(/^Files\s*:\s*/i, '').trim()
+        } else if (/^Description\s*:/i.test(l)) {
+          descLines.push(l.replace(/^Description\s*:\s*/i, '').trim())
+        } else {
+          descLines.push(l)
+        }
+      }
+      const description = descLines
+        .join('\n')
+        .replace(/\[END]\s*$/, '')
+        .trim()
+      const files = filesStr
+        .split(',')
+        .map((f) => f.trim())
+        .filter(Boolean)
+      return <TaskBlock taskId={filePath} files={files} description={description} />
+    }
 
     if (filePath) {
       if (language === 'file-replace') {
