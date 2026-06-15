@@ -29,7 +29,7 @@ import {
 import { useWorkspace } from '../WorkspaceContext'
 import { useFileContent } from '../hooks/useFileContent'
 import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
-import { useApplyRegistration } from './markdown/applyAll'
+import { ApplyBlockStatus, useApplyRegistration } from './markdown/applyAll'
 import { CommandBlock, CommitBlock, GenericCodeBlock, LinesDisplay } from './markdown/CodeBlocks'
 
 interface MarkdownProps {
