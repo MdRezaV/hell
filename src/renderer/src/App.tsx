@@ -376,7 +376,7 @@ function App(): React.JSX.Element {
 
         // 3. Prepare context and copy
         let dirStructure: string | undefined
-        if (dirStructureTag !== null) {
+        if (dirStructureTag !== null && dirStructureTag !== 'ADD') {
           dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
           if (dirStructureTag === 'PND') {
             setDirStructureTag('INQ')
