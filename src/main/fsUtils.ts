@@ -187,28 +187,29 @@ export async function readDirTree(
       return !mergedIg.ignores(testPath)
     })
 
-    const promises = filtered.map((entry) =>
-      limit(async () => {
-        const fullPath = join(path, entry.name)
-        if (entry.isDirectory()) {
-          const children = await readDirTree(fullPath, currentRules, false, rootDir)
-          return {
-            name: entry.name,
-            path: fullPath,
-            type: 'directory' as const,
-            children
-          } as FileNode
-        } else {
-          const bin = await isBinaryFile(fullPath)
-          return {
-            name: entry.name,
-            path: fullPath,
-            type: 'file' as const,
-            isBinary: bin
-          } as FileNode
-        }
+    const promises = filtered.map((entry) => {
+      const fullPath = join(path, entry.name)
+      if (entry.isDirectory()) {
+        return readDirTree(fullPath, currentRules, false, rootDir).then(
+          (children) =>
+            ({
+              name: entry.name,
+              path: fullPath,
+              type: 'directory' as const,
+              children
+            }) as FileNode
+        )
+      }
+      return limit(async () => {
+        const bin = await isBinaryFile(fullPath)
+        return {
+          name: entry.name,
+          path: fullPath,
+          type: 'file' as const,
+          isBinary: bin
+        } as FileNode
       })
-    )
+    })
 
     return await Promise.all(promises)
   } catch (e) {
