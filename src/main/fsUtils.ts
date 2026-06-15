@@ -1,7 +1,10 @@
 import { join, relative } from 'path'
 import { promises as fsp } from 'fs'
 import ignore, { type Ignore } from 'ignore'
+import pLimit from 'p-limit'
 import { log } from './logger'
+
+const limit = pLimit(50)
 
 export interface IgnoreRule {
   dir: string
@@ -172,28 +175,31 @@ export async function readDirTree(
       const fullPath = join(path, entry.name)
       return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
     })
-    const results: FileNode[] = []
-    for (const entry of filtered) {
-      const fullPath = join(path, entry.name)
-      if (entry.isDirectory()) {
-        const children = await readDirTree(fullPath, currentRules, false)
-        results.push({
-          name: entry.name,
-          path: fullPath,
-          type: 'directory' as const,
-          children
-        })
-      } else {
-        const bin = await isBinaryFile(fullPath)
-        results.push({
-          name: entry.name,
-          path: fullPath,
-          type: 'file' as const,
-          isBinary: bin
-        })
-      }
-    }
-    return results
+
+    const promises = filtered.map((entry) =>
+      limit(async () => {
+        const fullPath = join(path, entry.name)
+        if (entry.isDirectory()) {
+          const children = await readDirTree(fullPath, currentRules, false)
+          return {
+            name: entry.name,
+            path: fullPath,
+            type: 'directory' as const,
+            children
+          } as FileNode
+        } else {
+          const bin = await isBinaryFile(fullPath)
+          return {
+            name: entry.name,
+            path: fullPath,
+            type: 'file' as const,
+            isBinary: bin
+          } as FileNode
+        }
+      })
+    )
+
+    return await Promise.all(promises)
   } catch (e) {
     log.error(`Failed to read directory tree at ${path}:`, e)
     return []
