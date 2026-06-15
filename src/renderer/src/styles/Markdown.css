@@ -414,3 +414,43 @@
 .md-file-include-add:disabled {
   @apply cursor-default;
 }
+
+.md-task-block {
+  @apply border-border bg-background-soft;
+}
+
+.md-file-status-label.task {
+  @apply bg-[rgba(168,85,247,0.15)] text-[#a855f7] border border-[rgba(168,85,247,0.3)];
+}
+
+.md-file-apply.task {
+  @apply bg-[rgba(34,197,94,0.1)] text-[#22c55e] border-[rgba(34,197,94,0.2)] hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.4)];
+}
+
+.md-task-file-count {
+  @apply text-[11px] text-text-muted ml-2 font-mono;
+}
+
+.md-task-files-list {
+  @apply px-2 py-2 border-t border-border bg-background-soft flex flex-wrap gap-1;
+}
+
+.md-task-file-chip {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono text-text-secondary bg-background border border-border;
+}
+
+.md-task-no-files {
+  @apply text-[11px] text-text-muted font-mono;
+}
+
+.md-task-description {
+  @apply p-3 text-[13px] leading-relaxed text-text border-t border-border bg-background;
+}
+
+.md-task-paragraph {
+  @apply mt-2;
+}
+
+.md-task-paragraph:first-child {
+  @apply mt-0;
+}

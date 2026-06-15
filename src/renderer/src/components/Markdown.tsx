@@ -1103,23 +1103,14 @@ const TaskBlock = memo(function TaskBlock({
   }, [files, buildMessage])
 
   return (
-    <div className="md-file-block border-border bg-background-soft overflow-hidden">
+    <div className="md-file-block md-task-block">
       {files.map((f) => (
         <FileExistenceChecker key={f} path={f} onStatus={handleStatus} />
       ))}
       <div className="md-file-header">
         <div className="md-file-header-left">
-          <span
-            className="md-file-status-label"
-            style={{
-              background: 'rgba(168, 85, 247, 0.15)',
-              color: '#a855f7',
-              border: '1px solid rgba(168, 85, 247, 0.3)'
-            }}
-          >
-            TASK {taskId}
-          </span>
-          <span className="text-[11px] text-text-muted ml-2 font-mono" title={files.join(', ')}>
+          <span className="md-file-status-label task">TASK {taskId}</span>
+          <span className="md-task-file-count" title={files.join(', ')}>
             {files.length} file{files.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -1133,40 +1124,26 @@ const TaskBlock = memo(function TaskBlock({
           >
             {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
           </button>
-          <button
-            type="button"
-            className="md-file-apply"
-            style={{
-              background: 'rgba(34, 197, 94, 0.1)',
-              color: '#22c55e',
-              border: '1px solid rgba(34, 197, 94, 0.2)'
-            }}
-            onClick={handleRun}
-            title="Run task"
-          >
+          <button type="button" className="md-file-apply task" onClick={handleRun} title="Run task">
             <Play size={12} />
             <span>Run</span>
           </button>
         </div>
       </div>
-      <div className="px-2 py-2 border-t border-border bg-background-soft flex flex-wrap gap-1">
+      <div className="md-task-files-list">
         {files.length > 0 ? (
           files.map((f, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono text-text-secondary bg-background border border-border"
-              title={f}
-            >
+            <span key={i} className="md-task-file-chip" title={f}>
               <FilePathDisplay path={f} />
             </span>
           ))
         ) : (
-          <span className="text-[11px] text-text-muted font-mono">No files</span>
+          <span className="md-task-no-files">No files</span>
         )}
       </div>
-      <div className="p-3 text-[13px] leading-relaxed text-text-primary border-t border-border bg-background">
+      <div className="md-task-description">
         {description.split('\n').map((line, i) => (
-          <p key={i} className={i === 0 ? '' : 'mt-2'}>
+          <p key={i} className="md-task-paragraph">
             {line || '\u00A0'}
           </p>
         ))}
