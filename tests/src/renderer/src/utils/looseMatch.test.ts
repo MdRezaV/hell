@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findLooseMatch, tokenize } from './looseMatch'
+import { findLooseMatch, tokenize } from '../../../../../src/renderer/src/utils/looseMatch'
 
 describe('tokenize', () => {
   it('should tokenize identifiers', () => {

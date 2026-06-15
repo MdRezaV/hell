@@ -8,7 +8,7 @@ import {
   segmentContent,
   setActiveParser,
   wrapInFence
-} from './markdownParser'
+} from '../../../../../src/renderer/src/utils/markdownParser'
 
 describe('wrapInFence', () => {
   it('uses triple backticks when code has none', () => {

@@ -18,7 +18,7 @@ import {
   setFileState,
   touchWorkspace,
   updateChatSession
-} from '../src/main/database'
+} from '../../../src/main/database'
 
 vi.mock('electron', () => ({
   app: {
@@ -26,7 +26,7 @@ vi.mock('electron', () => ({
   }
 }))
 
-vi.mock('../src/main/logger', () => ({
+vi.mock('../../../src/main/logger', () => ({
   log: {
     info: vi.fn(),
     error: vi.fn(),
