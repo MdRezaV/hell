@@ -5,6 +5,7 @@ import {
   normalizeLineEndings,
   parseReplaceBlock,
   preprocess,
+  segmentContent,
   setActiveParser,
   wrapInFence
 } from './markdownParser'
@@ -477,6 +478,357 @@ describe('preprocess — MOVE blocks', () => {
     expect(out).toContain('```file:a.ts')
     expect(out).toContain('code')
     expect(out).toContain('```file-move:a.ts->b.ts')
+  })
+})
+
+describe('preprocess — TASK blocks', () => {
+  it('converts [TASK id] to a fenced task block', () => {
+    const input = '[TASK task-1]\nDo something\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:task-1')
+    expect(out).toContain('Do something')
+  })
+
+  it('handles TASK with multi-line content', () => {
+    const input = '[TASK feature]\nline1\nline2\nline3\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:feature')
+    expect(out).toContain('line1\nline2\nline3')
+  })
+
+  it('handles empty TASK content', () => {
+    const input = '[TASK empty]\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:empty')
+  })
+
+  it('preserves blank lines in TASK content', () => {
+    const input = '[TASK t]\nline1\n\nline2\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('line1\n\nline2')
+  })
+
+  it('handles TASK id with spaces', () => {
+    const input = '[TASK my task]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:my task')
+  })
+
+  it('handles TASK id with special characters', () => {
+    const input = '[TASK feat/auth-2]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:feat/auth-2')
+  })
+
+  it('handles TASK id with numeric values', () => {
+    const input = '[TASK 123]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:123')
+  })
+
+  it('trims whitespace around TASK id', () => {
+    const input = '[TASK    spaced   ]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:spaced')
+  })
+
+  it('terminates at [END]', () => {
+    const input = '[TASK t]\ncontent\n[END]\nmore text'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
+    expect(out).toContain('more text')
+  })
+
+  it('terminates at next FILE marker', () => {
+    const input = '[TASK t]\ncontent\n[FILE a.ts]\ncode\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
+    expect(out).toContain('```file:a.ts')
+  })
+
+  it('terminates at DELETE marker', () => {
+    const input = '[TASK t]\ncontent\n[DELETE FILE a.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
+    expect(out).toContain('```file-delete:a.ts')
+  })
+
+  it('terminates at MOVE marker', () => {
+    const input = '[TASK t]\ncontent\n[MOVE FILE FROM a.ts TO b.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('```file-move:a.ts->b.ts')
+  })
+
+  it('terminates at COMMIT line', () => {
+    const input = '[TASK t]\ncontent\nCOMMIT: done'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('```commit')
+  })
+
+  it('terminates at next TASK marker', () => {
+    const input = '[TASK a]\ncontentA\n[TASK b]\ncontentB\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:a')
+    expect(out).toContain('contentA')
+    expect(out).toContain('```task:b')
+    expect(out).toContain('contentB')
+  })
+
+  it('handles consecutive TASK blocks', () => {
+    const input = '[TASK a]\ncontentA\n[END]\n[TASK b]\ncontentB\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:a')
+    expect(out).toContain('contentA')
+    expect(out).toContain('```task:b')
+    expect(out).toContain('contentB')
+  })
+
+  it('terminates preceding FILE block', () => {
+    const input = '[FILE a.ts]\ncode\n[TASK t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('code')
+    expect(out).toContain('```task:t')
+  })
+
+  it('terminates orphan SEARCH block', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[TASK t]',
+      'content',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('```task:t')
+  })
+
+  it('ignores TASK inside backtick code fence', () => {
+    const input = '```\n[TASK t]\ncontent\n[END]\n```\n'
+    const out = preprocess(input)
+    expect(out).toBe(input)
+  })
+
+  it('ignores TASK inside tilde code fence', () => {
+    const input = '~~~\n[TASK t]\ncontent\n[END]\n~~~\n'
+    const out = preprocess(input)
+    expect(out).toBe(input)
+  })
+
+  it('recognizes TASK with leading whitespace', () => {
+    const input = '  [TASK t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
+  })
+
+  it('recognizes TASK with leading tabs', () => {
+    const input = '\t\t[TASK t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+  })
+
+  it('recognizes TASK with trailing whitespace', () => {
+    const input = '[TASK t]   \ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+  })
+
+  it('recognizes [END] with leading whitespace to close TASK', () => {
+    const input = '[TASK t]\ncontent\n   [END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
+  })
+
+  it('does not match lowercase [task]', () => {
+    const input = '[task t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('[task t]')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('does not match mixed case [Task]', () => {
+    const input = '[Task t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('[Task t]')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('does not match [TASK] without id', () => {
+    const input = '[TASK]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('[TASK]')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('does not match [TASK ] with only whitespace id', () => {
+    const input = '[TASK ]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('[TASK ]')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('does not match [TASK without closing bracket', () => {
+    const input = '[TASK t\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('[TASK t')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('ignores TASK with text before', () => {
+    const input = 'text [TASK t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('text [TASK t]')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('ignores TASK with text after', () => {
+    const input = '[TASK t] extra\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('[TASK t] extra')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('treats [TASK] inside SEARCH content as content', () => {
+    const input = '[FILE a.ts]\n[SEARCH]\nold [TASK t] here\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old [TASK t] here')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('treats [TASK] inside REPLACE content as content', () => {
+    const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\nnew [TASK t] here\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('new [TASK t] here')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('treats [TASK] inside FILE content as content when not alone on line', () => {
+    const input = '[FILE a.ts]\nsome [TASK t] text\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('some [TASK t] text')
+    expect(out).not.toContain('```task:')
+  })
+
+  it('treats [SEARCH] inside TASK as content (no special processing)', () => {
+    const input = '[TASK t]\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('[SEARCH]')
+    expect(out).toContain('old')
+    expect(out).toContain('[REPLACE]')
+    expect(out).toContain('new')
+  })
+
+  it('treats [FILE] inside TASK as content when not alone on line', () => {
+    const input = '[TASK t]\nsee [FILE x.ts] here\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('see [FILE x.ts] here')
+  })
+
+  it('treats [INCLUDE] inside TASK as content', () => {
+    const input = '[TASK t]\n[INCLUDE a.ts]\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('[INCLUDE a.ts]')
+    expect(out).not.toContain('file-include')
+  })
+
+  it('orphan SEARCH after TASK does not use TASK id as path', () => {
+    const input = [
+      '[TASK t]',
+      'content',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).not.toContain('file-replace')
+    expect(out).toContain('[SEARCH]')
+  })
+
+  it('uses tildes when TASK content contains triple backticks', () => {
+    const input = '[TASK t]\n```js\nconst x = 1\n```\n[END]'
+    const out = preprocess(input)
+    expect(out).toMatch(/~~~task:t/)
+    expect(out).toContain('```js')
+  })
+
+  it('handles TASK with Windows line endings', () => {
+    const input = '[TASK t]\r\ncontent\r\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
+  })
+
+  it('handles TASK followed by plain text', () => {
+    const input = '[TASK t]\ncontent\n[END]\n\nSome explanation'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('Some explanation')
+  })
+
+  it('preserves text before TASK block', () => {
+    const input = 'Some description\n\n[TASK t]\ncontent\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('Some description')
+    expect(out).toContain('```task:t')
+  })
+
+  it('handles TASK mixed with other operations', () => {
+    const input = [
+      'Intro',
+      '[TASK plan]',
+      'Do the thing',
+      '[END]',
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '[DELETE FILE old.ts]',
+      'COMMIT: done'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('Intro')
+    expect(out).toContain('```task:plan')
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('```file-delete:old.ts')
+    expect(out).toContain('```commit')
+  })
+
+  it('handles TASK without [END] at EOF', () => {
+    const input = '[TASK t]\npartial content'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('partial content')
+  })
+
+  it('handles TASK without [END] terminated by FILE marker', () => {
+    const input = '[TASK t]\npartial\n[FILE a.ts]\ncode\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('partial')
+    expect(out).toContain('```file:a.ts')
   })
 })
 
@@ -998,6 +1350,226 @@ describe('normalizeLineEndings', () => {
   })
 })
 
+describe('segmentContent', () => {
+  it('returns single empty segment for empty input', () => {
+    expect(segmentContent('')).toEqual([''])
+  })
+
+  it('returns single segment for plain text', () => {
+    expect(segmentContent('hello world')).toEqual(['hello world'])
+  })
+
+  it('returns single segment for multi-line text with no fences', () => {
+    const input = 'line1\nline2\nline3'
+    expect(segmentContent(input)).toEqual(['line1\nline2\nline3'])
+  })
+
+  it('splits after a closed backtick fence', () => {
+    const input = 'before\n```js\ncode\n```\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[0]).toContain('before')
+    expect(segs[0]).toContain('```js')
+    expect(segs[0]).toContain('code')
+    expect(segs[1]).toBe('after')
+  })
+
+  it('splits after a closed tilde fence', () => {
+    const input = 'before\n~~~\ncode\n~~~\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[0]).toContain('~~~')
+    expect(segs[1]).toBe('after')
+  })
+
+  it('handles multiple fenced blocks', () => {
+    const input = 'a\n```\ncode1\n```\nb\n```\ncode2\n```\nc'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(3)
+    expect(segs[0]).toContain('code1')
+    expect(segs[1]).toContain('code2')
+    expect(segs[2]).toBe('c')
+  })
+
+  it('handles fence at start of content', () => {
+    const input = '```\ncode\n```\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[0]).toContain('code')
+    expect(segs[1]).toBe('after')
+  })
+
+  it('keeps fence at end in same segment (no trailing content)', () => {
+    const input = 'before\n```\ncode\n```'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(1)
+    expect(segs[0]).toContain('before')
+    expect(segs[0]).toContain('code')
+  })
+
+  it('keeps unclosed fence in single segment (streaming)', () => {
+    const input = 'before\n```\ncode still streaming'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(1)
+    expect(segs[0]).toContain('before')
+    expect(segs[0]).toContain('code still streaming')
+  })
+
+  it('handles fence with language identifier', () => {
+    const input = 'text\n```typescript\nconst x = 1\n```\nmore'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+  })
+
+  it('handles empty fenced block', () => {
+    const input = 'before\n```\n```\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+  })
+
+  it('handles nested backticks inside tilde fence', () => {
+    const input = 'before\n~~~md\n```code```\n~~~\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[0]).toContain('```code```')
+  })
+
+  it('does not close backtick fence with tilde', () => {
+    const input = '```\ncode\n~~~\nmore code\n```'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(1)
+    expect(segs[0]).toContain('~~~')
+    expect(segs[0]).toContain('more code')
+  })
+
+  it('requires closing fence to be at least as long as opening', () => {
+    const input = '````\n```\n````\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[1]).toBe('after')
+  })
+
+  it('does not close longer fence with shorter fence', () => {
+    const input = '````\ncode\n```\nmore\n````\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[0]).toContain('code')
+    expect(segs[0]).toContain('more')
+    expect(segs[1]).toBe('after')
+  })
+
+  it('handles fence with up to 3 spaces indent', () => {
+    const input = 'before\n   ```\ncode\n   ```\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+  })
+
+  it('treats fence with 4+ spaces indent as regular text', () => {
+    const input = 'before\n    ```\ncode\n    ```\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(1)
+  })
+
+  it('handles consecutive fences', () => {
+    const input = '```\na\n```\n```\nb\n```\nend'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(3)
+  })
+
+  it('preserves blank lines in segments', () => {
+    const input = 'before\n\n```\ncode\n```\n\nafter'
+    const segs = segmentContent(input)
+    expect(segs.length).toBe(2)
+    expect(segs[0]).toContain('before\n')
+    expect(segs[1]).toBe('\nafter')
+  })
+})
+
+describe('preprocess — incremental preprocessing', () => {
+  it('produces identical output for identical input across calls', () => {
+    const input = '[FILE a.ts]\ncode\n[END]'
+    const out1 = preprocess(input)
+    const out2 = preprocess(input)
+    expect(out1).toBe(out2)
+  })
+
+  it('fast path produces same result as fresh preprocess for appended content', () => {
+    const prefix = '[FILE a.ts]\ncode\n[END]\n\ntrailing'
+    const full = prefix + '\n[DELETE FILE b.ts]'
+    const freshOut = preprocess(full)
+    // The cache from earlier calls should make this hit the fast path
+    const cachedOut = preprocess(full)
+    expect(cachedOut).toBe(freshOut)
+  })
+
+  it('handles appended content after a TASK block', () => {
+    const prefix = '[TASK t]\ncontent\n[END]\n\n'
+    preprocess(prefix)
+    const full = prefix + '[FILE a.ts]\ncode\n[END]'
+    const out = preprocess(full)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('```file:a.ts')
+  })
+
+  it('handles appended content after a DELETE marker', () => {
+    const prefix = '[DELETE FILE a.ts]\n'
+    preprocess(prefix)
+    const full = prefix + '[FILE b.ts]\ncode\n[END]'
+    const out = preprocess(full)
+    expect(out).toContain('```file-delete:a.ts')
+    expect(out).toContain('```file:b.ts')
+  })
+
+  it('handles appended content after a MOVE marker', () => {
+    const prefix = '[MOVE FILE FROM a.ts TO b.ts]\n'
+    preprocess(prefix)
+    const full = prefix + '[FILE c.ts]\ncode\n[END]'
+    const out = preprocess(full)
+    expect(out).toContain('```file-move:a.ts->b.ts')
+    expect(out).toContain('```file:c.ts')
+  })
+
+  it('handles appended content after a COMMIT line', () => {
+    const prefix = 'COMMIT: first\n'
+    preprocess(prefix)
+    const full = prefix + 'COMMIT: second'
+    const out = preprocess(full)
+    const matches = out.match(/```commit/g)
+    expect(matches?.length).toBe(2)
+  })
+
+  it('slow path runs when content diverges from cached prefix', () => {
+    preprocess('[FILE a.ts]\ncode\n[END]\n\ntrailing')
+    const different = '[FILE b.ts]\nother\n[END]'
+    const out = preprocess(different)
+    expect(out).toContain('```file:b.ts')
+    expect(out).not.toContain('```file:a.ts')
+  })
+
+  it('preserves lastFilePath across fast path boundary', () => {
+    const prefix = '[FILE a.ts]\ncode\n[END]\n\ntrailing'
+    preprocess(prefix)
+    const full = prefix + '\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(full)
+    expect(out).toContain('```file-replace:a.ts')
+  })
+
+  it('handles empty suffix (returns cached prefix verbatim)', () => {
+    const prefix = '[FILE a.ts]\ncode\n[END]\n\ntrailing'
+    const out1 = preprocess(prefix)
+    const out2 = preprocess(prefix)
+    expect(out2).toBe(out1)
+  })
+
+  it('handles single-token append to cached prefix', () => {
+    const prefix = '[FILE a.ts]\ncode\n[END]\n\ntrailing'
+    preprocess(prefix)
+    const out = preprocess(prefix + 'x')
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('trailingx')
+  })
+})
+
 describe('preprocess — Windows line endings', () => {
   it('handles FILE block with \\r\\n', () => {
     const input = '[FILE a.ts]\r\nconst x = 1\r\n[END]'
@@ -1031,6 +1603,13 @@ describe('preprocess — Windows line endings', () => {
     const out = preprocess(input)
     expect(out).toContain('```commit')
     expect(out).toContain('fix bug')
+  })
+
+  it('handles TASK with \\r\\n', () => {
+    const input = '[TASK t]\r\ncontent\r\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```task:t')
+    expect(out).toContain('content')
   })
 })
 
