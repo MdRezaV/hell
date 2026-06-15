@@ -1,14 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'path'
-import {
-  createReadStream,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync
-} from 'fs'
-import { readFile } from 'fs/promises'
+import { createReadStream } from 'fs'
+import { access, mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { getEncoding } from 'js-tiktoken'
 import { formatTreeText, readDirTree } from './fsUtils'
 import {
@@ -68,13 +61,13 @@ export function registerIpcHandlers(): void {
 
   safeHandle('read-file', async (_, workspace: string, relativePath: string) => {
     const fullPath = join(workspace, relativePath)
-    if (!existsSync(fullPath)) {
-      return { exists: false, error: false, content: null }
-    }
     try {
-      const content = readFileSync(fullPath, 'utf-8')
+      const content = await readFile(fullPath, 'utf-8')
       return { exists: true, error: false, content }
     } catch (e) {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: unknown }).code === 'ENOENT') {
+        return { exists: false, error: false, content: null }
+      }
       log.error('Failed to read file:', relativePath, e)
       return { exists: true, error: true, content: null }
     }
@@ -83,8 +76,8 @@ export function registerIpcHandlers(): void {
   safeHandle('write-file', async (_, workspace: string, relativePath: string, content: string) => {
     try {
       const fullPath = join(workspace, relativePath)
-      mkdirSync(dirname(fullPath), { recursive: true })
-      writeFileSync(fullPath, content, 'utf-8')
+      await mkdir(dirname(fullPath), { recursive: true })
+      await writeFile(fullPath, content, 'utf-8')
       return { success: true }
     } catch (e: unknown) {
       log.error('Failed to write file:', relativePath, e)
@@ -95,7 +88,7 @@ export function registerIpcHandlers(): void {
   safeHandle('delete-file', async (_, workspace: string, relativePath: string) => {
     try {
       const fullPath = join(workspace, relativePath)
-      unlinkSync(fullPath)
+      await unlink(fullPath)
       return { success: true }
     } catch (e: unknown) {
       log.error('Failed to delete file:', relativePath, e)
@@ -105,7 +98,14 @@ export function registerIpcHandlers(): void {
 
   safeHandle('db:get-last-workspace', async () => {
     const path = getLastWorkspace()
-    if (path && existsSync(path)) return path
+    if (path) {
+      try {
+        await access(path)
+        return path
+      } catch {
+        return null
+      }
+    }
     return null
   })
 
