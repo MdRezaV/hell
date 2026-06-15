@@ -9,6 +9,7 @@ const limit = pLimit(50)
 export interface IgnoreRule {
   dir: string
   ig: Ignore
+  patterns: string
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -136,23 +137,28 @@ export async function loadIgnoreRules(
     }
   }
   if (patterns.length > 0) {
-    rules.push({ dir, ig: ignore().add(patterns.join('\n')) })
+    const combined = patterns.join('\n')
+    rules.push({ dir, ig: ignore().add(combined), patterns: combined })
   }
   return rules
+}
+
+export function mergeIgnoreRules(rules: IgnoreRule[]): Ignore {
+  if (rules.length === 0) return ignore()
+  const allPatterns = rules.map((r) => r.patterns).join('\n')
+  return ignore().add(allPatterns)
 }
 
 export function isEntryIgnored(
   entryPath: string,
   isDirectory: boolean,
-  rules: IgnoreRule[]
+  ig: Ignore,
+  baseDir: string
 ): boolean {
-  for (const rule of rules) {
-    const rel = relative(rule.dir, entryPath).replace(/\\/g, '/')
-    if (!rel || rel.startsWith('..')) continue
-    const testPath = isDirectory ? `${rel}/` : rel
-    if (rule.ig.ignores(testPath)) return true
-  }
-  return false
+  const rel = relative(baseDir, entryPath).replace(/\\/g, '/')
+  if (!rel || rel.startsWith('..')) return false
+  const testPath = isDirectory ? `${rel}/` : rel
+  return ig.ignores(testPath)
 }
 
 export interface FileNode {
@@ -169,11 +175,12 @@ export async function readDirTree(
   isRoot: boolean
 ): Promise<FileNode[]> {
   const currentRules = await loadIgnoreRules(path, parentRules, isRoot)
+  const mergedIg = mergeIgnoreRules(currentRules)
   try {
     const entries = await fsp.readdir(path, { withFileTypes: true })
     const filtered = entries.filter((entry) => {
-      const fullPath = join(path, entry.name)
-      return !isEntryIgnored(fullPath, entry.isDirectory(), currentRules)
+      const testPath = entry.isDirectory() ? `${entry.name}/` : entry.name
+      return !mergedIg.ignores(testPath)
     })
 
     const promises = filtered.map((entry) =>

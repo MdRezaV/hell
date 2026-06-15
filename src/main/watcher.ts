@@ -1,7 +1,7 @@
 import { type FSWatcher, watch, type WatchOptions } from 'chokidar'
 import type { Stats } from 'fs'
 import { log } from './logger'
-import { loadIgnoreRules, isEntryIgnored, type IgnoreRule } from './fsUtils'
+import { loadIgnoreRules, isEntryIgnored, mergeIgnoreRules, type IgnoreRule } from './fsUtils'
 
 const DEBOUNCE_MS = 200
 const WRITE_STABILITY_MS = 200
@@ -38,11 +38,12 @@ export async function startWatching(workspacePath: string, onChange: () => void)
   } catch (e) {
     log.warn('Failed to load ignore rules for watcher', e)
   }
+  const mergedIg = mergeIgnoreRules(rules)
 
   const opts: WatchOptions = {
     ignored: ((path: string, stats?: Stats) => {
       if (!stats) return false
-      return isEntryIgnored(path, stats.isDirectory(), rules)
+      return isEntryIgnored(path, stats.isDirectory(), mergedIg, workspacePath)
     }) as WatchOptions['ignored'],
     persistent: true,
     ignoreInitial: true,
