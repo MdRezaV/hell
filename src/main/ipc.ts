@@ -268,20 +268,11 @@ export function registerIpcHandlers(): void {
     return await readDirTree(dirPath, [], true)
   })
 
-  safeHandle('search-file-content', async (_, workspace: string, query: string) => {
+  safeHandle('search-file-content', async (_, filePaths: string[], query: string) => {
     const q = query.toLowerCase()
-    const tree = await readDirTree(workspace, [], true)
     const overlapSize = Math.max(0, Buffer.byteLength(q, 'utf-8'))
 
-    // Collect all searchable file paths up front.
-    const fileQueue: string[] = []
-    function collect(nodes: typeof tree): void {
-      for (const node of nodes) {
-        if (node.type === 'file' && !node.isBinary) fileQueue.push(node.path)
-        if (node.children) collect(node.children)
-      }
-    }
-    collect(tree)
+    const fileQueue = filePaths.slice()
 
     // Stream-search a single file using a small byte-buffer overlap
     // instead of per-chunk string concatenation + slicing.

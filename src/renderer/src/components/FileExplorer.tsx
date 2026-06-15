@@ -375,7 +375,7 @@ function FileExplorer({
         try {
           const results: string[] = await window.electron.ipcRenderer.invoke(
             'search-file-content',
-            workspace,
+            Array.from(filePathSet),
             q
           )
           if (!cancelRef.current) {
@@ -388,7 +388,7 @@ function FileExplorer({
         }
       }, 300)
     },
-    [workspace]
+    [workspace, filePathSet]
   )
 
   useEffect(() => {
