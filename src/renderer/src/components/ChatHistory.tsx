@@ -23,11 +23,15 @@ interface ChatHistoryProps {
 
 const GROUP_ORDER = ['Today', 'Yesterday', 'Previous 7 Days', 'Previous 30 Days', 'Older']
 
+function startOfDay(year: number, month: number, date: number): Date {
+  return new Date(year, month, date)
+}
+
 function formatItemTime(ts: number): string {
   const d = new Date(ts)
   const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterdayStart = new Date(todayStart.getTime() - 86400000)
+  const todayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate() - 1)
 
   if (d >= todayStart) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -40,10 +44,10 @@ function formatItemTime(ts: number): string {
 
 function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
   const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterdayStart = new Date(todayStart.getTime() - 86400000)
-  const weekAgo = new Date(todayStart.getTime() - 7 * 86400000)
-  const monthAgo = new Date(todayStart.getTime() - 30 * 86400000)
+  const todayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+  const weekAgo = startOfDay(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+  const monthAgo = startOfDay(now.getFullYear(), now.getMonth(), now.getDate() - 29)
 
   const groups = new Map<string, ChatSession[]>()
 
