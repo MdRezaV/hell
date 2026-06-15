@@ -317,6 +317,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const inputValueRef = useRef('')
   const onMessagesChangeRef = useRef(onMessagesChange)
   const modeRef = useRef(mode)
+  const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string } | null>(null)
   const resizeTextarea = useAutoResizeTextarea()
 
   useEffect(() => {
@@ -338,10 +339,20 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   useEffect(() => {
     if (isLoadingRef.current) return
     if (messages.length === 0) return
+    const pending = { messages, mode: modeRef.current }
+    pendingSaveRef.current = pending
     const timeout = setTimeout(() => {
-      onMessagesChangeRef.current?.(messages, modeRef.current)
+      pendingSaveRef.current = null
+      onMessagesChangeRef.current?.(pending.messages, pending.mode)
     }, 300)
-    return () => clearTimeout(timeout)
+    return () => {
+      clearTimeout(timeout)
+      if (pendingSaveRef.current) {
+        const toFlush = pendingSaveRef.current
+        pendingSaveRef.current = null
+        onMessagesChangeRef.current?.(toFlush.messages, toFlush.mode)
+      }
+    }
   }, [messages])
 
   const scrollToBottom = useCallback((): void => {
