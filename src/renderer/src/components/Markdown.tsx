@@ -20,7 +20,6 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 import { useScrollSync } from '../hooks/useScrollSync'
 import { ArrowRight, Check, Copy, Play, X } from 'lucide-react'
-import log from 'electron-log/renderer'
 import '../styles/Markdown.css'
 import {
   getActiveParser,
@@ -34,13 +33,10 @@ import {
   applyFileMove,
   applyFileReplace,
   applyFileWrite,
-  FILE_CACHE_MAX,
-  fileContentCache,
-  type FileState,
-  invalidateFileContentCache,
-  ipcThrottle
+  invalidateFileContentCache
 } from '../utils/fileApply'
 import { useWorkspace } from '../WorkspaceContext'
+import { useFileContent } from '../hooks/useFileContent'
 
 interface MarkdownProps {
   content: string
@@ -189,82 +185,6 @@ const LinesDisplay = memo(function LinesDisplay({
     </>
   )
 })
-
-interface FileStateCache {
-  data: FileState
-  path: string
-  workspace: string
-}
-
-function useFileContent(path: string): FileState | null {
-  const { workspace } = useWorkspace()
-  const [cache, setCache] = useState<FileStateCache | null>(null)
-  const [refreshKey, setRefreshKey] = useState(0)
-
-  useEffect(() => {
-    if (!workspace) return
-    const handler = (e: Event): void => {
-      const detail = (e as CustomEvent).detail as { workspace: string; path: string }
-      if (detail.workspace === workspace && detail.path === path) {
-        setRefreshKey((k) => k + 1)
-      }
-    }
-    const wsHandler = (e: Event): void => {
-      const detail = (e as CustomEvent).detail as { workspace: string }
-      if (detail.workspace === workspace) {
-        setRefreshKey((k) => k + 1)
-      }
-    }
-    window.addEventListener('file-content-invalidated', handler)
-    window.addEventListener('workspace-files-invalidated', wsHandler)
-    return () => {
-      window.removeEventListener('file-content-invalidated', handler)
-      window.removeEventListener('workspace-files-invalidated', wsHandler)
-    }
-  }, [workspace, path])
-
-  useEffect(() => {
-    if (!workspace) return
-    const cacheKey = `${workspace}::${path}`
-    let cancelled = false
-
-    const existingPromise = fileContentCache.get(cacheKey)
-    if (existingPromise) {
-      existingPromise.then((result) => {
-        if (!cancelled) setCache({ data: result, path, workspace })
-      })
-    } else {
-      const promise = ipcThrottle(
-        () => window.electron.ipcRenderer.invoke('read-file', workspace, path) as Promise<FileState>
-      ).catch((e) => {
-        log.error(`Failed to read file ${path}:`, e)
-        return { exists: false, content: null }
-      })
-      if (fileContentCache.size >= FILE_CACHE_MAX) {
-        const firstKey = fileContentCache.keys().next().value
-        if (firstKey !== undefined) fileContentCache.delete(firstKey)
-      }
-      fileContentCache.set(cacheKey, promise)
-      promise.then((result) => {
-        if (!cancelled) setCache({ data: result, path, workspace })
-      })
-    }
-
-    return () => {
-      cancelled = true
-    }
-  }, [workspace, path, refreshKey])
-
-  if (!workspace) {
-    return { exists: false, content: null }
-  }
-
-  if (!cache || cache.path !== path || cache.workspace !== workspace) {
-    return null
-  }
-
-  return cache.data
-}
 
 type ApplyBlockStatus = 'idle' | 'applied' | 'error' | 'notFound'
 
