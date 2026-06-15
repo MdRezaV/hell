@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useEffect } from 'react'
 import '../styles/StatusBar.css'
 
 interface StatusBarProps {
@@ -33,6 +33,32 @@ const StatusBar = memo(function StatusBar({
   onCopy,
   onPaste
 }: StatusBarProps): React.JSX.Element {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      const modKey = e.ctrlKey || e.metaKey
+      if (!modKey || e.shiftKey || e.altKey) return
+
+      const target = e.target as HTMLElement
+      const isInput = ['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable
+
+      if (e.key.toLowerCase() === 'c') {
+        const selection = window.getSelection()
+        if (!isInput && (!selection || selection.toString().length === 0)) {
+          e.preventDefault()
+          onCopy()
+        }
+      } else if (e.key.toLowerCase() === 'v') {
+        if (!isInput) {
+          e.preventDefault()
+          onPaste()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onCopy, onPaste])
+
   return (
     <div className="statusbar">
       <span className="statusbar-item">{formatStats(lineCount, tokenCount)}</span>
