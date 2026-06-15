@@ -21,8 +21,6 @@ interface MarkdownProps {
   content: string
 }
 
-type CustomBlockRenderer = (code: string) => React.JSX.Element
-
 function extractText(node: ReactNode): string {
   if (typeof node === 'string') return node
   if (typeof node === 'number') return String(node)
@@ -51,11 +49,6 @@ function extractText(node: ReactNode): string {
   }
 
   return parts.join('')
-}
-
-const CUSTOM_BLOCK_RENDERERS: Record<string, CustomBlockRenderer> = {
-  command: (code) => <CommandBlock code={code} />,
-  commit: (code) => <CommitBlock code={code} />
 }
 
 // Defined at module scope so React does not unmount/remount code blocks on every
@@ -146,9 +139,11 @@ const markdownComponents: Components = {
       return <FileBlock path={filePath} code={codeText} />
     }
 
-    const customRenderer = CUSTOM_BLOCK_RENDERERS[language]
-    if (customRenderer) {
-      return customRenderer(codeText)
+    if (language === 'command') {
+      return <CommandBlock code={codeText} />
+    }
+    if (language === 'commit') {
+      return <CommitBlock code={codeText} />
     }
 
     const resolvedLanguage = language || detectLanguage(codeText)
