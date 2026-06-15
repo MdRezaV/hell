@@ -27,7 +27,9 @@ export const LinesDisplay = memo(function LinesDisplay({
     if (gutterRef.current && codeRef.current) {
       gutterRef.current.scrollTop = codeRef.current.scrollTop
     }
-    syncing.current = false
+    requestAnimationFrame(() => {
+      syncing.current = false
+    })
     onScroll?.()
   }, [onScroll])
 
@@ -37,7 +39,9 @@ export const LinesDisplay = memo(function LinesDisplay({
     if (gutterRef.current && codeRef.current) {
       codeRef.current.scrollTop = gutterRef.current.scrollTop
     }
-    syncing.current = false
+    requestAnimationFrame(() => {
+      syncing.current = false
+    })
   }, [])
 
   return (
