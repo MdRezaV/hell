@@ -133,13 +133,17 @@ function parseSearchReplacePairs(lines: string[]): Array<{ old: string; new: str
  * Tags must be alone on their line (optional leading/trailing whitespace allowed).
  * Tags with surrounding text are treated as content.
  */
-function preprocessImpl(content: string): string {
+function preprocessImpl(
+  content: string,
+  initialLastFilePath = ''
+): { result: string; lastFilePath: string } {
   const lines = normalizeLineEndings(content).split('\n')
   const result: string[] = []
   let i = 0
   let inFence = false
   let fenceChar = ''
   let fenceLen = 0
+  let lastFilePath = initialLastFilePath
 
   while (i < lines.length) {
     const line = lines[i]
@@ -168,6 +172,7 @@ function preprocessImpl(content: string): string {
     const fileMatch = /^\s*\[FILE (.+)]\s*$/.exec(line)
     if (fileMatch) {
       const path = fileMatch[1].trim()
+      lastFilePath = path
       i++
       const contentLines: string[] = []
       while (i < lines.length) {
@@ -249,11 +254,41 @@ function preprocessImpl(content: string): string {
       continue
     }
 
+    // Orphan [SEARCH] outside any [FILE] block — reuse the most recent FILE path
+    if (lastFilePath && SEARCH_RE.test(line)) {
+      const startIdx = i
+      const contentLines: string[] = [line]
+      i++
+      while (i < lines.length) {
+        if (FILE_END_RE.test(lines[i])) {
+          i++
+          break
+        }
+        if (BLOCK_MARKER_RE.test(lines[i])) break
+        contentLines.push(lines[i])
+        i++
+      }
+
+      const pairs = parseSearchReplacePairs(contentLines)
+      if (pairs.length > 0) {
+        for (const pair of pairs) {
+          const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
+          const fenced = wrapInFence(combined, `file-replace:${lastFilePath}`)
+          result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+        }
+      } else {
+        for (let k = startIdx; k < i; k++) {
+          result.push(lines[k])
+        }
+      }
+      continue
+    }
+
     result.push(line)
     i++
   }
 
-  return result.join('\n')
+  return { result: result.join('\n'), lastFilePath }
 }
 
 /**
@@ -324,13 +359,16 @@ function _findLastSafeBoundary(content: string): number {
   let fenceChar = ''
   let fenceLen = 0
   let inFileBlock = false
+  let inOrphanSearch = false
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
-    if (!inFence && !inFileBlock) {
+    if (!inFence && !inFileBlock && !inOrphanSearch) {
       if (/^\s*\[FILE .+]\s*$/.test(line)) {
         inFileBlock = true
+      } else if (/^\s*\[SEARCH]\s*$/.test(line)) {
+        inOrphanSearch = true
       } else {
         const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
         if (m) {
@@ -339,9 +377,10 @@ function _findLastSafeBoundary(content: string): number {
           fenceLen = m[2].length
         }
       }
-    } else if (inFileBlock) {
+    } else if (inFileBlock || inOrphanSearch) {
       if (/^\s*\[END]\s*$/.test(line)) {
         inFileBlock = false
+        inOrphanSearch = false
         lastSafeEnd = charPos + line.length + 1
       }
     } else {
@@ -363,6 +402,7 @@ function _findLastSafeBoundary(content: string): number {
 
 let _incRawPrefix = ''
 let _incProcessedPrefix = ''
+let _incLastFilePath = ''
 
 export function preprocess(content: string): string {
   const normalized = content.indexOf('\r') === -1 ? content : normalizeLineEndings(content)
@@ -373,20 +413,23 @@ export function preprocess(content: string): string {
   if (_incRawPrefix.length > 0 && normalized.startsWith(_incRawPrefix)) {
     const suffix = normalized.slice(_incRawPrefix.length)
     if (!suffix) return _incProcessedPrefix
-    return _incProcessedPrefix + preprocessImpl(suffix)
+    return _incProcessedPrefix + preprocessImpl(suffix, _incLastFilePath).result
   }
 
   // Slow path: full preprocessing
-  const result = preprocessImpl(normalized)
+  const { result } = preprocessImpl(normalized)
 
   // Cache at the last safe boundary so subsequent appends hit the fast path
   const safeEnd = _findLastSafeBoundary(normalized)
   if (safeEnd > 0 && safeEnd < normalized.length) {
     _incRawPrefix = normalized.slice(0, safeEnd)
-    _incProcessedPrefix = preprocessImpl(_incRawPrefix)
+    const prefixResult = preprocessImpl(_incRawPrefix)
+    _incProcessedPrefix = prefixResult.result
+    _incLastFilePath = prefixResult.lastFilePath
   } else {
     _incRawPrefix = ''
     _incProcessedPrefix = ''
+    _incLastFilePath = ''
   }
 
   return result

@@ -597,6 +597,349 @@ describe('preprocess — mixed operations', () => {
   })
 })
 
+describe('preprocess — orphan SEARCH/REPLACE blocks', () => {
+  it('uses last FILE path for orphan SEARCH after FILE block with SEARCH/REPLACE', () => {
+    const input = [
+      '[FILE a.ts]',
+      '[SEARCH]',
+      'old1',
+      '[REPLACE]',
+      'new1',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old2',
+      '[REPLACE]',
+      'new2',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    const matches = out.match(/```file-replace:a\.ts/g)
+    expect(matches?.length).toBe(2)
+    expect(out).toContain('old1')
+    expect(out).toContain('new1')
+    expect(out).toContain('old2')
+    expect(out).toContain('new2')
+  })
+
+  it('uses last FILE path for orphan SEARCH after plain FILE block', () => {
+    const input = [
+      '[FILE a.ts]',
+      'const x = 1',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old')
+    expect(out).toContain('new')
+  })
+
+  it('handles multiple consecutive orphan SEARCH blocks', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old1',
+      '[REPLACE]',
+      'new1',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old2',
+      '[REPLACE]',
+      'new2',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old3',
+      '[REPLACE]',
+      'new3',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    const matches = out.match(/```file-replace:a\.ts/g)
+    expect(matches?.length).toBe(3)
+  })
+
+  it('uses the most recent FILE path', () => {
+    const input = [
+      '[FILE a.ts]',
+      'codeA',
+      '[END]',
+      '[FILE b.ts]',
+      'codeB',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:b.ts')
+    expect(out).not.toContain('```file-replace:a.ts')
+  })
+
+  it('treats orphan SEARCH as regular text when no prior FILE block exists', () => {
+    const input = '[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(input)
+    expect(out).toBe(input)
+    expect(out).not.toContain('file-replace')
+  })
+
+  it('handles multiple SEARCH/REPLACE pairs in one orphan block', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old1',
+      '[REPLACE]',
+      'new1',
+      '[SEARCH]',
+      'old2',
+      '[REPLACE]',
+      'new2',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    const matches = out.match(/```file-replace:a\.ts/g)
+    expect(matches?.length).toBe(2)
+    expect(out).toContain('old1')
+    expect(out).toContain('new1')
+    expect(out).toContain('old2')
+    expect(out).toContain('new2')
+  })
+
+  it('handles orphan SEARCH without closing [END]', () => {
+    const input = ['[FILE a.ts]', 'code', '[END]', '', '[SEARCH]', 'old', '[REPLACE]', 'new'].join(
+      '\n'
+    )
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old')
+    expect(out).toContain('new')
+  })
+
+  it('falls back to regular text when orphan SEARCH has no REPLACE', () => {
+    const input = ['[FILE a.ts]', 'code', '[END]', '', '[SEARCH]', 'just some text', '[END]'].join(
+      '\n'
+    )
+    const out = preprocess(input)
+    expect(out).not.toContain('file-replace')
+    expect(out).toContain('[SEARCH]')
+    expect(out).toContain('just some text')
+  })
+
+  it('stops orphan SEARCH at next FILE block', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[FILE b.ts]',
+      'codeB',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('```file:b.ts')
+    expect(out).toContain('codeB')
+  })
+
+  it('stops orphan SEARCH at DELETE marker', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[DELETE FILE b.ts]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('```file-delete:b.ts')
+  })
+
+  it('stops orphan SEARCH at COMMIT line', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      'COMMIT: done'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('```commit')
+    expect(out).toContain('done')
+  })
+
+  it('does not process orphan SEARCH inside code fence', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '```',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[END]',
+      '```'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).not.toContain('file-replace')
+    expect(out).toContain('[SEARCH]')
+  })
+
+  it('handles orphan SEARCH immediately after FILE [END] with no blank line', () => {
+    const input = [
+      '[FILE a.ts]',
+      '[SEARCH]',
+      'old1',
+      '[REPLACE]',
+      'new1',
+      '[END]',
+      '[SEARCH]',
+      'old2',
+      '[REPLACE]',
+      'new2',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    const matches = out.match(/```file-replace:a\.ts/g)
+    expect(matches?.length).toBe(2)
+  })
+
+  it('handles orphan SEARCH with Windows line endings', () => {
+    const input = '[FILE a.ts]\r\ncode\r\n[END]\r\n\r\n[SEARCH]\r\nold\r\n[REPLACE]\r\nnew\r\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old')
+    expect(out).toContain('new')
+  })
+
+  it('handles text between FILE block and orphan SEARCH', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      'Some explanation text here.',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      'new',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('Some explanation text here.')
+  })
+
+  it('handles empty REPLACE in orphan SEARCH', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      'old',
+      '[REPLACE]',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old')
+  })
+
+  it('handles empty SEARCH in orphan block', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      '[REPLACE]',
+      'new',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('new')
+  })
+
+  it('handles the LLM scenario with empty SEARCH/REPLACE content', () => {
+    const input = [
+      '[FILE path/to/file.ts]',
+      '[SEARCH]',
+      '',
+      '[REPLACE]',
+      '',
+      '[END]',
+      '',
+      '[SEARCH]',
+      '',
+      '[REPLACE]',
+      '',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    const matches = out.match(/```file-replace:path\/to\/file\.ts/g)
+    expect(matches?.length).toBe(2)
+  })
+
+  it('handles orphan SEARCH correctly during incremental preprocessing (fast path)', () => {
+    const prefix = '[FILE a.ts]\ncode\n[END]\n\ntrailing text'
+    preprocess(prefix)
+
+    const full = prefix + '\n\n[SEARCH]\nold\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(full)
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('old')
+    expect(out).toContain('new')
+  })
+
+  it('orphan SEARCH in suffix uses cached lastFilePath even with new FILE block later', () => {
+    const prefix = '[FILE a.ts]\ncode\n[END]\n\ntrailing'
+    preprocess(prefix)
+
+    const full =
+      prefix +
+      '\n\n[SEARCH]\nold1\n[REPLACE]\nnew1\n[END]\n[FILE b.ts]\ncodeB\n[END]\n[SEARCH]\nold2\n[REPLACE]\nnew2\n[END]'
+    const out = preprocess(full)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).toContain('```file:b.ts')
+    expect(out).toContain('```file-replace:b.ts')
+  })
+})
+
 describe('parser registry', () => {
   beforeEach(() => {
     setActiveParser('diff')
