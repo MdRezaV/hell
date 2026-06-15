@@ -1611,3 +1611,255 @@ describe('tag detection hardening', () => {
     })
   })
 })
+
+describe('preprocess — INCLUDE inline tags', () => {
+  it('converts [INCLUDE path] to inline code marker', () => {
+    const input = '[INCLUDE a.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:a.ts`')
+  })
+
+  it('preserves text before and after [INCLUDE]', () => {
+    const input = '1. [INCLUDE path/to/file.ext]. IGNORED TEXT'
+    const out = preprocess(input)
+    expect(out).toBe('1. `file-include:path/to/file.ext`. IGNORED TEXT')
+  })
+
+  it('handles [INCLUDE] at start of line with trailing text', () => {
+    const input = '[INCLUDE a.ts] is needed'
+    const out = preprocess(input)
+    expect(out).toBe('`file-include:a.ts` is needed')
+  })
+
+  it('handles [INCLUDE] at end of line', () => {
+    const input = 'See [INCLUDE a.ts]'
+    const out = preprocess(input)
+    expect(out).toBe('See `file-include:a.ts`')
+  })
+
+  it('handles multiple [INCLUDE] on the same line', () => {
+    const input = '[INCLUDE a.ts] and [INCLUDE b.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:a.ts`')
+    expect(out).toContain('`file-include:b.ts`')
+    expect(out).toBe('`file-include:a.ts` and `file-include:b.ts`')
+  })
+
+  it('trims whitespace in path', () => {
+    const input = '[INCLUDE   a.ts  ]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:a.ts`')
+  })
+
+  it('handles path with spaces', () => {
+    const input = '[INCLUDE my file.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:my file.ts`')
+  })
+
+  it('handles path with special characters', () => {
+    const input = '[INCLUDE src/@types/index.d.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:src/@types/index.d.ts`')
+  })
+
+  it('handles [INCLUDE] with leading whitespace on line', () => {
+    const input = '  [INCLUDE a.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:a.ts`')
+    expect(out).toBe('  `file-include:a.ts`')
+  })
+
+  it('handles [INCLUDE] with numbered list prefix', () => {
+    const input = '1. [INCLUDE path/to/file.ext]. IGNORED TEXT'
+    const out = preprocess(input)
+    expect(out).toBe('1. `file-include:path/to/file.ext`. IGNORED TEXT')
+  })
+
+  it('does not match [INCLUDE without closing bracket', () => {
+    const input = '[INCLUDE a.ts'
+    const out = preprocess(input)
+    expect(out).not.toContain('file-include')
+    expect(out).toBe('[INCLUDE a.ts')
+  })
+
+  it('does not match lowercase [include]', () => {
+    const input = '[include a.ts]'
+    const out = preprocess(input)
+    expect(out).not.toContain('file-include')
+    expect(out).toBe('[include a.ts]')
+  })
+
+  it('does not match mixed case [Include]', () => {
+    const input = '[Include a.ts]'
+    const out = preprocess(input)
+    expect(out).not.toContain('file-include')
+    expect(out).toBe('[Include a.ts]')
+  })
+
+  it('does not match [INCLUDE] without path', () => {
+    const input = '[INCLUDE]'
+    const out = preprocess(input)
+    expect(out).not.toContain('file-include')
+    expect(out).toBe('[INCLUDE]')
+  })
+
+  it('does not match [INCLUDE] with only whitespace path', () => {
+    const input = '[INCLUDE   ]'
+    const out = preprocess(input)
+    expect(out).not.toContain('file-include')
+    expect(out).toBe('[INCLUDE   ]')
+  })
+
+  it('ignores [INCLUDE] inside FILE block content', () => {
+    const input = '[FILE a.ts]\n[INCLUDE b.ts]\n[END]'
+    const out = preprocess(input)
+    expect(out).not.toContain('file-include')
+    expect(out).toContain('[INCLUDE b.ts]')
+    expect(out).toContain('```file:a.ts')
+  })
+
+  it('ignores [INCLUDE] inside FILE block with surrounding text', () => {
+    const input = '[FILE a.ts]\nsome [INCLUDE b.ts] text\n[END]'
+    const out = preprocess(input)
+    expect(out).not.toContain('`file-include:')
+    expect(out).toContain('some [INCLUDE b.ts] text')
+  })
+
+  it('ignores [INCLUDE] inside SEARCH content', () => {
+    const input = '[FILE a.ts]\n[SEARCH]\n[INCLUDE b.ts]\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(input)
+    expect(out).not.toContain('`file-include:')
+    expect(out).toContain('[INCLUDE b.ts]')
+    expect(out).toContain('```file-replace:a.ts')
+  })
+
+  it('ignores [INCLUDE] inside REPLACE content', () => {
+    const input = '[FILE a.ts]\n[SEARCH]\nold\n[REPLACE]\n[INCLUDE b.ts]\n[END]'
+    const out = preprocess(input)
+    expect(out).not.toContain('`file-include:')
+    expect(out).toContain('[INCLUDE b.ts]')
+    expect(out).toContain('```file-replace:a.ts')
+  })
+
+  it('ignores [INCLUDE] inside SEARCH with surrounding text', () => {
+    const input = '[FILE a.ts]\n[SEARCH]\nsee [INCLUDE b.ts] here\n[REPLACE]\nnew\n[END]'
+    const out = preprocess(input)
+    expect(out).not.toContain('`file-include:')
+    expect(out).toContain('see [INCLUDE b.ts] here')
+  })
+
+  it('ignores [INCLUDE] inside backtick code fence', () => {
+    const input = '```\n[INCLUDE a.ts]\n```\n'
+    const out = preprocess(input)
+    expect(out).toBe(input)
+  })
+
+  it('ignores [INCLUDE] inside tilde code fence', () => {
+    const input = '~~~\n[INCLUDE a.ts]\n~~~\n'
+    const out = preprocess(input)
+    expect(out).toBe(input)
+  })
+
+  it('ignores [INCLUDE] inside code fence with language', () => {
+    const input = '```md\n[INCLUDE a.ts]\n```\n'
+    const out = preprocess(input)
+    expect(out).toBe(input)
+  })
+
+  it('ignores [INCLUDE] inside orphan SEARCH block', () => {
+    const input = [
+      '[FILE a.ts]',
+      'code',
+      '[END]',
+      '',
+      '[SEARCH]',
+      '[INCLUDE b.ts]',
+      '[REPLACE]',
+      'new',
+      '[END]'
+    ].join('\n')
+    const out = preprocess(input)
+    expect(out).toContain('```file-replace:a.ts')
+    expect(out).not.toContain('`file-include:')
+  })
+
+  it('processes [INCLUDE] in orphan SEARCH fallback when no REPLACE', () => {
+    const input = ['[FILE a.ts]', 'code', '[END]', '', '[SEARCH]', '[INCLUDE b.ts]', '[END]'].join(
+      '\n'
+    )
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:b.ts`')
+  })
+
+  it('processes [INCLUDE] on lines outside any block', () => {
+    const input = 'Some text\n[INCLUDE a.ts]\nMore text'
+    const out = preprocess(input)
+    expect(out).toContain('Some text')
+    expect(out).toContain('`file-include:a.ts`')
+    expect(out).toContain('More text')
+  })
+
+  it('processes [INCLUDE] between FILE blocks', () => {
+    const input = '[FILE a.ts]\ncode\n[END]\n[INCLUDE b.ts]\n[FILE c.ts]\ncode2\n[END]'
+    const out = preprocess(input)
+    expect(out).toContain('```file:a.ts')
+    expect(out).toContain('`file-include:b.ts`')
+    expect(out).toContain('```file:c.ts')
+  })
+
+  it('processes [INCLUDE] after DELETE marker', () => {
+    const input = '[DELETE FILE a.ts]\n[INCLUDE b.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('```file-delete:a.ts')
+    expect(out).toContain('`file-include:b.ts`')
+  })
+
+  it('processes [INCLUDE] after MOVE marker', () => {
+    const input = '[MOVE FILE FROM a.ts TO b.ts]\n[INCLUDE c.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('```file-move:a.ts->b.ts')
+    expect(out).toContain('`file-include:c.ts`')
+  })
+
+  it('processes [INCLUDE] after COMMIT line', () => {
+    const input = 'COMMIT: done\n[INCLUDE a.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('```commit')
+    expect(out).toContain('`file-include:a.ts`')
+  })
+
+  it('handles [INCLUDE] on same line as surrounding markdown', () => {
+    const input = '- [INCLUDE a.ts] — required dependency'
+    const out = preprocess(input)
+    expect(out).toBe('- `file-include:a.ts` — required dependency')
+  })
+
+  it('handles [INCLUDE] with Windows line endings', () => {
+    const input = '[INCLUDE a.ts]\r\n[INCLUDE b.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:a.ts`')
+    expect(out).toContain('`file-include:b.ts`')
+  })
+
+  it('does not process [INCLUDE] inside COMMIT message', () => {
+    const input = 'COMMIT: add [INCLUDE a.ts] support'
+    const out = preprocess(input)
+    expect(out).toContain('```commit')
+    expect(out).toContain('[INCLUDE a.ts]')
+    expect(out).not.toContain('`file-include:')
+  })
+
+  it('handles plain text with no INCLUDE tags', () => {
+    const input = 'Just plain text'
+    expect(preprocess(input)).toBe('Just plain text')
+  })
+
+  it('handles multiple [INCLUDE] across multiple lines', () => {
+    const input = '[INCLUDE a.ts]\n[INCLUDE b.ts]\n[INCLUDE c.ts]'
+    const out = preprocess(input)
+    expect(out).toContain('`file-include:a.ts`')
+    expect(out).toContain('`file-include:b.ts`')
+    expect(out).toContain('`file-include:c.ts`')
+  })
+})

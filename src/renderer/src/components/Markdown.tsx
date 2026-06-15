@@ -1125,6 +1125,18 @@ const markdownComponents: Components = {
     ...props
   }: React.ComponentPropsWithoutRef<'code'> & { node?: unknown }): React.JSX.Element {
     void _node
+    const text = extractText(children)
+    if (!className && text.startsWith('file-include:')) {
+      const includePath = text.slice('file-include:'.length)
+      return (
+        <span className="md-file-include">
+          <code {...props}>{includePath}</code>
+          <button type="button" className="md-file-include-add" title="Add file">
+            Add
+          </button>
+        </span>
+      )
+    }
     return (
       <code className={className} {...props}>
         {children}

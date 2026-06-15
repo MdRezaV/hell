@@ -62,6 +62,15 @@ const BLOCK_MARKER_RE =
 const FILE_END_RE = /^\s*\[END]\s*$/
 const SEARCH_RE = /^\s*\[SEARCH]\s*$/
 const REPLACE_RE = /^\s*\[REPLACE]\s*$/
+const INCLUDE_INLINE_RE = /\[INCLUDE\s+([^\]]+)]/g
+
+function processIncludeInline(line: string): string {
+  return line.replace(INCLUDE_INLINE_RE, (match, path) => {
+    const trimmed = path.trim()
+    if (!trimmed) return match
+    return `\`file-include:${trimmed}\``
+  })
+}
 
 function isCodeFenceOpen(line: string): { char: string; len: number } | null {
   const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
@@ -278,13 +287,13 @@ function preprocessImpl(
         }
       } else {
         for (let k = startIdx; k < i; k++) {
-          result.push(lines[k])
+          result.push(processIncludeInline(lines[k]))
         }
       }
       continue
     }
 
-    result.push(line)
+    result.push(processIncludeInline(line))
     i++
   }
 
