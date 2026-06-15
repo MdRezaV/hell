@@ -437,6 +437,8 @@ export function pruneWorkspaceState(
   const validRelDirs = validDirPaths.map((p) => toRelative(workspacePath, p))
 
   const tx = d.transaction(() => {
+    d.exec(`DROP TABLE IF EXISTS temp_valid_files`)
+    d.exec(`DROP TABLE IF EXISTS temp_valid_dirs`)
     d.exec(`CREATE TEMP TABLE temp_valid_files (relative_path TEXT PRIMARY KEY)`)
     d.exec(`CREATE TEMP TABLE temp_valid_dirs (relative_path TEXT PRIMARY KEY)`)
 
