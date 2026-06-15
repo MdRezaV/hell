@@ -207,7 +207,7 @@ Questions:
 
 <planning_standards>
 - **Atomic Tasks**: Each task should represent a single, logical unit of work that can be implemented and verified independently.
-- **Explicit File Scope**: Always list the exact files that will be created, modified, or deleted in each task. Do not list files that are merely read for context.
+- **Explicit File Scope**: Always list the exact files that will be created, modified, deleted, or read for context in each task.
 - **Sequential Logic**: Order tasks logically. Establish foundations and interfaces first, then implement core logic, and finally handle integration, edge cases, and tests.
 - **Actionable Descriptions**: Describe exactly *what* needs to be done and *why*, without dictating the exact syntax. Highlight potential pitfalls or edge cases to watch out for in the description.
 </planning_standards>
