@@ -8,6 +8,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'fs'
+import { readFile } from 'fs/promises'
 import { getEncoding } from 'js-tiktoken'
 import { formatTreeText, readDirTree } from './fsUtils'
 import {
@@ -335,22 +336,43 @@ export function registerIpcHandlers(): void {
     let totalLines = 0
     let totalTokens = 0
     const enc = getTiktokenEncoder()
-    for (const rel of relativePaths) {
+
+    const queue = relativePaths.slice()
+    const CONCURRENCY = 8
+
+    async function processFile(rel: string): Promise<void> {
       const fullPath = join(workspace, rel)
-      if (!existsSync(fullPath)) continue
       try {
-        const content = readFileSync(fullPath, 'utf-8')
-        if (content.length === 0) continue
+        const buf = await readFile(fullPath)
+        if (buf.length === 0) return
         let newlines = 0
-        for (let i = 0; i < content.length; i++) {
-          if (content[i] === '\n') newlines++
+        for (let i = 0; i < buf.length; i++) {
+          if (buf[i] === 0x0a) newlines++
         }
         totalLines += newlines + 1
-        totalTokens += enc.encode(content).length
-      } catch (e) {
+        totalTokens += enc.encode(buf.toString('utf-8')).length
+      } catch (e: unknown) {
+        if (
+          e &&
+          typeof e === 'object' &&
+          'code' in e &&
+          (e as { code: unknown }).code === 'ENOENT'
+        ) {
+          return
+        }
         log.error('Failed to count lines for file:', rel, e)
       }
     }
+
+    async function worker(): Promise<void> {
+      while (true) {
+        const rel = queue.pop()
+        if (rel === undefined) return
+        await processFile(rel)
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
     return { lines: totalLines, tokens: totalTokens }
   })
 
