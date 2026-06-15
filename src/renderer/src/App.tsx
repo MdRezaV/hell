@@ -18,7 +18,7 @@ function App(): React.JSX.Element {
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
-  const [dirStructureTag, setDirStructureTag] = useState<FileTag | null>(null)
+  const [dirStructureTag, setDirStructureTag] = useState<FileTag | null>('PND')
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
   const copySnapshotRef = useRef<Set<string>>(new Set())
@@ -27,7 +27,7 @@ function App(): React.JSX.Element {
   const workspaceRef = useRef<string | null>(null)
   const fileStatesRef = useRef<FileStates>(new Map())
   const expandedDirsRef = useRef<Set<string>>(new Set())
-  const dirStructureTagRef = useRef<FileTag | null>(null)
+  const dirStructureTagRef = useRef<FileTag | null>('PND')
   const isNewChatRef = useRef(false)
 
   useEffect(() => {
@@ -70,7 +70,8 @@ function App(): React.JSX.Element {
       }
       setFileStates(fsMap)
       setExpandedDirs(expSet)
-      setDirStructureTag(null)
+      setDirStructureTag('PND')
+      dirStructureTagRef.current = 'PND'
     } catch (e) {
       log.error('Failed to load workspace state:', e)
     }
@@ -106,7 +107,8 @@ function App(): React.JSX.Element {
 
         setFileStates(fsMap)
         setExpandedDirs(expSet)
-        setDirStructureTag(null)
+        setDirStructureTag('PND')
+        dirStructureTagRef.current = 'PND'
       } catch (e) {
         log.error('Failed to apply chat session state:', e)
       }
@@ -183,10 +185,14 @@ function App(): React.JSX.Element {
           } else {
             setFileStates(new Map())
             setExpandedDirs(new Set())
+            setDirStructureTag('PND')
+            dirStructureTagRef.current = 'PND'
           }
         } else {
           setFileStates(new Map())
           setExpandedDirs(new Set())
+          setDirStructureTag(null)
+          dirStructureTagRef.current = null
         }
         setActiveChatId(null)
         chatRef.current?.loadChat([])
@@ -648,7 +654,8 @@ function App(): React.JSX.Element {
       copySnapshotRef.current = new Set()
       chatRef.current?.loadChat([])
       setChatHistoryKey((k) => k + 1)
-      setDirStructureTag(null)
+      setDirStructureTag('PND')
+      dirStructureTagRef.current = 'PND'
       setLineCount(null)
       setTokenCount(null)
     } catch (e) {
