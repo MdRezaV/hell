@@ -1043,6 +1043,24 @@ function getLanguageFromPath(filePath: string): string {
   return result
 }
 
+function FileExistenceChecker({
+  path,
+  onStatus
+}: {
+  path: string
+  onStatus: (path: string, exists: boolean | null) => void
+}): null {
+  const state = useFileContent(path)
+  useEffect(() => {
+    if (state === null) {
+      onStatus(path, null)
+    } else {
+      onStatus(path, state.exists)
+    }
+  }, [state, path, onStatus])
+  return null
+}
+
 const TaskBlock = memo(function TaskBlock({
   taskId,
   files,
@@ -1053,17 +1071,42 @@ const TaskBlock = memo(function TaskBlock({
   description: string
 }): React.JSX.Element {
   const { copied, copy } = useCopyToClipboard()
+  const [fileExistsMap, setFileExistsMap] = useState<Map<string, boolean | null>>(new Map())
+
+  const handleStatus = useCallback((path: string, exists: boolean | null) => {
+    setFileExistsMap((prev) => {
+      if (prev.get(path) === exists) return prev
+      const next = new Map(prev)
+      next.set(path, exists)
+      return next
+    })
+  }, [])
+
+  const missingFiles = useMemo(
+    () => files.filter((f) => fileExistsMap.get(f) === false),
+    [files, fileExistsMap]
+  )
+
+  const buildMessage = useCallback((): string => {
+    if (missingFiles.length === 0) return description
+    return `Files: ${missingFiles.join(', ')}\n${description}`
+  }, [missingFiles, description])
 
   const handleCopy = useCallback(async (): Promise<void> => {
-    await copy(description)
-  }, [copy, description])
+    await copy(buildMessage())
+  }, [copy, buildMessage])
 
   const handleRun = useCallback((): void => {
-    window.dispatchEvent(new CustomEvent('task-run', { detail: { files, description } }))
-  }, [files, description])
+    window.dispatchEvent(
+      new CustomEvent('task-run', { detail: { files, description: buildMessage() } })
+    )
+  }, [files, buildMessage])
 
   return (
     <div className="md-file-block border-border bg-background-soft overflow-hidden">
+      {files.map((f) => (
+        <FileExistenceChecker key={f} path={f} onStatus={handleStatus} />
+      ))}
       <div className="md-file-header">
         <div className="md-file-header-left">
           <span
