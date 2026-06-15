@@ -1,9 +1,9 @@
 .statusbar {
-  @apply flex items-center h-6 m-0 px-2.5 bg-[#115e59] flex-shrink-0 gap-3 leading-none;
+  @apply flex items-center h-6 m-0 px-2.5 bg-[#4a3268] flex-shrink-0 gap-3 leading-none;
 }
 
 .statusbar-item {
-  @apply text-[11px] font-semibold text-[#ccfbf1] leading-none;
+  @apply text-[11px] font-semibold text-[#e8def8] leading-none;
 }
 
 .statusbar-spacer {
@@ -15,5 +15,5 @@
 }
 
 .statusbar-btn {
-  @apply inline-flex items-center justify-center px-2.5 h-5 text-[10px] font-bold tracking-wider text-[#ccfbf1] bg-[#146e69] border-0 outline-none rounded-none cursor-pointer leading-none hover:bg-[#1a857f] active:bg-[#20a39c];
+  @apply inline-flex items-center justify-center px-2.5 h-5 text-[10px] font-bold tracking-wider text-[#e8def8] bg-[#563d78] border-0 outline-none rounded-none cursor-pointer leading-none hover:bg-[#644a8a] active:bg-[#72579c];
 }
