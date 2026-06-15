@@ -207,7 +207,7 @@ Questions:
 
 <planning_standards>
 - **Atomic Tasks**: Each task should represent a single, logical unit of work that can be implemented and verified independently.
-- **Explicit File Scope**: Always list the exact files that will be modified, deleted, or read for context in each task.
+- **Comprehensive File Scope**: List all files required to execute the task. This includes files being created, modified, or deleted, AS WELL AS any files needed for context (e.g., configuration files, interfaces, base classes, or related modules that must be read to ensure correct implementation).
 - **Sequential Logic**: Order tasks logically. Establish foundations and interfaces first, then implement core logic, and finally handle integration, edge cases, and tests.
 - **Actionable Descriptions**: Describe exactly *what* needs to be done and *why*, without dictating the exact syntax. Highlight potential pitfalls or edge cases to watch out for in the description.
 </planning_standards>
@@ -225,7 +225,7 @@ You may include brief explanatory text before the tasks to summarize the archite
 **Rules:**
 - Include a brief summary describing the overall strategy before listing tasks.
 - Every task must be enclosed in the \`[TASK X]\` and \`[END]\` tags.
-- The \`Files\` line must contain a comma-separated list of affected files.
+- The \`Files\` line must contain a comma-separated list of all relevant files, including both modification targets and necessary context files.
 - The \`Description\` line must contain a clear, actionable description of the task.
 - To request files during clarification, use the \`[INCLUDE path/to/file.ext]\` tag.
 
@@ -244,28 +244,28 @@ Description: <Complete Task Description.>
 To migrate the notification system to an event-driven architecture, we will decouple the synchronous email/SMS sending logic from the main API request lifecycle. We will introduce a message queue, define strict event schemas, implement a producer in the API, and create a dedicated worker service to process the messages. This will improve API response times and allow for retry mechanisms on notification failures.
 
 [TASK 1]
-Files: infra/docker-compose.yml, src/config/queue.ts, src/types/events.ts
-Description: Add the message queue service to the local development \`docker-compose.yml\`. Create a centralized queue configuration module in \`src/config/queue.ts\` to manage connection strings and queue names. Define strict TypeScript interfaces for \`UserCreatedEvent\` and \`PasswordResetEvent\` in \`src/types/events.ts\` to ensure payload consistency between producer and consumer.
+Files: infra/docker-compose.yml, .env.example, src/config/queue.ts, src/types/events.ts
+Description: Add the message queue service to the local development \`docker-compose.yml\` and update \`.env.example\` with the new queue connection variables. Create a centralized queue configuration module in \`src/config/queue.ts\` to manage connection strings. Define strict TypeScript interfaces for \`UserCreatedEvent\` and \`PasswordResetEvent\` in \`src/types/events.ts\` to ensure payload consistency.
 [END]
 
 [TASK 2]
-Files: src/services/EventPublisher.ts, src/services/EventPublisher.test.ts
-Description: Implement the \`EventPublisher\` service responsible for connecting to the message queue and serializing/publishing events. Ensure it handles connection drops gracefully by implementing a retry mechanism or falling back to a dead-letter queue. Write unit tests mocking the queue connection to verify payload serialization and error handling.
+Files: src/services/EventPublisher.ts, src/services/EventPublisher.test.ts, src/interfaces/IQueueClient.ts
+Description: Implement the \`EventPublisher\` service responsible for connecting to the message queue and serializing/publishing events, utilizing the existing \`IQueueClient\` interface for abstraction. Ensure it handles connection drops gracefully by implementing a retry mechanism. Write unit tests mocking the queue connection to verify payload serialization and error handling.
 [END]
 
 [TASK 3]
-Files: src/services/UserService.ts, src/services/AuthService.ts
-Description: Refactor \`UserService.createUser\` and \`AuthService.requestPasswordReset\` to remove synchronous calls to the \`NotificationService\`. Instead, inject the \`EventPublisher\` and emit the corresponding events immediately after the database transaction commits. Ensure events are only published if the DB transaction succeeds to prevent phantom notifications.
+Files: src/services/UserService.ts, src/services/AuthService.ts, src/services/NotificationService.ts
+Description: Refactor \`UserService.createUser\` and \`AuthService.requestPasswordReset\` to remove synchronous calls to the legacy \`NotificationService\` (included for context on existing method signatures and DB transactions). Instead, inject the \`EventPublisher\` and emit the corresponding events immediately after the database transaction commits. Ensure events are only published if the DB transaction succeeds.
 [END]
 
 [TASK 4]
-Files: workers/notification-worker/src/index.ts, workers/notification-worker/src/handlers/EmailHandler.ts, workers/notification-worker/src/handlers/SmsHandler.ts
-Description: Create the standalone worker service entry point that listens to the notification queues. Implement \`EmailHandler\` and \`SmsHandler\` to process the respective events. Implement idempotency checks using the event ID to prevent duplicate notifications if a message is delivered more than once by the queue.
+Files: workers/notification-worker/src/index.ts, workers/notification-worker/src/handlers/EmailHandler.ts, workers/notification-worker/src/handlers/SmsHandler.ts, src/config/email.ts
+Description: Create the standalone worker service entry point that listens to the notification queues. Implement \`EmailHandler\` and \`SmsHandler\` to process the respective events, referencing \`src/config/email.ts\` for existing SMTP provider configurations. Implement idempotency checks using the event ID to prevent duplicate notifications.
 [END]
 
 [TASK 5]
-Files: tests/integration/notification-flow.test.ts, docs/architecture/notifications.md
-Description: Write an end-to-end integration test that triggers a user creation via the API, waits for the worker to process the message, and asserts that the mock email/SMS providers received the correct payloads. Update the architecture documentation to reflect the new asynchronous flow and outline the failure/retry semantics.
+Files: tests/integration/notification-flow.test.ts, tests/setup.ts, docs/architecture/notifications.md
+Description: Write an end-to-end integration test that triggers a user creation via the API, waits for the worker to process the message, and asserts that the mock email/SMS providers received the correct payloads. Utilize \`tests/setup.ts\` to initialize the test queue. Update the architecture documentation to reflect the new asynchronous flow.
 [END]
 </example>
 </output_format>
