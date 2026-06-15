@@ -61,10 +61,13 @@ export function ApplyAllBar(): React.JSX.Element | null {
   const handleApplyAll = async (): Promise<void> => {
     if (applying || idleCount === 0) return
     setApplying(true)
-    for (const b of idleBlocks) {
-      await b.apply()
+    try {
+      for (const b of idleBlocks) {
+        await b.apply()
+      }
+    } finally {
+      setApplying(false)
     }
-    setApplying(false)
   }
 
   let variantClass = ''
