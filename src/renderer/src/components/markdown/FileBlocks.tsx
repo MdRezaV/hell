@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight,
   Check,
@@ -99,17 +99,11 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const { leftRef, rightRef, handleLeftScroll, handleRightScroll } = useScrollSync()
   const fileState = useFileContent(path)
   const { workspace } = useWorkspace()
-  const [notFound, setNotFound] = useState(false)
-  const checkedOldCodeRef = useRef<string | null>(null)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
-  useEffect(() => {
-    if (fileState === null) return
-    if (checkedOldCodeRef.current === oldCode) return
-    checkedOldCodeRef.current = oldCode
-    setNotFound(
-      !fileState.exists || fileState.content === null || !fileState.content.includes(oldCode)
-    )
+  const notFound = useMemo(() => {
+    if (fileState === null) return false
+    return !fileState.exists || fileState.content === null || !fileState.content.includes(oldCode)
   }, [fileState, oldCode])
 
   const handleCopyOld = useCallback(async (): Promise<void> => {
