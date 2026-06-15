@@ -225,7 +225,7 @@ You may include brief explanatory text before the tasks to summarize the archite
 **Rules:**
 - Include a brief summary describing the overall strategy before listing tasks.
 - Every task must be enclosed in the \`[TASK X]\` and \`[END]\` tags.
-- The \`Files\` line must contain a comma-separated list of all relevant files, including both modification targets and necessary context files.
+- The \`Files\` line must consist solely of a single-line, comma-separated list of all relevant files (including both modification targets and necessary context files), with no extra text before or after the file paths.
 - The \`Description\` line must contain a clear, actionable description of the task.
 - To request files during clarification, use the \`[INCLUDE path/to/file.ext]\` tag.
 
