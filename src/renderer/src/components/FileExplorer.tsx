@@ -273,6 +273,8 @@ function FileExplorer({
   const [searchLoading, setSearchLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancelRef = useRef(false)
+  const onFilePathsChangeRef = useRef(onFilePathsChange)
+  onFilePathsChangeRef.current = onFilePathsChange
 
   if (workspace !== prevWorkspace) {
     setPrevWorkspace(workspace)
@@ -287,7 +289,7 @@ function FileExplorer({
   useEffect(() => {
     if (!workspace) {
       queueMicrotask(() => {
-        onFilePathsChange(new Set())
+        onFilePathsChangeRef.current(new Set())
       })
       return
     }
@@ -300,7 +302,7 @@ function FileExplorer({
       setTree(sorted)
       const filePaths = collectFilePaths(sorted)
       const dirPaths = collectDirPaths(sorted)
-      onFilePathsChange(filePaths)
+      onFilePathsChangeRef.current(filePaths)
       window.electron.ipcRenderer
         .invoke('db:prune-workspace-state', workspace, Array.from(filePaths), Array.from(dirPaths))
         .catch((e) => log.error('Failed to prune workspace state:', e))
@@ -338,7 +340,7 @@ function FileExplorer({
       cancelled = true
       window.electron.ipcRenderer.removeListener('workspace:changed', handleChange)
     }
-  }, [workspace, onFilePathsChange])
+  }, [workspace])
 
   const handleOpenWorkspace = async (): Promise<void> => {
     try {
