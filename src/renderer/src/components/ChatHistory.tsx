@@ -29,7 +29,7 @@ function formatItemTime(ts: number): string {
   const yesterdayStart = new Date(todayStart.getTime() - 86400000)
 
   if (d >= todayStart) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
   }
   if (d >= yesterdayStart) {
     return 'Yesterday'
@@ -57,6 +57,10 @@ function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
 
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(s)
+  }
+
+  for (const [, items] of groups) {
+    items.sort((a, b) => b.created_at - a.created_at)
   }
 
   return groups
