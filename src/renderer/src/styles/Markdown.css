@@ -186,7 +186,7 @@
 }
 
 .md-file-copy {
-  @apply inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
+  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
     bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
     hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
 }
@@ -242,7 +242,7 @@
 }
 
 .md-commit-block {
-  @apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border border-border-subtle rounded-md gap-2 text-[12px] leading-snug min-w-0 my-2.5 transition-colors duration-normal hover:border-ctp-overlay0;
+  @apply flex items-center justify-between p-1.5 bg-surface-0 border border-border-subtle rounded-md gap-2 text-[12px] leading-snug min-w-0 my-2.5 transition-colors duration-normal hover:border-ctp-overlay0;
 }
 
 .md-commit-text {
@@ -250,7 +250,7 @@
 }
 
 .md-commit-copy {
-  @apply inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
+  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
     bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
     hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
 }

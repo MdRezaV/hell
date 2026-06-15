@@ -188,11 +188,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
               title={copiedOld ? 'Copied' : 'Copy search code'}
               aria-label={copiedOld ? 'Copied' : 'Copy search code'}
             >
-              {copiedOld ? (
-                <Check size={14} strokeWidth={2.25} />
-              ) : (
-                <Copy size={14} strokeWidth={2} />
-              )}
+              {copiedOld ? <Check size={12} /> : <Copy size={12} />}
             </button>
           </div>
           <div ref={leftRef} className="md-file-code md-file-diff-code">
@@ -217,11 +213,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
               title={copiedNew ? 'Copied' : 'Copy replace code'}
               aria-label={copiedNew ? 'Copied' : 'Copy replace code'}
             >
-              {copiedNew ? (
-                <Check size={14} strokeWidth={2.25} />
-              ) : (
-                <Copy size={14} strokeWidth={2} />
-              )}
+              {copiedNew ? <Check size={12} /> : <Copy size={12} />}
             </button>
           </div>
           <div ref={rightRef} className="md-file-code md-file-diff-code">
@@ -594,7 +586,7 @@ export const TaskBlock = memo(function TaskBlock({
             title={copied ? 'Copied' : 'Copy description'}
             aria-label={copied ? 'Copied' : 'Copy description'}
           >
-            {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+            {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>
           <button type="button" className="md-file-apply task" onClick={handleRun} title="Run task">
             <Play size={12} />
