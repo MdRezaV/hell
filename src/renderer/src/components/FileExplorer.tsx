@@ -398,6 +398,97 @@ function FileExplorer({
     }
   }, [])
 
+  useEffect(() => {
+    const normalize = (p: string): string => p.replace(/\\/g, '/')
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent).detail as
+        | {
+            path: string
+            matched?: boolean
+          }
+        | undefined
+      if (!detail?.path) return
+      const targetRaw = detail.path
+      const target = normalize(targetRaw)
+
+      const found = (matchedPath: string): void => {
+        onToggleFile([matchedPath], true)
+        detail.matched = true
+      }
+
+      // 1. Exact match
+      if (filePathSet.has(targetRaw)) {
+        found(targetRaw)
+        return
+      }
+
+      // 2. Normalized exact match (handles separator differences)
+      for (const p of filePathSet) {
+        if (normalize(p) === target) {
+          found(p)
+          return
+        }
+      }
+
+      // 3. Suffix match (handles relative vs workspace-prefixed paths)
+      const targetWithSlash = target.startsWith('/') ? target : `/${target}`
+      let bestMatch: string | null = null
+      let bestLen = -1
+      for (const p of filePathSet) {
+        const norm = normalize(p)
+        if (norm === target || norm.endsWith(targetWithSlash) || norm.endsWith('/' + target)) {
+          if (norm.length > bestLen) {
+            bestMatch = p
+            bestLen = norm.length
+          }
+        }
+      }
+      if (bestMatch) {
+        found(bestMatch)
+        return
+      }
+
+      // 4. Basename match as last resort
+      const baseName = target.split('/').pop()?.toLowerCase()
+      if (baseName) {
+        const candidates: string[] = []
+        for (const p of filePathSet) {
+          if (p.split(/[/\\]/).pop()?.toLowerCase() === baseName) {
+            candidates.push(p)
+          }
+        }
+        if (candidates.length === 1) {
+          found(candidates[0])
+          return
+        }
+        if (candidates.length > 1) {
+          // Pick the one whose path best contains the include's parent dirs
+          const targetParts = target.split('/').slice(0, -1)
+          let best: string | null = null
+          let bestScore = -1
+          for (const c of candidates) {
+            const cn = normalize(c)
+            let score = 0
+            for (const part of targetParts) {
+              if (cn.includes(part)) score++
+            }
+            if (score > bestScore) {
+              bestScore = score
+              best = c
+            }
+          }
+          if (best) {
+            found(best)
+          }
+        }
+      }
+    }
+    window.addEventListener('file-include-add', handler)
+    return () => {
+      window.removeEventListener('file-include-add', handler)
+    }
+  }, [filePathSet, onToggleFile])
+
   const filteredTree = useMemo(() => {
     const q = search.trim().toLowerCase()
     return filterTree(tree, q, contentMatches)

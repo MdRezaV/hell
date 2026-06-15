@@ -390,3 +390,27 @@
 .md-apply-all:disabled {
   @apply opacity-60 cursor-default;
 }
+
+.md-file-include {
+  @apply inline-flex items-center gap-1 align-middle whitespace-nowrap;
+}
+
+.md-file-include code {
+  @apply !py-0;
+}
+
+.md-file-include-add {
+  @apply inline-flex items-center px-1.5 py-px text-[10px] font-semibold leading-snug text-accent-text bg-accent border border-accent rounded-sm cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover;
+}
+
+.md-file-include-add.added {
+  @apply bg-success border-success cursor-default;
+}
+
+.md-file-include-add.not-found {
+  @apply bg-ctp-peach border-ctp-peach text-ctp-mantle cursor-default;
+}
+
+.md-file-include-add:disabled {
+  @apply cursor-default;
+}

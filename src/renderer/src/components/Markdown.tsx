@@ -188,6 +188,39 @@ function extractText(node: ReactNode): string {
   return parts.join('')
 }
 
+function FileIncludeAddButton({ path }: { path: string }): React.JSX.Element {
+  const [status, setStatus] = useState<'idle' | 'added' | 'notFound'>('idle')
+
+  const handleClick = useCallback((): void => {
+    const detail: { path: string; matched?: boolean } = { path }
+    const event = new CustomEvent('file-include-add', { detail })
+    window.dispatchEvent(event)
+    setStatus(detail.matched ? 'added' : 'notFound')
+  }, [path])
+
+  let label = 'Add'
+  let className = 'md-file-include-add'
+  if (status === 'added') {
+    label = 'Added'
+    className += ' added'
+  } else if (status === 'notFound') {
+    label = 'Not Found'
+    className += ' not-found'
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      title={status === 'notFound' ? 'File not found in workspace' : 'Add file'}
+      onClick={handleClick}
+      disabled={status === 'added'}
+    >
+      {label}
+    </button>
+  )
+}
+
 function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
   const segments = path.split(/[/\\]/)
   return (
@@ -1131,9 +1164,7 @@ const markdownComponents: Components = {
       return (
         <span className="md-file-include">
           <code {...props}>{includePath}</code>
-          <button type="button" className="md-file-include-add" title="Add file">
-            Add
-          </button>
+          <FileIncludeAddButton path={includePath} />
         </span>
       )
     }
