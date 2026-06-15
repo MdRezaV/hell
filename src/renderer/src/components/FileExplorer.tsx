@@ -66,27 +66,37 @@ interface FlatNode {
   level: number
   isOpen: boolean
   hasChildren: boolean
+  checkState: CheckState
+  tags: FileTag[]
 }
 
-function flattenTree(nodes: FileNode[], expandedDirs: Set<string>, level: number = 0): FlatNode[] {
+function flattenTree(
+  nodes: FileNode[],
+  expandedDirs: Set<string>,
+  fileStates: Map<string, FileTag>,
+  level: number = 0
+): FlatNode[] {
   const result: FlatNode[] = []
   for (const node of nodes) {
     const isOpen = node.type === 'directory' && expandedDirs.has(node.path)
     const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
-    result.push({ node, level, isOpen, hasChildren })
+    const checkState = getCheckState(node, fileStates)
+    const tags = getNodeTags(node, fileStates)
+    result.push({ node, level, isOpen, hasChildren, checkState, tags })
     if (isOpen && node.children) {
-      result.push(...flattenTree(node.children, expandedDirs, level + 1))
+      result.push(...flattenTree(node.children, expandedDirs, fileStates, level + 1))
     }
   }
   return result
 }
 
-function VirtualTreeNode({
+const VirtualTreeNode = memo(function VirtualTreeNode({
   node,
   level,
   isOpen,
   hasChildren,
-  fileStates,
+  checkState,
+  tags,
   onToggle,
   onToggleExpand
 }: {
@@ -94,12 +104,11 @@ function VirtualTreeNode({
   level: number
   isOpen: boolean
   hasChildren: boolean
-  fileStates: Map<string, FileTag>
+  checkState: CheckState
+  tags: FileTag[]
   onToggle: (paths: string[], checked: boolean) => void
   onToggleExpand: (path: string, expanded: boolean) => void
 }): React.JSX.Element {
-  const checkState = getCheckState(node, fileStates)
-  const tags = getNodeTags(node, fileStates)
   const isBinary = node.type === 'file' && !!node.isBinary
   const selectablePaths = node.leafPaths
   const isDisabled = selectablePaths.length === 0
@@ -158,7 +167,7 @@ function VirtualTreeNode({
       ))}
     </div>
   )
-}
+})
 
 function sortTree(nodes: FileNode[]): FileNode[] {
   const sorted = [...nodes]
@@ -497,8 +506,8 @@ function FileExplorer({
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const flatNodes = useMemo(
-    () => flattenTree(filteredTree, expandedDirs),
-    [filteredTree, expandedDirs]
+    () => flattenTree(filteredTree, expandedDirs, fileStates),
+    [filteredTree, expandedDirs, fileStates]
   )
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe to use
@@ -595,7 +604,8 @@ function FileExplorer({
                       level={flatNode.level}
                       isOpen={flatNode.isOpen}
                       hasChildren={flatNode.hasChildren}
-                      fileStates={fileStates}
+                      checkState={flatNode.checkState}
+                      tags={flatNode.tags}
                       onToggle={onToggleFile}
                       onToggleExpand={onToggleExpand}
                     />
