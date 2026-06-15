@@ -270,39 +270,64 @@ export function registerIpcHandlers(): void {
   safeHandle('search-file-content', async (_, workspace: string, query: string) => {
     const q = query.toLowerCase()
     const tree = await readDirTree(workspace, [], true)
-    const result: string[] = []
+    const overlapSize = Math.max(0, Buffer.byteLength(q, 'utf-8'))
 
-    async function walk(nodes: typeof tree): Promise<void> {
+    // Collect all searchable file paths up front.
+    const fileQueue: string[] = []
+    function collect(nodes: typeof tree): void {
       for (const node of nodes) {
-        if (node.type === 'file' && !node.isBinary) {
-          try {
-            const stream = createReadStream(node.path, {
-              encoding: 'utf-8',
-              highWaterMark: 64 * 1024
-            })
-            let found = false
-            let overlap = ''
-            const overlapSize = Math.max(0, q.length - 1)
+        if (node.type === 'file' && !node.isBinary) fileQueue.push(node.path)
+        if (node.children) collect(node.children)
+      }
+    }
+    collect(tree)
 
-            for await (const chunk of stream) {
-              const text = overlap + chunk
-              if (text.toLowerCase().includes(q)) {
-                found = true
-                stream.destroy()
-                break
-              }
-              overlap = text.length > overlapSize ? text.slice(-overlapSize) : text
-            }
-            if (found) result.push(node.path)
-          } catch {
-            /* skip unreadable files */
+    // Stream-search a single file using a small byte-buffer overlap
+    // instead of per-chunk string concatenation + slicing.
+    async function searchFile(filePath: string): Promise<boolean> {
+      try {
+        const stream = createReadStream(filePath, {
+          highWaterMark: 64 * 1024
+        })
+        let overlap: Buffer = Buffer.alloc(0)
+        let found = false
+
+        for await (const chunk of stream as AsyncIterable<Buffer>) {
+          const searchArea = overlap.length === 0 ? chunk : Buffer.concat([overlap, chunk])
+
+          if (searchArea.toString('utf-8').toLowerCase().includes(q)) {
+            found = true
+            stream.destroy()
+            break
+          }
+
+          if (searchArea.length > overlapSize) {
+            // subarray shares memory with searchArea; copy when the retained
+            // slice is small so the large parent buffer can be GC'd.
+            const tail = searchArea.subarray(searchArea.length - overlapSize)
+            overlap = tail.length * 4 < searchArea.length ? Buffer.from(tail) : tail
+          } else {
+            overlap = searchArea
           }
         }
-        if (node.children) await walk(node.children)
+        return found
+      } catch {
+        return false
       }
     }
 
-    await walk(tree)
+    const CONCURRENCY = 16
+    const result: string[] = []
+
+    async function worker(): Promise<void> {
+      while (true) {
+        const filePath = fileQueue.pop()
+        if (!filePath) return
+        if (await searchFile(filePath)) result.push(filePath)
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
     return result
   })
 
