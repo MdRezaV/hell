@@ -790,25 +790,6 @@ function App(): React.JSX.Element {
     }
   }, [workspace, fileStates, filePaths])
 
-  const handleClearDb = useCallback(async (): Promise<void> => {
-    try {
-      await window.electron.ipcRenderer.invoke('db:clear-all')
-      setFileStates(new Map())
-      setExpandedDirs(new Set())
-      setFilePaths(new Set())
-      setActiveChatId(null)
-      copySnapshotRef.current = new Set()
-      chatRef.current?.loadChat([])
-      setChatHistoryKey((k) => k + 1)
-      setDirStructureTag('PND')
-      dirStructureTagRef.current = 'PND'
-      setLineCount(null)
-      setTokenCount(null)
-    } catch (e) {
-      log.error('Failed to clear database:', e)
-    }
-  }, [])
-
   return (
     <WorkspaceContext.Provider value={{ workspace }}>
       <div className="flex flex-col w-full h-full">
@@ -873,7 +854,6 @@ function App(): React.JSX.Element {
           tokenCount={workspace ? (tokenCount ?? 0) : null}
           onCopy={handleCopy}
           onPaste={handlePaste}
-          onClearDb={handleClearDb}
         />
       </div>
     </WorkspaceContext.Provider>

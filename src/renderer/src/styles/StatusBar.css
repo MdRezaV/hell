@@ -1,9 +1,9 @@
 .statusbar {
-  @apply flex items-center h-5 m-0 px-2.5 bg-accent flex-shrink-0 gap-3 leading-none;
+  @apply flex items-center h-6 m-0 px-2.5 bg-[#115e59] flex-shrink-0 gap-3 leading-none;
 }
 
 .statusbar-item {
-  @apply text-[11px] font-medium text-accent-text opacity-85 leading-none;
+  @apply text-[11px] font-semibold text-[#ccfbf1] leading-none;
 }
 
 .statusbar-spacer {
@@ -15,13 +15,5 @@
 }
 
 .statusbar-btn {
-  @apply inline-flex items-center justify-center px-2 h-[18px] text-[10px] font-bold tracking-wider text-white bg-[rgba(0,0,0,0.15)] border border-[rgba(255,255,255,0.2)] rounded-none cursor-pointer leading-none hover:bg-[rgba(0,0,0,0.3)] active:bg-[rgba(0,0,0,0.4)];
-}
-
-.statusbar-btn:not(:last-child) {
-  @apply border-r-0;
-}
-
-.statusbar-btn-danger {
-  @apply hover:bg-[rgba(180,40,40,0.5)] active:bg-[rgba(180,40,40,0.7)];
+  @apply inline-flex items-center justify-center px-2.5 h-5 text-[10px] font-bold tracking-wider text-[#ccfbf1] bg-[#146e69] border-0 outline-none rounded-none cursor-pointer leading-none hover:bg-[#1a857f] active:bg-[#20a39c];
 }
