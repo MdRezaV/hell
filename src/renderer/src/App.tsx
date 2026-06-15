@@ -376,10 +376,12 @@ function App(): React.JSX.Element {
 
         // 3. Prepare context and copy
         let dirStructure: string | undefined
-        if (dirStructureTag === 'PND') {
+        if (dirStructureTag !== null) {
           dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
-          setDirStructureTag('INQ')
-          dirStructureTagRef.current = 'INQ'
+          if (dirStructureTag === 'PND') {
+            setDirStructureTag('INQ')
+            dirStructureTagRef.current = 'INQ'
+          }
         }
 
         const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
