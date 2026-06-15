@@ -288,13 +288,15 @@ export interface AIChatHandle {
   pasteAsAssistant(): Promise<boolean>
   getResolvedUserIndex(): number
   getMessages(): ChatMessage[]
-  loadChat(messages: ChatMessage[]): void
+  getMode(): string
+  setMode(mode: string): void
+  loadChat(messages: ChatMessage[], mode?: string): void
   runTask(description: string, files: FileContext[], dirStructure?: string): Promise<boolean>
 }
 
 interface AIChatProps {
   onNewChat?: () => void
-  onMessagesChange?: (messages: ChatMessage[]) => void
+  onMessagesChange?: (messages: ChatMessage[], mode: string) => void
 }
 
 const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
@@ -314,6 +316,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const messagesRef = useRef<ChatMessage[]>([])
   const inputValueRef = useRef('')
   const onMessagesChangeRef = useRef(onMessagesChange)
+  const modeRef = useRef(mode)
   const resizeTextarea = useAutoResizeTextarea()
 
   useEffect(() => {
@@ -329,10 +332,14 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   }, [onMessagesChange])
 
   useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
+
+  useEffect(() => {
     if (isLoadingRef.current) return
     if (messages.length === 0) return
     const timeout = setTimeout(() => {
-      onMessagesChangeRef.current?.(messages)
+      onMessagesChangeRef.current?.(messages, modeRef.current)
     }, 1500)
     return () => clearTimeout(timeout)
   }, [messages])
@@ -373,7 +380,13 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       getMessages(): ChatMessage[] {
         return messagesRef.current
       },
-      loadChat(newMessages: ChatMessage[]): void {
+      getMode(): string {
+        return modeRef.current
+      },
+      setMode(newMode: string): void {
+        setMode(newMode)
+      },
+      loadChat(newMessages: ChatMessage[], newMode?: string): void {
         isLoadingRef.current = true
         setInput('')
         if (inputRef.current) {
@@ -382,6 +395,9 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         setEditingId(null)
         setCopiedId(null)
         setIsAwaitingResponse(false)
+        if (newMode !== undefined) {
+          setMode(newMode)
+        }
         setMessages(newMessages)
         setTimeout(() => {
           isLoadingRef.current = false

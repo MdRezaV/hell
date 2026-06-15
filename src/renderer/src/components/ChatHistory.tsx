@@ -10,6 +10,7 @@ export interface ChatSession {
   messages: string
   created_at: number
   updated_at: number
+  mode?: string
 }
 
 interface ChatHistoryProps {
@@ -194,8 +195,13 @@ export default memo(function ChatHistory({
                         <span className="chat-history-item-title">
                           {session.title || 'New Chat'}
                         </span>
-                        <span className="chat-history-item-date">
-                          {formatItemTime(session.created_at)}
+                        <span className="chat-history-item-meta">
+                          {session.mode && (
+                            <span className="chat-history-item-mode">{session.mode}</span>
+                          )}
+                          <span className="chat-history-item-date">
+                            {formatItemTime(session.created_at)}
+                          </span>
                         </span>
                       </div>
                       <button

@@ -9,7 +9,7 @@ const MAX_WORKSPACES = 5
 // backwards-incompatible way. On startup, if the stored
 // `PRAGMA user_version` does not match, the database is wiped
 // and recreated from scratch.
-const SCHEMA_VERSION = 4
+const SCHEMA_VERSION = 5
 
 let db: Database.Database | null = null
 
@@ -115,6 +115,12 @@ function createTables(d: Database.Database): void {
       DEFAULT
       '[]',
       dir_structure_tag
+      TEXT
+      NOT
+      NULL
+      DEFAULT
+      '',
+      mode
       TEXT
       NOT
       NULL
@@ -316,6 +322,7 @@ export interface ChatSession {
   file_states: string
   expanded_dirs: string
   dir_structure_tag: string
+  mode: string
 }
 
 export function createChatSession(
@@ -324,13 +331,14 @@ export function createChatSession(
   messages: string,
   fileStates: string = '[]',
   expandedDirs: string = '[]',
-  dirStructureTag: string = ''
+  dirStructureTag: string = '',
+  mode: string = ''
 ): string {
   const d = getDb()
   const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   d.prepare(
-    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag, mode)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     workspacePath ?? null,
@@ -340,7 +348,8 @@ export function createChatSession(
     Date.now(),
     fileStates,
     expandedDirs,
-    dirStructureTag
+    dirStructureTag,
+    mode
   )
   return id
 }
@@ -351,12 +360,13 @@ export function updateChatSession(
   messages: string,
   fileStates: string = '[]',
   expandedDirs: string = '[]',
-  dirStructureTag: string = ''
+  dirStructureTag: string = '',
+  mode: string = ''
 ): void {
   const d = getDb()
   d.prepare(
-    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ? WHERE id = ?`
-  ).run(title, messages, Date.now(), fileStates, expandedDirs, dirStructureTag, id)
+    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ?, mode = ? WHERE id = ?`
+  ).run(title, messages, Date.now(), fileStates, expandedDirs, dirStructureTag, mode, id)
 }
 
 export function snapshotWorkspaceStateToSession(workspacePath: string): {

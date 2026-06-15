@@ -142,6 +142,7 @@ function App(): React.JSX.Element {
       const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
       const ed = serializeExpandedDirs(expandedDirsRef.current)
       const dst = dirStructureTagRef.current ?? ''
+      const mode = chatRef.current.getMode()
       if (activeChatIdRef.current) {
         await window.electron.ipcRenderer.invoke(
           'db:update-chat-session',
@@ -150,7 +151,8 @@ function App(): React.JSX.Element {
           JSON.stringify(messages),
           fs,
           ed,
-          dst
+          dst,
+          mode
         )
       } else {
         const id = await window.electron.ipcRenderer.invoke(
@@ -160,7 +162,8 @@ function App(): React.JSX.Element {
           JSON.stringify(messages),
           fs,
           ed,
-          dst
+          dst,
+          mode
         )
         setActiveChatId(id)
       }
@@ -438,6 +441,7 @@ function App(): React.JSX.Element {
         const ws = workspaceRef.current
         const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
         const ed = serializeExpandedDirs(expandedDirsRef.current)
+        const savedMode = chatRef.current?.getMode() ?? ''
         if (prevActiveChatId) {
           await window.electron.ipcRenderer.invoke(
             'db:update-chat-session',
@@ -446,7 +450,8 @@ function App(): React.JSX.Element {
             JSON.stringify(currentMessages),
             fs,
             ed,
-            savedDirStructureTag
+            savedDirStructureTag,
+            savedMode
           )
         } else {
           await window.electron.ipcRenderer.invoke(
@@ -456,7 +461,8 @@ function App(): React.JSX.Element {
             JSON.stringify(currentMessages),
             fs,
             ed,
-            savedDirStructureTag
+            savedDirStructureTag,
+            savedMode
           )
         }
       }
@@ -500,7 +506,7 @@ function App(): React.JSX.Element {
             }))
           }))
           setActiveChatId(id)
-          chatRef.current?.loadChat(messages)
+          chatRef.current?.loadChat(messages, session.mode || undefined)
         }
       } catch (e) {
         log.error('Failed to select chat:', e)
@@ -510,7 +516,7 @@ function App(): React.JSX.Element {
   )
 
   const handleMessagesChange = useCallback(
-    async (messages: ChatMessage[]) => {
+    async (messages: ChatMessage[], modeLabel: string) => {
       try {
         if (isNewChatRef.current) return
         if (messages.length === 0) return
@@ -527,7 +533,8 @@ function App(): React.JSX.Element {
             JSON.stringify(messages),
             fs,
             ed,
-            dst
+            dst,
+            modeLabel
           )
         } else {
           const id = await window.electron.ipcRenderer.invoke(
@@ -537,7 +544,8 @@ function App(): React.JSX.Element {
             JSON.stringify(messages),
             fs,
             ed,
-            dst
+            dst,
+            modeLabel
           )
           setActiveChatId(id)
         }
@@ -645,6 +653,7 @@ function App(): React.JSX.Element {
           const ws = workspaceRef.current
           const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
           const ed = serializeExpandedDirs(expandedDirsRef.current)
+          const savedMode = chatRef.current?.getMode() ?? ''
           if (prevActiveChatId) {
             await window.electron.ipcRenderer.invoke(
               'db:update-chat-session',
@@ -653,7 +662,8 @@ function App(): React.JSX.Element {
               JSON.stringify(currentMessages),
               fs,
               ed,
-              savedDirStructureTag
+              savedDirStructureTag,
+              savedMode
             )
           } else {
             await window.electron.ipcRenderer.invoke(
@@ -663,7 +673,8 @@ function App(): React.JSX.Element {
               JSON.stringify(currentMessages),
               fs,
               ed,
-              savedDirStructureTag
+              savedDirStructureTag,
+              savedMode
             )
           }
         }
