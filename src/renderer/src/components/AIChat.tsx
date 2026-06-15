@@ -340,7 +340,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     if (messages.length === 0) return
     const timeout = setTimeout(() => {
       onMessagesChangeRef.current?.(messages, modeRef.current)
-    }, 1500)
+    }, 300)
     return () => clearTimeout(timeout)
   }, [messages])
 
