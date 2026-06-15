@@ -1106,6 +1106,21 @@ const TaskBlock = memo(function TaskBlock({
           </button>
         </div>
       </div>
+      <div className="px-2 py-2 border-t border-border bg-background-soft flex flex-wrap gap-1">
+        {files.length > 0 ? (
+          files.map((f, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono text-text-secondary bg-background border border-border"
+              title={f}
+            >
+              <FilePathDisplay path={f} />
+            </span>
+          ))
+        ) : (
+          <span className="text-[11px] text-text-muted font-mono">No files</span>
+        )}
+      </div>
       <div className="p-3 text-[13px] leading-relaxed text-text-primary border-t border-border bg-background">
         {description.split('\n').map((line, i) => (
           <p key={i} className={i === 0 ? '' : 'mt-2'}>
