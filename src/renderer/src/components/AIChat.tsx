@@ -313,6 +313,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const isLoadingRef = useRef(false)
   const messagesRef = useRef<ChatMessage[]>([])
   const inputValueRef = useRef('')
+  const onMessagesChangeRef = useRef(onMessagesChange)
   const resizeTextarea = useAutoResizeTextarea()
 
   useEffect(() => {
@@ -324,12 +325,17 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   }, [input])
 
   useEffect(() => {
+    onMessagesChangeRef.current = onMessagesChange
+  }, [onMessagesChange])
+
+  useEffect(() => {
     if (isLoadingRef.current) return
+    if (messages.length === 0) return
     const timeout = setTimeout(() => {
-      onMessagesChange?.(messages)
+      onMessagesChangeRef.current?.(messages)
     }, 1500)
     return () => clearTimeout(timeout)
-  }, [messages, onMessagesChange])
+  }, [messages])
 
   const scrollToBottom = useCallback((): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
