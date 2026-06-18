@@ -14,8 +14,9 @@ import {
   FileReplaceBlock,
   TaskBlock
 } from './markdown/FileBlocks'
-import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
+
 import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
+import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
 
 interface MarkdownProps {
   content: string

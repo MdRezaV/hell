@@ -5,7 +5,7 @@ import {
   type ApplyBlockInfo,
   type ApplyBlockStatus,
   useApplyAllContext
-} from './applyAll'
+} from '@renderer/hooks/useApplyAll'
 
 export function ApplyAllProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [blocks, setBlocks] = useState<Map<string, ApplyBlockInfo>>(new Map())

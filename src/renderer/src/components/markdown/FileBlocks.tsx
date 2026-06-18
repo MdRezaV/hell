@@ -26,8 +26,9 @@ import {
   applyFileWrite,
   invalidateFileContentCache
 } from '../../utils/fileApply'
-import { ApplyBlockStatus, useApplyRegistration } from './applyAll'
 import { LinesDisplay } from './CodeBlocks'
+import { ApplyBlockStatus, useApplyRegistration } from '@renderer/hooks/useApplyAll'
+
 
 export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Element {
   const [status, setStatus] = useState<'idle' | 'added' | 'notFound'>('idle')
