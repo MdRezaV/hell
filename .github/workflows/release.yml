@@ -23,6 +23,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run tests
+        run: npm run test
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Sync package.json version
+        run: npm pkg set version=${{ steps.version.outputs.VERSION }}
+
       - name: Build and package
         run: npm run build:linux
         env:
@@ -49,6 +59,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Extract version from tag
+        id: version
+        shell: bash # Required on Windows for the ${...#v} string manipulation
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Sync package.json version
+        run: npm pkg set version=${{ steps.version.outputs.VERSION }}
 
       - name: Build and package
         run: npm run build:win
