@@ -167,6 +167,7 @@ export interface FileNode {
   type: 'file' | 'directory'
   children?: FileNode[]
   isBinary?: boolean
+  isHell?: boolean
 }
 
 export async function readDirTree(
@@ -202,11 +203,13 @@ export async function readDirTree(
       }
       return limit(async () => {
         const bin = await isBinaryFile(fullPath)
+        const isHell = entry.name === 'HELL.md'
         return {
           name: entry.name,
           path: fullPath,
           type: 'file' as const,
-          isBinary: bin
+          isBinary: bin || isHell,
+          isHell
         } as FileNode
       })
     })

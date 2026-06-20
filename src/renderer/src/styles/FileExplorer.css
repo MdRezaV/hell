@@ -141,6 +141,11 @@
   color: #888;
 }
 
+.tree-tag--HELL {
+  background-color: rgba(243, 139, 168, 0.35);
+  color: #f38ba8;
+}
+
 .tree-label--binary {
   opacity: 0.5;
 }

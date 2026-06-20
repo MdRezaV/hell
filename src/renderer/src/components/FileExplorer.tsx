@@ -23,6 +23,7 @@ interface FileNode {
   type: 'file' | 'directory'
   children?: FileNode[]
   isBinary?: boolean
+  isHell?: boolean
   leafPaths: string[]
 }
 
@@ -110,6 +111,7 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
   onToggleExpand: (path: string, expanded: boolean) => void
 }): React.JSX.Element {
   const isBinary = node.type === 'file' && !!node.isBinary
+  const isHell = node.type === 'file' && !!node.isHell
   const selectablePaths = node.leafPaths
   const isDisabled = selectablePaths.length === 0
   const showCheckbox = !isBinary
@@ -159,7 +161,8 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
         {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
       </span>
       <span className={`tree-label${isBinary ? ' tree-label--binary' : ''}`}>{node.name}</span>
-      {isBinary && <span className="tree-tag tree-tag--BIN">BIN</span>}
+      {isHell && <span className="tree-tag tree-tag--HELL">HELL</span>}
+      {isBinary && !isHell && <span className="tree-tag tree-tag--BIN">BIN</span>}
       {tags.map((tag) => (
         <span key={tag} className={`tree-tag tree-tag--${tag}`}>
           {node.type === 'file' ? tag : TAG_CHARS[tag]}
