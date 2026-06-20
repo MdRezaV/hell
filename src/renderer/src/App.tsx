@@ -22,6 +22,8 @@ function App(): React.JSX.Element {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
   const copySnapshotRef = useRef<Set<string>>(new Set())
+  const lastPasteAddedRef = useRef<Set<string>>(new Set())
+  const lastCopiedUserIndexRef = useRef<number>(-1)
   const chatRef = useRef<AIChatHandle>(null)
   const activeChatIdRef = useRef<string | null>(null)
   const workspaceRef = useRef<string | null>(null)
@@ -309,6 +311,8 @@ function App(): React.JSX.Element {
         return next
       })
       copySnapshotRef.current = new Set()
+      lastPasteAddedRef.current = new Set()
+      lastCopiedUserIndexRef.current = -1
     } catch (e) {
       log.error('Failed to clear selections:', e)
     }
@@ -325,11 +329,21 @@ function App(): React.JSX.Element {
     latestCopyFnRef.current = async (): Promise<void> => {
       try {
         if (!workspace) return
+
+        const currentUserIndex = chatRef.current?.getResolvedUserIndex() ?? 0
+        if (currentUserIndex !== lastCopiedUserIndexRef.current) {
+          lastPasteAddedRef.current = new Set()
+          lastCopiedUserIndexRef.current = currentUserIndex
+        }
+
+        const currentFileStates = fileStatesRef.current
+        const currentDirStructureTag = dirStructureTagRef.current
+
         // 1. Transition PND -> INQ first and collect paths synchronously
         const pathsToInclude: string[] = []
         const pathsToMarkInq: string[] = []
 
-        fileStates.forEach((state, path) => {
+        currentFileStates.forEach((state, path) => {
           if (filePaths.has(path)) {
             if (state === 'PND') {
               pathsToMarkInq.push(path)
@@ -355,6 +369,17 @@ function App(): React.JSX.Element {
           )
         }
 
+        // Record which paths are newly transitioned for copySnapshotRef
+        copySnapshotRef.current = new Set(pathsToInclude)
+
+        // Include ADD files that were added by the most recent paste
+        const lastPasteAdded = lastPasteAddedRef.current
+        lastPasteAdded.forEach((path) => {
+          if (currentFileStates.get(path) === 'ADD' && !pathsToInclude.includes(path)) {
+            pathsToInclude.push(path)
+          }
+        })
+
         // 2. Read file contents for all targeted paths
         const pendingFilesPromises = pathsToInclude.map(async (absolutePath) => {
           let relativePath = absolutePath
@@ -379,9 +404,9 @@ function App(): React.JSX.Element {
 
         // 3. Prepare context and copy
         let dirStructure: string | undefined
-        if (dirStructureTag !== null && dirStructureTag !== 'ADD') {
+        if (currentDirStructureTag !== null && currentDirStructureTag !== 'ADD') {
           dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
-          if (dirStructureTag === 'PND') {
+          if (currentDirStructureTag === 'PND') {
             setDirStructureTag('INQ')
             dirStructureTagRef.current = 'INQ'
           }
@@ -389,12 +414,11 @@ function App(): React.JSX.Element {
 
         const success = await chatRef.current?.copyByIndex(undefined, pendingFiles, dirStructure)
         if (!success) return
-        copySnapshotRef.current = new Set(pathsToInclude)
       } catch (e) {
         log.error('Failed to copy context:', e)
       }
     }
-  }, [workspace, fileStates, filePaths, dirStructureTag])
+  }, [workspace, filePaths])
 
   const handleCopy = useCallback(() => {
     latestCopyFnRef.current?.()
@@ -410,6 +434,8 @@ function App(): React.JSX.Element {
       chatRef.current?.loadChat([])
 
       copySnapshotRef.current = new Set()
+      lastPasteAddedRef.current = new Set()
+      lastCopiedUserIndexRef.current = -1
       if (dirStructureTag === 'ADD' || dirStructureTag === 'INQ') {
         setDirStructureTag('PND')
         dirStructureTagRef.current = 'PND'
@@ -567,6 +593,11 @@ function App(): React.JSX.Element {
         await saveCurrentChat()
 
         const snapshot = copySnapshotRef.current
+        const newlyAdded = new Set(snapshot)
+        fileStatesRef.current.forEach((state, path) => {
+          if (state === 'INQ') newlyAdded.add(path)
+        })
+        lastPasteAddedRef.current = newlyAdded
         setFileStates((prev) => {
           const next = new Map(prev)
           const toAdd = new Set<string>()
@@ -644,6 +675,8 @@ function App(): React.JSX.Element {
         const savedDirStructureTag = dirStructureTagRef.current ?? ''
         chatRef.current?.loadChat([])
         copySnapshotRef.current = new Set()
+        lastPasteAddedRef.current = new Set()
+        lastCopiedUserIndexRef.current = -1
         setDirStructureTag('PND')
         dirStructureTagRef.current = 'PND'
         setActiveChatId(null)
