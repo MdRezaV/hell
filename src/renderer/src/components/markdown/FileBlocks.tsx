@@ -31,7 +31,6 @@ import {
 import { LinesDisplay } from './CodeBlocks'
 import { ApplyBlockStatus, useApplyRegistration } from '@renderer/hooks/useApplyAll'
 
-
 export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Element {
   const [status, setStatus] = useState<'idle' | 'added' | 'notFound'>('idle')
 
@@ -113,18 +112,16 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const replaceInFile = useMemo(() => {
     if (fileState === null) return false
     return (
-      !!fileState.exists &&
+      fileState.exists &&
       fileState.content !== null &&
       fileState.content.includes(newCode) &&
       !fileState.content.includes(oldCode)
     )
   }, [fileState, oldCode, newCode])
 
-  useEffect(() => {
-    if (applyState === 'idle' && replaceInFile) {
-      setApplyState('applied')
-    }
-  }, [applyState, replaceInFile])
+  if (applyState === 'idle' && replaceInFile) {
+    setApplyState('applied')
+  }
 
   const handleCopyOld = useCallback(async (): Promise<void> => {
     await copyOld(oldCode)
