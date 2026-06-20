@@ -400,10 +400,15 @@ export function buildPrompt(
   index: number,
   mode: ChatModeConfig,
   files: FileContext[] = [],
-  dirStructure?: string
+  dirStructure?: string,
+  hellMd?: string | null
 ): string {
   const contextSection = formatContext(files, dirStructure)
   const template = findPromptTemplate(mode.prompts, index)
 
-  return `${template.start}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
+  const hellMdBody =
+    hellMd && hellMd.trim().length > 0 ? normalizeLineEndings(hellMd.trim()) : 'HELL.MD is empty.'
+
+  const raw = `${template.start}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
+  return raw.replace('[CONTENT OF HELL.MD SHOULD BE HERE]', hellMdBody)
 }

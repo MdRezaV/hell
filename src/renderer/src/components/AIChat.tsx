@@ -24,6 +24,7 @@ import '../styles/AIChat.css'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
 import { buildPrompt, CHAT_MODES, type FileContext, getModeByLabel } from '../utils/PromptEngine'
+import { useWorkspace } from '../WorkspaceContext'
 
 export interface MessageVariant {
   content: string
@@ -319,6 +320,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const modeRef = useRef(mode)
   const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string } | null>(null)
   const resizeTextarea = useAutoResizeTextarea()
+  const { workspace } = useWorkspace()
 
   useEffect(() => {
     messagesRef.current = messages
@@ -335,6 +337,23 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   useEffect(() => {
     modeRef.current = mode
   }, [mode])
+
+  const readHellMd = useCallback(async (): Promise<string | null> => {
+    if (!workspace) return null
+    try {
+      const result = (await window.electron.ipcRenderer.invoke(
+        'read-file',
+        workspace,
+        'HELL.MD'
+      )) as { exists: boolean; error: boolean; content: string | null }
+      if (result && !result.error && result.exists) {
+        return result.content
+      }
+      return null
+    } catch {
+      return null
+    }
+  }, [workspace])
 
   useEffect(() => {
     if (isLoadingRef.current) return
@@ -449,7 +468,15 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         const userMsg = updatedUserMessages[resolvedIndex]
         const userContent = userMsg.variants[userMsg.activeVariant].content
         const modeConfig = getModeByLabel(modeLabel || mode)
-        const promptText = buildPrompt(userContent, resolvedIndex, modeConfig, files, dirStructure)
+        const hellMdContent = await readHellMd()
+        const promptText = buildPrompt(
+          userContent,
+          resolvedIndex,
+          modeConfig,
+          files,
+          dirStructure,
+          hellMdContent
+        )
         try {
           await navigator.clipboard.writeText(promptText)
           return true
@@ -476,7 +503,15 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
         const modeConfig = getModeByLabel('Coding')
         const userCount = newMessages.filter((m) => m.role === 'user').length
-        const promptText = buildPrompt(description, userCount - 1, modeConfig, files, dirStructure)
+        const hellMdContent = await readHellMd()
+        const promptText = buildPrompt(
+          description,
+          userCount - 1,
+          modeConfig,
+          files,
+          dirStructure,
+          hellMdContent
+        )
         try {
           await navigator.clipboard.writeText(promptText)
           return true
@@ -517,7 +552,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         }
       }
     }
-  }, [mode])
+  }, [mode, readHellMd])
 
   const handleSend = (): void => {
     const trimmed = input.trim()
