@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { Check } from 'lucide-react'
+import { Check, Undo2 } from 'lucide-react'
 import {
   ApplyAllContext,
   type ApplyBlockInfo,
@@ -10,13 +10,21 @@ import {
 export function ApplyAllProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [blocks, setBlocks] = useState<Map<string, ApplyBlockInfo>>(new Map())
 
-  const register = useCallback((id: string, apply: () => Promise<void>) => {
-    setBlocks((prev) => {
-      const next = new Map(prev)
-      next.set(id, { apply, status: prev.get(id)?.status ?? 'idle' })
-      return next
-    })
-  }, [])
+  const register = useCallback(
+    (id: string, apply: () => Promise<void>, unapply?: () => Promise<void>) => {
+      setBlocks((prev) => {
+        const next = new Map(prev)
+        const existing = prev.get(id)
+        next.set(id, {
+          apply,
+          unapply: unapply ?? existing?.unapply,
+          status: existing?.status ?? 'idle'
+        })
+        return next
+      })
+    },
+    []
+  )
 
   const unregister = useCallback((id: string) => {
     setBlocks((prev) => {
@@ -47,7 +55,7 @@ export function ApplyAllProvider({ children }: { children: ReactNode }): React.J
 
 export function ApplyAllBar(): React.JSX.Element | null {
   const ctx = useApplyAllContext()
-  const [applying, setApplying] = useState(false)
+  const [busy, setBusy] = useState<'idle' | 'applying' | 'unapplying'>('idle')
   if (!ctx) return null
   const { blocks } = ctx
   const blockArr = [...blocks.values()]
@@ -55,49 +63,85 @@ export function ApplyAllBar(): React.JSX.Element | null {
 
   const idleBlocks = blockArr.filter((b) => b.status === 'idle')
   const idleCount = idleBlocks.length
+  const appliedBlocks = blockArr.filter((b) => b.status === 'applied' && b.unapply)
+  const appliedCount = appliedBlocks.length
   const hasWarning = blockArr.some((b) => b.status === 'notFound')
   const allApplied = blockArr.every((b) => b.status === 'applied')
 
   const handleApplyAll = async (): Promise<void> => {
-    if (applying || idleCount === 0) return
-    setApplying(true)
+    if (busy !== 'idle' || idleCount === 0) return
+    setBusy('applying')
     try {
       for (const b of idleBlocks) {
         await b.apply()
       }
     } finally {
-      setApplying(false)
+      setBusy('idle')
+    }
+  }
+
+  const handleUnapplyAll = async (): Promise<void> => {
+    if (busy !== 'idle' || appliedCount === 0) return
+    setBusy('unapplying')
+    try {
+      for (const b of [...appliedBlocks].reverse()) {
+        await b.unapply!()
+      }
+    } finally {
+      setBusy('idle')
     }
   }
 
   let variantClass = ''
   let label = `Apply All (${idleCount})`
-  let disabled = false
+  let applyDisabled = false
 
   if (allApplied) {
     variantClass = ' applied'
     label = 'All Applied'
-    disabled = true
-  } else if (applying) {
+    applyDisabled = true
+  } else if (busy === 'applying') {
     label = 'Applying...'
-    disabled = true
+    applyDisabled = true
   } else if (hasWarning) {
     variantClass = ' warning'
     if (idleCount === 0) {
       label = 'Not Found'
-      disabled = true
+      applyDisabled = true
     }
   } else if (idleCount === 0) {
-    disabled = true
+    applyDisabled = true
+  }
+
+  if (busy === 'unapplying') {
+    applyDisabled = true
+  }
+
+  let unapplyLabel = `UnApply All (${appliedCount})`
+  let unapplyDisabled = appliedCount === 0 || busy !== 'idle'
+  if (busy === 'unapplying') {
+    unapplyLabel = 'UnApplying...'
+    unapplyDisabled = true
+  } else if (appliedCount === 0) {
+    unapplyDisabled = true
   }
 
   return (
     <div className="md-apply-all-bar">
       <button
         type="button"
+        className="md-unapply-all"
+        onClick={handleUnapplyAll}
+        disabled={unapplyDisabled}
+      >
+        <Undo2 size={12} />
+        <span>{unapplyLabel}</span>
+      </button>
+      <button
+        type="button"
         className={`md-apply-all${variantClass}`}
         onClick={handleApplyAll}
-        disabled={disabled}
+        disabled={applyDisabled}
       >
         <Check size={12} />
         <span>{label}</span>

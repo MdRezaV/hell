@@ -189,6 +189,16 @@
   @apply opacity-60 cursor-default;
 }
 
+.md-file-apply.unapply {
+  @apply bg-[rgba(243,139,168,0.1)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)]
+  hover:bg-[rgba(243,139,168,0.2)] hover:border-[rgba(243,139,168,0.5)];
+}
+
+.md-file-apply.unapply.disabled,
+.md-file-apply.unapply:disabled {
+  @apply opacity-50 cursor-default hover:bg-[rgba(243,139,168,0.1)] hover:border-[rgba(243,139,168,0.3)];
+}
+
 .md-file-copy, .md-commit-copy {
   @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
     bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
@@ -355,7 +365,17 @@
 }
 
 .md-apply-all-bar {
-  @apply flex justify-end mt-3 pt-2 border-t border-border-subtle;
+  @apply flex justify-end mt-3 pt-2 border-t border-border-subtle gap-2;
+}
+
+.md-unapply-all {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
+    bg-[rgba(243,139,168,0.1)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)]
+    hover:bg-[rgba(243,139,168,0.2)] hover:border-[rgba(243,139,168,0.5)];
+}
+
+.md-unapply-all:disabled {
+  @apply opacity-50 cursor-default hover:bg-[rgba(243,139,168,0.1)] hover:border-[rgba(243,139,168,0.3)];
 }
 
 .md-file-include {

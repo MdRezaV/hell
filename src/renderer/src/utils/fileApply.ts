@@ -129,6 +129,37 @@ export async function applyFileReplace(
   }
 }
 
+export async function unapplyFileReplace(
+  workspace: string,
+  path: string,
+  oldCode: string,
+  newCode: string
+): Promise<ApplyResult> {
+  try {
+    const fileResult = await readFile(workspace, path)
+    if (!fileResult.exists || fileResult.content === null) {
+      return { success: false, error: 'File not found' }
+    }
+    const content = normalizeLineEndings(fileResult.content)
+    const normalizedOldCode = normalizeLineEndings(oldCode)
+    const normalizedNewCode = normalizeLineEndings(newCode)
+
+    const exactIdx = content.lastIndexOf(normalizedNewCode)
+    if (exactIdx !== -1) {
+      const newContent =
+        content.slice(0, exactIdx) +
+        normalizedOldCode +
+        content.slice(exactIdx + normalizedNewCode.length)
+      return applyFileWrite(workspace, path, newContent)
+    }
+
+    return { success: false, error: 'Applied text not found in file' }
+  } catch (e) {
+    log.error('Failed to unapply replace:', e)
+    return { success: false, error: String(e) }
+  }
+}
+
 export async function applyFileMove(
   workspace: string,
   oldPath: string,

@@ -4,11 +4,12 @@ export type ApplyBlockStatus = 'idle' | 'applied' | 'error' | 'notFound'
 
 export interface ApplyBlockInfo {
   apply: () => Promise<void>
+  unapply?: () => Promise<void>
   status: ApplyBlockStatus
 }
 
 export interface ApplyAllContextValue {
-  register: (id: string, apply: () => Promise<void>) => void
+  register: (id: string, apply: () => Promise<void>, unapply?: () => Promise<void>) => void
   unregister: (id: string) => void
   setStatus: (id: string, status: ApplyBlockStatus) => void
   blocks: Map<string, ApplyBlockInfo>
@@ -22,19 +23,32 @@ export function useApplyAllContext(): ApplyAllContextValue | null {
 
 let applyIdCounter = 0
 
-export function useApplyRegistration(applyFn: () => Promise<void>, status: ApplyBlockStatus): void {
+export function useApplyRegistration(
+  applyFn: () => Promise<void>,
+  status: ApplyBlockStatus,
+  unapplyFn?: () => Promise<void>
+): void {
   const ctx = useApplyAllContext()
   const idRef = useRef(`apply-${++applyIdCounter}`)
   const applyRef = useRef(applyFn)
+  const unapplyRef = useRef(unapplyFn)
 
   useEffect(() => {
     applyRef.current = applyFn
   }, [applyFn])
 
   useEffect(() => {
+    unapplyRef.current = unapplyFn
+  }, [unapplyFn])
+
+  useEffect(() => {
     if (!ctx) return
     const id = idRef.current
-    ctx.register(id, () => applyRef.current())
+    ctx.register(
+      id,
+      () => applyRef.current(),
+      unapplyRef.current ? () => unapplyRef.current!() : undefined
+    )
     return () => ctx.unregister(id)
   }, [ctx])
 

@@ -12,6 +12,7 @@ import {
   Replace,
   Search,
   Trash2,
+  Undo2,
   X
 } from 'lucide-react'
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
@@ -24,7 +25,8 @@ import {
   applyFileMove,
   applyFileReplace,
   applyFileWrite,
-  invalidateFileContentCache
+  invalidateFileContentCache,
+  unapplyFileReplace
 } from '../../utils/fileApply'
 import { LinesDisplay } from './CodeBlocks'
 import { ApplyBlockStatus, useApplyRegistration } from '@renderer/hooks/useApplyAll'
@@ -103,9 +105,26 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
   const notFound = useMemo(() => {
+    if (applyState === 'applied') return false
     if (fileState === null) return false
     return !fileState.exists || fileState.content === null || !fileState.content.includes(oldCode)
-  }, [fileState, oldCode])
+  }, [fileState, oldCode, applyState])
+
+  const replaceInFile = useMemo(() => {
+    if (fileState === null) return false
+    return (
+      !!fileState.exists &&
+      fileState.content !== null &&
+      fileState.content.includes(newCode) &&
+      !fileState.content.includes(oldCode)
+    )
+  }, [fileState, oldCode, newCode])
+
+  useEffect(() => {
+    if (applyState === 'idle' && replaceInFile) {
+      setApplyState('applied')
+    }
+  }, [applyState, replaceInFile])
 
   const handleCopyOld = useCallback(async (): Promise<void> => {
     await copyOld(oldCode)
@@ -122,8 +141,19 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
     setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, path, oldCode, newCode])
 
+  const handleUnapply = useCallback(async (): Promise<void> => {
+    if (!workspace) return
+    const result = await unapplyFileReplace(workspace, path, oldCode, newCode)
+    if (result.success) {
+      invalidateFileContentCache(workspace, path)
+      setApplyState('idle')
+    } else {
+      setApplyState('error')
+    }
+  }, [workspace, path, oldCode, newCode])
+
   const applyStatus: ApplyBlockStatus = notFound ? 'notFound' : applyState
-  useApplyRegistration(handleApply, applyStatus)
+  useApplyRegistration(handleApply, applyStatus, handleUnapply)
 
   return (
     <div className="md-file-block md-file-replace-block">
@@ -140,11 +170,22 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
         <div className="md-file-header-actions">
           <button
             type="button"
+            className={`md-file-apply unapply${applyState === 'applied' ? '' : ' disabled'}`}
+            onClick={handleUnapply}
+            disabled={applyState !== 'applied'}
+            title={applyState === 'applied' ? 'Revert applied changes' : 'Apply changes first'}
+          >
+            <Undo2 size={12} />
+            <span>UnApply</span>
+          </button>
+          <button
+            type="button"
             className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
             onClick={handleApply}
+            disabled={applyState === 'applied'}
             title={
               applyState === 'applied'
-                ? 'Applied'
+                ? 'Already applied'
                 : applyState === 'error'
                   ? 'Failed to apply'
                   : 'Apply changes'
