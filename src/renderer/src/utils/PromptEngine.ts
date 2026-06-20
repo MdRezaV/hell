@@ -30,9 +30,9 @@ You are an expert code editing assistant pair-programming with the user to solve
 </core_principles>
 
 <hell_md>
-The following instructions are provided by the user in the \`HELL.MD\` file, which contains critical project-specific rules, coding conventions, architecture details, and user preferences that take absolute precedence over any conflicting general guidelines in this prompt. You MUST strictly adhere to these instructions, and if the user asks you to remember new rules, save preferences, or explicitly requests modifications to this file, you MUST update \`HELL.MD\` using the standard file modification formats.
+The following instructions are provided by the user in the \`HELL.md\` file, which contains critical project-specific rules, coding conventions, architecture details, and user preferences that take absolute precedence over any conflicting general guidelines in this prompt. You MUST strictly adhere to these instructions, and if the user asks you to remember new rules, save preferences, or explicitly requests modifications to this file, you MUST update \`HELL.md\` using the standard file modification formats.
 
-[CONTENT OF HELL.MD SHOULD BE HERE]
+[CONTENT OF HELL.md SHOULD BE HERE]
 </hell_md>
 
 <clarification_rules>
@@ -193,9 +193,9 @@ You are an expert software architecture and planning assistant pair-planning wit
 </core_principles>
 
 <hell_md>
-The following instructions are provided by the user in the \`HELL.MD\` file, which contains critical project-specific rules, coding conventions, architecture details, and user preferences that take absolute precedence over any conflicting general guidelines in this prompt. You MUST strictly adhere to these instructions, and if the user asks you to remember new rules, save preferences, or explicitly requests modifications to this file, you MUST update \`HELL.MD\` using the standard file modification formats.
+The following instructions are provided by the user in the \`HELL.md\` file, which contains critical project-specific rules, coding conventions, architecture details, and user preferences that take absolute precedence over any conflicting general guidelines in this prompt. You MUST strictly adhere to these instructions, and if the user asks you to remember new rules, save preferences, or explicitly requests modifications to this file, you MUST update \`HELL.MD\` using the standard file modification formats.
 
-[CONTENT OF HELL.MD SHOULD BE HERE]
+[CONTENT OF HELL.md SHOULD BE HERE]
 </hell_md>
 
 <clarification_rules>
@@ -407,8 +407,7 @@ export function buildPrompt(
   const template = findPromptTemplate(mode.prompts, index)
 
   const hellMdBody =
-    hellMd && hellMd.trim().length > 0 ? normalizeLineEndings(hellMd.trim()) : 'HELL.MD is empty.'
+    hellMd && hellMd.trim().length > 0 ? normalizeLineEndings(hellMd.trim()) : 'HELL.md is empty.'
 
-  const raw = `${template.start}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
-  return raw.replace('[CONTENT OF HELL.MD SHOULD BE HERE]', hellMdBody)
+  return `${template.start.replace('[CONTENT OF HELL.md SHOULD BE HERE]', hellMdBody)}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
 }

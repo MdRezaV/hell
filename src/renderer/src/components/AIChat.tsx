@@ -344,7 +344,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       const result = (await window.electron.ipcRenderer.invoke(
         'read-file',
         workspace,
-        'HELL.MD'
+        'HELL.md'
       )) as { exists: boolean; error: boolean; content: string | null }
       if (result && !result.error && result.exists) {
         return result.content
