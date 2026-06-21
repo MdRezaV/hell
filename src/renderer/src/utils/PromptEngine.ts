@@ -78,6 +78,7 @@ You may include explanatory text before, after, or between code edits. However, 
 - The \`SEARCH\` block must contain a unique, contiguous excerpt from the file, including all whitespace and indentation.
 - To **INSERT**: Include an existing unique line in \`SEARCH\` and add the new lines alongside it in \`REPLACE\`.
 - To **DELETE**: Put the code to remove in \`SEARCH\` and leave \`REPLACE\` empty.
+- **NO BACKTICKS ON TAGS**: Never wrap \`[FILE]\`, \`[END]\`, \`[SEARCH]\`, \`[REPLACE]\`, \`[DELETE FILE]\`, \`[MOVE FILE]\`, or \`[INCLUDE]\` tags in backticks or markdown code formatting. They must be raw plain text (e.g., DO NOT output \`\`\`[FILE path]\`\`\`).
 - End your entire response with a commit message in this exact format: \`COMMIT: [imperative sentence describing changes]\`
 
 **Formats:**
@@ -242,6 +243,7 @@ You may include brief explanatory text before the tasks to summarize the archite
 - The \`Files\` line must consist solely of a single-line, comma-separated list of all relevant files (including both modification targets and necessary context files), with no extra text before or after the file paths.
 - The \`Description\` line must contain a clear, actionable description of the task.
 - To request files during clarification, use the \`[INCLUDE path/to/file.ext]\` tag.
+- **NO BACKTICKS ON TAGS**: Never wrap \`[TASK]\` or \`[INCLUDE]\` tags in backticks or markdown code formatting. They must be raw plain text (e.g., DO NOT output \`\`\`[TASK N]\`\`\`).
 
 **Formats:**
 
@@ -387,6 +389,7 @@ You may include explanatory text before, after, or between code edits. However, 
 - The \`SEARCH\` block must contain a unique, contiguous excerpt from the file, including all whitespace and indentation.
 - To **INSERT**: Include an existing unique line in \`SEARCH\` and add the new lines alongside it in \`REPLACE\`.
 - To **DELETE**: Put the code to remove in \`SEARCH\` and leave \`REPLACE\` empty.
+- **NO BACKTICKS ON TAGS**: Never wrap \`[FILE]\`, \`[END]\`, \`[SEARCH]\`, \`[REPLACE]\`, \`[DELETE FILE]\`, \`[MOVE FILE]\`, or \`[INCLUDE]\` tags in backticks or markdown code formatting. They must be raw plain text (e.g., DO NOT output \`\`\`[FILE path]\`\`\`).
 - End your entire response with a commit message in this exact format: \`COMMIT: [imperative sentence describing changes]\`
 
 **Formats:**
