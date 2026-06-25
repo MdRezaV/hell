@@ -321,19 +321,30 @@ function preprocessImpl(
   return { result: result.join('\n'), lastFilePath }
 }
 
+export interface Segment {
+  content: string
+  startIndex: number
+}
+
 /**
  * Split preprocessed markdown into segments at code-fence boundaries.
  * Each segment is rendered by an independent, memoized ReactMarkdown
  * instance so that during streaming only the last (active) segment
  * re-parses — eliminating the O(N²) cost of re-parsing the entire
  * accumulated document on every token.
+ *
+ * Returns segments with stable `startIndex` keys (character offset in
+ * the original content) to prevent React from unmounting/remounting
+ * segments when fence boundaries shift during streaming.
  */
-export function segmentContent(content: string): string[] {
-  if (!content) return ['']
+export function segmentContent(content: string): Segment[] {
+  if (!content) return [{ content: '', startIndex: 0 }]
 
   const lines = content.split('\n')
-  const segments: string[] = []
-  let segStart = 0
+  const segments: Segment[] = []
+  let segStartLine = 0
+  let segStartChar = 0
+  let charPos = 0
   let inFence = false
   let fenceChar = ''
   let fenceLen = 0
@@ -356,18 +367,23 @@ export function segmentContent(content: string): string[] {
       if (closeRe.test(line)) {
         inFence = false
         if (i < lines.length - 1) {
-          segments.push(lines.slice(segStart, i + 1).join('\n'))
-          segStart = i + 1
+          const segContent = lines.slice(segStartLine, i + 1).join('\n')
+          segments.push({ content: segContent, startIndex: segStartChar })
+          segStartLine = i + 1
+          segStartChar = charPos + line.length + 1
         }
       }
     }
+
+    charPos += line.length + 1
   }
 
-  if (segStart < lines.length) {
-    segments.push(lines.slice(segStart).join('\n'))
+  if (segStartLine < lines.length) {
+    const segContent = lines.slice(segStartLine).join('\n')
+    segments.push({ content: segContent, startIndex: segStartChar })
   }
 
-  return segments.length > 0 ? segments : ['']
+  return segments.length > 0 ? segments : [{ content: '', startIndex: 0 }]
 }
 
 export interface MarkdownParser {

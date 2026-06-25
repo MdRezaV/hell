@@ -269,8 +269,8 @@ const Markdown = memo(function Markdown({
       <div className="md-content">
         {segments.map((segment, i) => (
           <LazySegment
-            key={i}
-            content={segment}
+            key={segment.startIndex}
+            content={segment.content}
             isStreaming={isStreaming && i === lastIndex}
           />
         ))}
