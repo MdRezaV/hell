@@ -174,11 +174,7 @@
 }
 
 .chat-message-user {
-  @apply self-end flex-row-reverse;
-}
-
-.chat-message-ai {
-  @apply self-start;
+  @apply flex-row-reverse;
 }
 
 .chat-message-body {

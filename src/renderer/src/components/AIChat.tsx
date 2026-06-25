@@ -359,6 +359,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     [messages]
   )
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: virtualItemCount,
     getScrollElement: () => scrollContainerRef.current,
@@ -787,11 +788,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           </button>
         </div>
       </div>
-      <div
-        ref={scrollContainerRef}
-        className="ai-chat-messages"
-        onScroll={handleScroll}
-      >
+      <div ref={scrollContainerRef} className="ai-chat-messages" onScroll={handleScroll}>
         <div
           key={chatId}
           style={{
@@ -803,11 +800,13 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const isTypingRow = virtualRow.index === messages.length
             const rowKey = isTypingRow ? 'typing' : messages[virtualRow.index].id
+            const isUserRow = !isTypingRow && messages[virtualRow.index].role === 'user'
             return (
               <div
                 key={rowKey}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
+                className={`flex ${isUserRow ? 'justify-end' : 'justify-start'}`}
                 style={{
                   position: 'absolute',
                   top: 0,
