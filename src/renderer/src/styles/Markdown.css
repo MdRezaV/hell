@@ -14,7 +14,12 @@
   @apply mb-2.5;
 }
 
-.md-content h1, .md-content h2, .md-content h3, .md-content h4, .md-content h5, .md-content h6 {
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4,
+.md-content h5,
+.md-content h6 {
   @apply mt-4 mb-2 font-semibold leading-snug text-text;
 }
 
@@ -34,7 +39,8 @@
   @apply text-sm;
 }
 
-.md-content ul, .md-content ol {
+.md-content ul,
+.md-content ol {
   @apply mb-2.5 pl-[22px];
 }
 
@@ -50,7 +56,8 @@
   @apply mb-0.5;
 }
 
-.md-content li > ul, .md-content li > ol {
+.md-content li > ul,
+.md-content li > ol {
   @apply mt-0.5 mb-0;
 }
 
@@ -106,7 +113,8 @@
   @apply my-2.5 w-full border-collapse text-[12.5px];
 }
 
-.md-content th, .md-content td {
+.md-content th,
+.md-content td {
   @apply px-3 py-1.5 border border-border-subtle text-left;
 }
 
@@ -138,7 +146,9 @@
   @apply bg-black/20;
 }
 
-.md-command-label, .md-file-replace-label, .md-file-status-label {
+.md-command-label,
+.md-file-replace-label,
+.md-file-status-label {
   @apply inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm leading-snug;
 }
 
@@ -146,11 +156,14 @@
   @apply flex-shrink-0 whitespace-nowrap;
 }
 
-.md-command-label, .md-file-replace-label.new, .md-file-status-label.created {
+.md-command-label,
+.md-file-replace-label.new,
+.md-file-status-label.created {
   @apply bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)];
 }
 
-.md-file-replace-label.old, .md-file-status-label.deleted {
+.md-file-replace-label.old,
+.md-file-status-label.deleted {
   @apply bg-[rgba(243,139,168,0.12)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)];
 }
 
@@ -166,13 +179,17 @@
   @apply bg-[rgba(168,85,247,0.12)] text-[#a855f7] border border-[rgba(168,85,247,0.3)];
 }
 
-.md-command-run, .md-file-apply, .md-apply-all {
+.md-command-run,
+.md-file-apply,
+.md-apply-all {
   @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
     bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
     hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
 }
 
-.md-file-apply.applied, .md-apply-all.applied, .md-file-include-add.added {
+.md-file-apply.applied,
+.md-apply-all.applied,
+.md-file-include-add.added {
   @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
 }
 
@@ -199,13 +216,15 @@
   @apply opacity-50 cursor-default hover:bg-[rgba(243,139,168,0.1)] hover:border-[rgba(243,139,168,0.3)];
 }
 
-.md-file-copy, .md-commit-copy {
+.md-file-copy,
+.md-commit-copy {
   @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
     bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
     hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
 }
 
-.md-file-copy.copied, .md-commit-copy.copied {
+.md-file-copy.copied,
+.md-commit-copy.copied {
   @apply bg-[rgba(34,197,94,0.15)] text-[#22c55e] border-[rgba(34,197,94,0.4)];
 }
 
@@ -357,10 +376,32 @@
 }
 
 .md-syntax-block {
-  @apply !m-0 !px-3.5 !py-3 !bg-background-mute !border !border-border-subtle !rounded-md text-[12px] leading-snug;
+  margin: 0 !important;
+  border-radius: 0 0 6px 6px !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
 }
 
-.md-command-syntax code, .md-syntax-block code {
+.md-plain-pre {
+  background: #282c34;
+  color: #abb2bf;
+  padding: 12px 14px;
+  overflow: auto;
+  white-space: pre;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+.md-plain-pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+.md-command-syntax code,
+.md-syntax-block code {
   @apply !font-[inherit] !text-inherit !leading-[inherit];
 }
 

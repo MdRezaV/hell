@@ -1,4 +1,12 @@
-import React, { Children, isValidElement, memo, type ReactNode, useMemo } from 'react'
+import React, {
+  Children,
+  createContext,
+  isValidElement,
+  memo,
+  type ReactNode,
+  useContext,
+  useMemo
+} from 'react'
 import type { Components } from 'react-markdown'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -21,6 +29,16 @@ import { useLazyMount } from '../hooks/useLazyMount'
 
 interface MarkdownProps {
   content: string
+  isStreaming?: boolean
+}
+
+// Indicates whether the currently-rendering segment is the active (streaming)
+// one. Consumed by code-block components to defer expensive syntax
+// highlighting until streaming completes.
+const StreamingContext = createContext(false)
+
+export function useIsStreaming(): boolean {
+  return useContext(StreamingContext)
 }
 
 function extractText(node: ReactNode): string {
@@ -63,6 +81,7 @@ const markdownComponents: Components = {
     node: _node
   }: React.ComponentPropsWithoutRef<'pre'> & { node?: unknown }): React.JSX.Element {
     void _node
+    const isStreaming = useIsStreaming()
     let language = ''
     let codeText = ''
     let filePath = ''
@@ -127,10 +146,17 @@ const markdownComponents: Components = {
         const parsed = parseReplaceBlock(codeText)
         const oldCode = parsed?.oldCode ?? ''
         const newCode = parsed?.newCode ?? ''
-        return <FileReplaceBlock path={filePath} oldCode={oldCode} newCode={newCode} />
+        return (
+          <FileReplaceBlock
+            path={filePath}
+            oldCode={oldCode}
+            newCode={newCode}
+            isStreaming={isStreaming}
+          />
+        )
       }
       if (language === 'file-delete') {
-        return <FileDeleteBlock path={filePath} />
+        return <FileDeleteBlock path={filePath} isStreaming={isStreaming} />
       }
       if (language === 'file-move') {
         const arrowIdx = filePath.indexOf('->')
@@ -138,7 +164,7 @@ const markdownComponents: Components = {
         const newPath = arrowIdx >= 0 ? filePath.slice(arrowIdx + 2) : ''
         return <FileMoveBlock oldPath={oldPath} newPath={newPath} />
       }
-      return <FileBlock path={filePath} code={codeText} />
+      return <FileBlock path={filePath} code={codeText} isStreaming={isStreaming} />
     }
 
     if (language === 'command') {
@@ -158,6 +184,7 @@ const markdownComponents: Components = {
         language={resolvedLanguage}
         code={codeText}
         showLangLabel={showLangLabel || !!language}
+        isStreaming={isStreaming}
       />
     )
   },
@@ -191,14 +218,18 @@ const markdownComponents: Components = {
 // previous segments are skipped by React.memo — no re-parsing, no
 // re-highlighting.
 const MarkdownSegment = memo(function MarkdownSegment({
-  content
+  content,
+  isStreaming = false
 }: {
   content: string
+  isStreaming?: boolean
 }): React.JSX.Element {
   return (
-    <ReactMarkdown remarkPlugins={markdownRemarkPlugins} components={markdownComponents}>
-      {content}
-    </ReactMarkdown>
+    <StreamingContext.Provider value={isStreaming}>
+      <ReactMarkdown remarkPlugins={markdownRemarkPlugins} components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
+    </StreamingContext.Provider>
   )
 })
 
@@ -207,15 +238,17 @@ const MarkdownSegment = memo(function MarkdownSegment({
 // freeing DOM nodes, memory, and any ApplyAll context registrations
 // associated with the segment's file blocks.
 const LazySegment = memo(function LazySegment({
-  content
+  content,
+  isStreaming = false
 }: {
   content: string
+  isStreaming?: boolean
 }): React.JSX.Element {
   const { containerRef, shouldMount, placeholderHeight } = useLazyMount()
   return (
     <div ref={containerRef} className="md-lazy-segment">
       {shouldMount ? (
-        <MarkdownSegment content={content} />
+        <MarkdownSegment content={content} isStreaming={isStreaming} />
       ) : (
         <div style={{ height: placeholderHeight ?? 0 }} aria-hidden />
       )}
@@ -223,15 +256,23 @@ const LazySegment = memo(function LazySegment({
   )
 })
 
-const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.Element {
+const Markdown = memo(function Markdown({
+  content,
+  isStreaming = false
+}: MarkdownProps): React.JSX.Element {
   const processedContent = useMemo(() => getActiveParser().preprocess(content), [content])
   const segments = useMemo(() => segmentContent(processedContent), [processedContent])
+  const lastIndex = segments.length - 1
 
   return (
     <ApplyAllProvider>
       <div className="md-content">
         {segments.map((segment, i) => (
-          <LazySegment key={i} content={segment} />
+          <LazySegment
+            key={i}
+            content={segment}
+            isStreaming={isStreaming && i === lastIndex}
+          />
         ))}
         <ApplyAllBar />
       </div>

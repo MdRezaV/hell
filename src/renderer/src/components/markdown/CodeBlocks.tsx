@@ -8,11 +8,13 @@ import { normalizeLineEndings } from '../../utils/markdownParser'
 export const LinesDisplay = memo(function LinesDisplay({
   code,
   language,
-  onScroll
+  onScroll,
+  isStreaming = false
 }: {
   code: string
   language?: string
   onScroll?: () => void
+  isStreaming?: boolean
 }): React.JSX.Element {
   const normalizedCode = normalizeLineEndings(code)
   const lines = normalizedCode.split('\n')
@@ -54,7 +56,7 @@ export const LinesDisplay = memo(function LinesDisplay({
         ))}
       </div>
       <div className="md-file-code-scroll" onScroll={handleCodeScroll} ref={codeRef}>
-        {hasSyntax ? (
+        {hasSyntax && !isStreaming ? (
           <SyntaxHighlighter language={language} style={oneDark} className="md-file-syntax">
             {normalizedCode}
           </SyntaxHighlighter>
@@ -147,18 +149,26 @@ export const CommitBlock = memo(function CommitBlock({
 export const GenericCodeBlock = memo(function GenericCodeBlock({
   language,
   code,
-  showLangLabel
+  showLangLabel,
+  isStreaming = false
 }: {
   language: string
   code: string
   showLangLabel: boolean
+  isStreaming?: boolean
 }): React.JSX.Element {
   return (
     <div className="md-code-block-wrapper">
       {showLangLabel && <div className="md-code-lang">{language}</div>}
-      <SyntaxHighlighter language={language} style={oneDark} className="md-syntax-block">
-        {code}
-      </SyntaxHighlighter>
+      {isStreaming ? (
+        <pre className="md-syntax-block md-plain-pre">
+          <code>{code}</code>
+        </pre>
+      ) : (
+        <SyntaxHighlighter language={language} style={oneDark} className="md-syntax-block">
+          {code}
+        </SyntaxHighlighter>
+      )}
     </div>
   )
 })

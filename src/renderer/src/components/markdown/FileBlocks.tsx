@@ -90,11 +90,13 @@ export function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
 export const FileReplaceBlock = memo(function FileReplaceBlock({
   path,
   oldCode,
-  newCode
+  newCode,
+  isStreaming = false
 }: {
   path: string
   oldCode: string
   newCode: string
+  isStreaming?: boolean
 }): React.JSX.Element {
   const { copied: copiedOld, copy: copyOld } = useCopyToClipboard()
   const { copied: copiedNew, copy: copyNew } = useCopyToClipboard()
@@ -229,6 +231,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
               code={oldCode}
               language={getLanguageFromPath(path)}
               onScroll={handleLeftScroll}
+              isStreaming={isStreaming}
             />
           </div>
         </div>
@@ -254,6 +257,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
               code={newCode}
               language={getLanguageFromPath(path)}
               onScroll={handleRightScroll}
+              isStreaming={isStreaming}
             />
           </div>
         </div>
@@ -333,9 +337,11 @@ export const FileMoveBlock = memo(function FileMoveBlock({
 })
 
 export const FileDeleteBlock = memo(function FileDeleteBlock({
-  path
+  path,
+  isStreaming = false
 }: {
   path: string
+  isStreaming?: boolean
 }): React.JSX.Element {
   const fileState = useFileContent(path)
   const { copied, copy } = useCopyToClipboard()
@@ -444,7 +450,11 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
         </div>
       </div>
       <div className="md-file-code">
-        <LinesDisplay code={fileState.content || ''} language={getLanguageFromPath(path)} />
+        <LinesDisplay
+          code={fileState.content || ''}
+          language={getLanguageFromPath(path)}
+          isStreaming={isStreaming}
+        />
       </div>
     </div>
   )
@@ -452,10 +462,12 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
 
 export const FileBlock = memo(function FileBlock({
   path,
-  code
+  code,
+  isStreaming = false
 }: {
   path: string
   code: string
+  isStreaming?: boolean
 }): React.JSX.Element {
   const { copied, copy } = useCopyToClipboard()
   const fileState = useFileContent(path)
@@ -531,7 +543,11 @@ export const FileBlock = memo(function FileBlock({
         </div>
       </div>
       <div className="md-file-code">
-        <LinesDisplay code={code} language={getLanguageFromPath(path)} />
+        <LinesDisplay
+          code={code}
+          language={getLanguageFromPath(path)}
+          isStreaming={isStreaming}
+        />
       </div>
     </div>
   )
