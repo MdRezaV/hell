@@ -329,10 +329,40 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   const virtualItemCount = messages.length + (isAwaitingResponse ? 1 : 0)
 
+  const estimateSize = useCallback(
+    (index: number): number => {
+      if (index >= messages.length) {
+        return 60
+      }
+      const message = messages[index]
+      if (!message) return 80
+
+      const variant = message.variants[message.activeVariant]
+      const content = variant?.content ?? ''
+
+      const newlineCount = (content.match(/\n/g) || []).length
+      const estimatedLinesFromLength = Math.ceil(content.length / 45)
+      const totalLines = Math.max(newlineCount + 1, estimatedLinesFromLength)
+
+      let height = 56 + totalLines * 22
+
+      if (message.variants.length > 1) {
+        height += 24
+      }
+
+      if (message.role === 'assistant') {
+        height += 16
+      }
+
+      return Math.max(60, Math.min(height, 1200))
+    },
+    [messages]
+  )
+
   const virtualizer = useVirtualizer({
     count: virtualItemCount,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 80,
+    estimateSize,
     overscan: 5
   })
   const virtualizerRef = useRef(virtualizer)
@@ -455,12 +485,47 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         }
         setMessages(newMessages)
         isNearBottomRef.current = true
-        setTimeout(() => {
-          isLoadingRef.current = false
-          if (newMessages.length > 0) {
-            virtualizerRef.current.scrollToIndex(newMessages.length - 1, { align: 'end' })
+
+        if (newMessages.length === 0) {
+          setTimeout(() => {
+            isLoadingRef.current = false
+          }, 0)
+          return
+        }
+
+        requestAnimationFrame(() => {
+          let attempts = 0
+          const maxAttempts = 40
+          let lastTotalSize = 0
+          let stableFrames = 0
+
+          const checkAndScroll = (): void => {
+            attempts++
+            const currentCount = virtualizerRef.current.options.count
+            const currentTotalSize = virtualizerRef.current.getTotalSize()
+
+            if (currentCount >= newMessages.length && currentTotalSize > 0) {
+              if (currentTotalSize === lastTotalSize) {
+                stableFrames++
+              } else {
+                stableFrames = 0
+              }
+            }
+            lastTotalSize = currentTotalSize
+
+            if (stableFrames >= 2 || attempts >= maxAttempts) {
+              isLoadingRef.current = false
+              virtualizerRef.current.scrollToIndex(newMessages.length - 1, {
+                align: 'end',
+                behavior: 'auto'
+              })
+            } else {
+              requestAnimationFrame(checkAndScroll)
+            }
           }
-        }, 50)
+
+          requestAnimationFrame(checkAndScroll)
+        })
       },
       async copyByIndex(
         index?: number,
