@@ -136,8 +136,13 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
     const result = await applyFileReplace(workspace, path, oldCode, newCode)
-    if (result.success) invalidateFileContentCache(workspace, path)
-    setApplyState(result.success ? 'applied' : 'error')
+    if (result.success) {
+      invalidateFileContentCache(workspace, path)
+      setApplyState('applied')
+    } else {
+      setApplyState('error')
+      throw new Error('Apply failed')
+    }
   }, [workspace, path, oldCode, newCode])
 
   const handleUnapply = useCallback(async (): Promise<void> => {
@@ -148,11 +153,13 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
       setApplyState('idle')
     } else {
       setApplyState('error')
+      throw new Error('Unapply failed')
     }
   }, [workspace, path, oldCode, newCode])
 
   const applyStatus: ApplyBlockStatus = notFound ? 'notFound' : applyState
-  useApplyRegistration(handleApply, applyStatus, handleUnapply)
+  const stableKey = `replace:${path}:${oldCode}:${newCode}`
+  useApplyRegistration(handleApply, applyStatus, handleUnapply, stableKey)
 
   return (
     <div className="md-file-block md-file-replace-block">
@@ -282,11 +289,15 @@ export const FileMoveBlock = memo(function FileMoveBlock({
     if (result.success) {
       invalidateFileContentCache(workspace, oldPath)
       invalidateFileContentCache(workspace, newPath)
+      setApplyState('applied')
+    } else {
+      setApplyState('error')
+      throw new Error('Apply failed')
     }
-    setApplyState(result.success ? 'applied' : 'error')
   }, [workspace, oldPath, newPath])
 
-  useApplyRegistration(handleApply, applyState)
+  const stableKey = `move:${oldPath}:${newPath}`
+  useApplyRegistration(handleApply, applyState, undefined, stableKey)
 
   return (
     <div className="md-file-block">
@@ -356,8 +367,13 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace || !fileState?.exists) return
     const result = await applyFileDelete(workspace, path)
-    if (result.success) invalidateFileContentCache(workspace, path)
-    setApplyState(result.success ? 'applied' : 'error')
+    if (result.success) {
+      invalidateFileContentCache(workspace, path)
+      setApplyState('applied')
+    } else {
+      setApplyState('error')
+      throw new Error('Apply failed')
+    }
   }, [workspace, path, fileState])
 
   const deleteStatus: ApplyBlockStatus = !fileState
@@ -365,7 +381,8 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
     : !fileState.exists
       ? 'notFound'
       : applyState
-  useApplyRegistration(handleApply, deleteStatus)
+  const stableKey = `delete:${path}`
+  useApplyRegistration(handleApply, deleteStatus, undefined, stableKey)
 
   if (fileState === null) {
     return (
@@ -481,11 +498,17 @@ export const FileBlock = memo(function FileBlock({
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
     const result = await applyFileWrite(workspace, path, code)
-    if (result.success) invalidateFileContentCache(workspace, path)
-    setApplyState(result.success ? 'applied' : 'error')
+    if (result.success) {
+      invalidateFileContentCache(workspace, path)
+      setApplyState('applied')
+    } else {
+      setApplyState('error')
+      throw new Error('Apply failed')
+    }
   }, [workspace, path, code])
 
-  useApplyRegistration(handleApply, applyState)
+  const stableKey = `file:${path}:${code}`
+  useApplyRegistration(handleApply, applyState, undefined, stableKey)
 
   const isCreated = fileState !== null && !fileState.exists
 
