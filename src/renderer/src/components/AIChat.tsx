@@ -19,6 +19,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import Markdown from './Markdown'
 import '../styles/AIChat.css'
 import { useClickOutside } from '../hooks/useClickOutside'
@@ -42,6 +43,8 @@ let nextId = 0
 function generateId(): string {
   return `msg-${Date.now()}-${nextId++}`
 }
+
+const NEAR_BOTTOM_THRESHOLD = 100
 
 type ChatMode = string
 
@@ -310,7 +313,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0].label)
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const copyTimeoutRef = useRef<number | null>(null)
   const isLoadingRef = useRef(false)
@@ -319,8 +322,27 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const onMessagesChangeRef = useRef(onMessagesChange)
   const modeRef = useRef(mode)
   const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string } | null>(null)
+  const isNearBottomRef = useRef(true)
   const resizeTextarea = useAutoResizeTextarea()
   const { workspace } = useWorkspace()
+
+  const virtualItemCount = messages.length + (isAwaitingResponse ? 1 : 0)
+
+  const virtualizer = useVirtualizer({
+    count: virtualItemCount,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 80,
+    overscan: 5
+  })
+  const virtualizerRef = useRef(virtualizer)
+  virtualizerRef.current = virtualizer
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    isNearBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD
+  }, [])
 
   useEffect(() => {
     messagesRef.current = messages
@@ -374,13 +396,12 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     }
   }, [messages])
 
-  const scrollToBottom = useCallback((): void => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
-  }, [])
-
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, isAwaitingResponse, scrollToBottom])
+    if (!isNearBottomRef.current) return
+    if (virtualItemCount > 0) {
+      virtualizerRef.current.scrollToIndex(virtualItemCount - 1, { align: 'end' })
+    }
+  }, [virtualItemCount])
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -429,8 +450,12 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           setMode(newMode)
         }
         setMessages(newMessages)
+        isNearBottomRef.current = true
         setTimeout(() => {
           isLoadingRef.current = false
+          if (newMessages.length > 0) {
+            virtualizerRef.current.scrollToIndex(newMessages.length - 1, { align: 'end' })
+          }
         }, 50)
       },
       async copyByIndex(
@@ -693,22 +718,53 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           </button>
         </div>
       </div>
-      <div className="ai-chat-messages">
-        {messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            message={msg}
-            isEditing={editingId === msg.id}
-            isCopied={copiedId === msg.id}
-            onVariantChange={handleVariantChange}
-            onEdit={handleEditSave}
-            onStartEdit={setEditingId}
-            onCancelEdit={handleCancelEdit}
-            onCopy={handleCopy}
-          />
-        ))}
-        {isAwaitingResponse && <TypingIndicator />}
-        <div ref={messagesEndRef} />
+      <div
+        ref={scrollContainerRef}
+        className="ai-chat-messages"
+        onScroll={handleScroll}
+      >
+        <div
+          style={{
+            height: virtualizer.getTotalSize(),
+            width: '100%',
+            position: 'relative'
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const isTypingRow = virtualRow.index === messages.length
+            const rowKey = isTypingRow ? 'typing' : messages[virtualRow.index].id
+            return (
+              <div
+                key={rowKey}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                  paddingBottom: '1rem'
+                }}
+              >
+                {isTypingRow ? (
+                  <TypingIndicator />
+                ) : (
+                  <MessageBubble
+                    message={messages[virtualRow.index]}
+                    isEditing={editingId === messages[virtualRow.index].id}
+                    isCopied={copiedId === messages[virtualRow.index].id}
+                    onVariantChange={handleVariantChange}
+                    onEdit={handleEditSave}
+                    onStartEdit={setEditingId}
+                    onCancelEdit={handleCancelEdit}
+                    onCopy={handleCopy}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
       <div className="ai-chat-input-bar ai-chat-input-bar-floating">
         <div className="ai-chat-input-wrapper ai-chat-input-floating">
