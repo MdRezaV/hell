@@ -1352,67 +1352,67 @@ describe('normalizeLineEndings', () => {
 
 describe('segmentContent', () => {
   it('returns single empty segment for empty input', () => {
-    expect(segmentContent('')).toEqual([''])
+    expect(segmentContent('')).toEqual([{ content: '', startIndex: 0 }])
   })
 
   it('returns single segment for plain text', () => {
-    expect(segmentContent('hello world')).toEqual(['hello world'])
+    expect(segmentContent('hello world')).toEqual([{ content: 'hello world', startIndex: 0 }])
   })
 
   it('returns single segment for multi-line text with no fences', () => {
     const input = 'line1\nline2\nline3'
-    expect(segmentContent(input)).toEqual(['line1\nline2\nline3'])
+    expect(segmentContent(input)).toEqual([{ content: 'line1\nline2\nline3', startIndex: 0 }])
   })
 
   it('splits after a closed backtick fence', () => {
     const input = 'before\n```js\ncode\n```\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[0]).toContain('before')
-    expect(segs[0]).toContain('```js')
-    expect(segs[0]).toContain('code')
-    expect(segs[1]).toBe('after')
+    expect(segs[0].content).toContain('before')
+    expect(segs[0].content).toContain('```js')
+    expect(segs[0].content).toContain('code')
+    expect(segs[1].content).toBe('after')
   })
 
   it('splits after a closed tilde fence', () => {
     const input = 'before\n~~~\ncode\n~~~\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[0]).toContain('~~~')
-    expect(segs[1]).toBe('after')
+    expect(segs[0].content).toContain('~~~')
+    expect(segs[1].content).toBe('after')
   })
 
   it('handles multiple fenced blocks', () => {
     const input = 'a\n```\ncode1\n```\nb\n```\ncode2\n```\nc'
     const segs = segmentContent(input)
     expect(segs.length).toBe(3)
-    expect(segs[0]).toContain('code1')
-    expect(segs[1]).toContain('code2')
-    expect(segs[2]).toBe('c')
+    expect(segs[0].content).toContain('code1')
+    expect(segs[1].content).toContain('code2')
+    expect(segs[2].content).toBe('c')
   })
 
   it('handles fence at start of content', () => {
     const input = '```\ncode\n```\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[0]).toContain('code')
-    expect(segs[1]).toBe('after')
+    expect(segs[0].content).toContain('code')
+    expect(segs[1].content).toBe('after')
   })
 
   it('keeps fence at end in same segment (no trailing content)', () => {
     const input = 'before\n```\ncode\n```'
     const segs = segmentContent(input)
     expect(segs.length).toBe(1)
-    expect(segs[0]).toContain('before')
-    expect(segs[0]).toContain('code')
+    expect(segs[0].content).toContain('before')
+    expect(segs[0].content).toContain('code')
   })
 
   it('keeps unclosed fence in single segment (streaming)', () => {
     const input = 'before\n```\ncode still streaming'
     const segs = segmentContent(input)
     expect(segs.length).toBe(1)
-    expect(segs[0]).toContain('before')
-    expect(segs[0]).toContain('code still streaming')
+    expect(segs[0].content).toContain('before')
+    expect(segs[0].content).toContain('code still streaming')
   })
 
   it('handles fence with language identifier', () => {
@@ -1431,31 +1431,31 @@ describe('segmentContent', () => {
     const input = 'before\n~~~md\n```code```\n~~~\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[0]).toContain('```code```')
+    expect(segs[0].content).toContain('```code```')
   })
 
   it('does not close backtick fence with tilde', () => {
     const input = '```\ncode\n~~~\nmore code\n```'
     const segs = segmentContent(input)
     expect(segs.length).toBe(1)
-    expect(segs[0]).toContain('~~~')
-    expect(segs[0]).toContain('more code')
+    expect(segs[0].content).toContain('~~~')
+    expect(segs[0].content).toContain('more code')
   })
 
   it('requires closing fence to be at least as long as opening', () => {
     const input = '````\n```\n````\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[1]).toBe('after')
+    expect(segs[1].content).toBe('after')
   })
 
   it('does not close longer fence with shorter fence', () => {
     const input = '````\ncode\n```\nmore\n````\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[0]).toContain('code')
-    expect(segs[0]).toContain('more')
-    expect(segs[1]).toBe('after')
+    expect(segs[0].content).toContain('code')
+    expect(segs[0].content).toContain('more')
+    expect(segs[1].content).toBe('after')
   })
 
   it('handles fence with up to 3 spaces indent', () => {
@@ -1480,8 +1480,8 @@ describe('segmentContent', () => {
     const input = 'before\n\n```\ncode\n```\n\nafter'
     const segs = segmentContent(input)
     expect(segs.length).toBe(2)
-    expect(segs[0]).toContain('before\n')
-    expect(segs[1]).toBe('\nafter')
+    expect(segs[0].content).toContain('before\n')
+    expect(segs[1].content).toBe('\nafter')
   })
 })
 
