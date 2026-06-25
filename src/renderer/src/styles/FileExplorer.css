@@ -162,3 +162,19 @@
   cursor: pointer;
   user-select: none;
 }
+
+.explorer-skeleton {
+  @apply flex flex-col py-1 flex-1;
+}
+
+.explorer-skeleton-row {
+  @apply flex items-center h-5 gap-1.5 pr-2;
+}
+
+.explorer-skeleton-checkbox {
+  @apply w-3 h-3 rounded-sm bg-surface-1 animate-pulse flex-shrink-0;
+}
+
+.explorer-skeleton-bar {
+  @apply h-2.5 rounded-sm bg-surface-1 animate-pulse;
+}

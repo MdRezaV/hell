@@ -5,6 +5,7 @@ import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat
 import ChatHistory from './components/ChatHistory'
 import StatusBar from './components/StatusBar'
 import { WorkspaceContext } from './WorkspaceContext'
+import { useLoading } from './LoadingContext'
 import { useResizableLayout } from './hooks/useResizableLayout'
 import { deriveTitle, joinWithWorkspace } from './utils/appUtils'
 import { invalidateWorkspaceFileCache } from './utils/fileApply'
@@ -14,6 +15,7 @@ type FileStates = Map<string, FileTag>
 function App(): React.JSX.Element {
   const { leftWidth, rightWidth, layoutRef, startResizeLeft, startResizeRight } =
     useResizableLayout()
+  const { withLoading } = useLoading()
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
@@ -176,54 +178,56 @@ function App(): React.JSX.Element {
 
   const handleWorkspaceChange = useCallback(
     async (path: string | null, { restore = true } = {}): Promise<void> => {
-      try {
-        await saveCurrentChat()
-        log.info('Workspace changed:', path ?? '(none)')
-        setWorkspace(path)
-        setFilePaths(new Set())
-        copySnapshotRef.current = new Set()
-        await window.electron.ipcRenderer.invoke('workspace:watch', path)
-        if (path) {
-          await window.electron.ipcRenderer.invoke('db:touch-workspace', path)
-          if (restore) {
-            await loadWorkspaceState(path)
+      await withLoading(async () => {
+        try {
+          await saveCurrentChat()
+          log.info('Workspace changed:', path ?? '(none)')
+          setActiveChatId(null)
+          chatRef.current?.loadChat([])
+          setWorkspace(path)
+          setFilePaths(new Set())
+          copySnapshotRef.current = new Set()
+          await window.electron.ipcRenderer.invoke('workspace:watch', path)
+          if (path) {
+            await window.electron.ipcRenderer.invoke('db:touch-workspace', path)
+            if (restore) {
+              await loadWorkspaceState(path)
+            } else {
+              setFileStates(new Map())
+              setExpandedDirs(new Set())
+              setDirStructureTag('PND')
+              dirStructureTagRef.current = 'PND'
+            }
           } else {
             setFileStates(new Map())
             setExpandedDirs(new Set())
-            setDirStructureTag('PND')
-            dirStructureTagRef.current = 'PND'
+            setDirStructureTag(null)
+            dirStructureTagRef.current = null
           }
-        } else {
-          setFileStates(new Map())
-          setExpandedDirs(new Set())
-          setDirStructureTag(null)
-          dirStructureTagRef.current = null
+        } catch (e) {
+          log.error('Failed to change workspace:', e)
         }
-        setActiveChatId(null)
-        chatRef.current?.loadChat([])
-      } catch (e) {
-        log.error('Failed to change workspace:', e)
-      }
+      })
     },
-    [loadWorkspaceState, saveCurrentChat]
+    [loadWorkspaceState, saveCurrentChat, withLoading]
   )
 
   useEffect(() => {
     let cancelled = false
-    window.electron.ipcRenderer
-      .invoke('db:get-last-workspace')
-      .then(async (path: string | null) => {
-        if (!cancelled && path) {
-          await handleWorkspaceChange(path)
-        }
-      })
-      .catch((e) => {
-        log.warn('Failed to load last workspace', e)
-      })
+    withLoading(async () => {
+      const path: string | null = await window.electron.ipcRenderer.invoke(
+        'db:get-last-workspace'
+      )
+      if (!cancelled && path) {
+        await handleWorkspaceChange(path)
+      }
+    }).catch((e) => {
+      log.warn('Failed to load last workspace', e)
+    })
     return () => {
       cancelled = true
     }
-  }, [handleWorkspaceChange])
+  }, [handleWorkspaceChange, withLoading])
 
   const handleToggleFile = useCallback(
     (paths: string[], checked: boolean): void => {
@@ -502,43 +506,52 @@ function App(): React.JSX.Element {
 
   const handleSelectChat = useCallback(
     async (id: string): Promise<void> => {
-      try {
-        await saveCurrentChat()
-        const session = await window.electron.ipcRenderer.invoke('db:get-chat-session', id)
-        if (session) {
-          const sessionWorkspace = session.workspace_path
-          if (sessionWorkspace && sessionWorkspace !== workspace) {
-            setWorkspace(sessionWorkspace)
-            await window.electron.ipcRenderer.invoke('workspace:watch', sessionWorkspace)
-            await window.electron.ipcRenderer.invoke('db:touch-workspace', sessionWorkspace)
-          }
+      await withLoading(async () => {
+        try {
+          await saveCurrentChat()
+          chatRef.current?.loadChat([])
+          setActiveChatId(null)
 
-          const targetWorkspace = sessionWorkspace || workspace
-          if (targetWorkspace) {
-            await applyChatSessionState(session, targetWorkspace)
-          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 0))
 
-          const restoredTag = session.dir_structure_tag
-            ? (session.dir_structure_tag as FileTag)
-            : null
-          setDirStructureTag(restoredTag)
-          dirStructureTagRef.current = restoredTag
+          const session = await window.electron.ipcRenderer.invoke('db:get-chat-session', id)
+          if (session) {
+            const sessionWorkspace = session.workspace_path
+            if (sessionWorkspace && sessionWorkspace !== workspace) {
+              setWorkspace(sessionWorkspace)
+              await window.electron.ipcRenderer.invoke('workspace:watch', sessionWorkspace)
+              await window.electron.ipcRenderer.invoke('db:touch-workspace', sessionWorkspace)
+            }
 
-          const messages = JSON.parse(session.messages).map((m: ChatMessage) => ({
-            ...m,
-            variants: m.variants.map((v: ChatMessage['variants'][number]) => ({
-              ...v,
-              timestamp: new Date(v.timestamp)
+            const targetWorkspace = sessionWorkspace || workspace
+            if (targetWorkspace) {
+              await applyChatSessionState(session, targetWorkspace)
+            }
+
+            const restoredTag = session.dir_structure_tag
+              ? (session.dir_structure_tag as FileTag)
+              : null
+            setDirStructureTag(restoredTag)
+            dirStructureTagRef.current = restoredTag
+
+            await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+            const messages = JSON.parse(session.messages).map((m: ChatMessage) => ({
+              ...m,
+              variants: m.variants.map((v: ChatMessage['variants'][number]) => ({
+                ...v,
+                timestamp: new Date(v.timestamp)
+              }))
             }))
-          }))
-          setActiveChatId(id)
-          chatRef.current?.loadChat(messages, session.mode || undefined)
+            setActiveChatId(id)
+            chatRef.current?.loadChat(messages, session.mode || undefined, id)
+          }
+        } catch (e) {
+          log.error('Failed to select chat:', e)
         }
-      } catch (e) {
-        log.error('Failed to select chat:', e)
-      }
+      })
     },
-    [saveCurrentChat, workspace, applyChatSessionState]
+    [saveCurrentChat, workspace, applyChatSessionState, withLoading]
   )
 
   const handleMessagesChange = useCallback(

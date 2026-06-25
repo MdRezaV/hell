@@ -294,7 +294,7 @@ export interface AIChatHandle {
   getMessages(): ChatMessage[]
   getMode(): string
   setMode(mode: string): void
-  loadChat(messages: ChatMessage[], mode?: string): void
+  loadChat(messages: ChatMessage[], mode?: string, chatId?: string): void
   runTask(description: string, files: FileContext[], dirStructure?: string): Promise<boolean>
 }
 
@@ -313,6 +313,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0].label)
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false)
+  const [chatId, setChatId] = useState<string | undefined>(undefined)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const copyTimeoutRef = useRef<number | null>(null)
@@ -437,7 +438,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       setMode(newMode: string): void {
         setMode(newMode)
       },
-      loadChat(newMessages: ChatMessage[], newMode?: string): void {
+      loadChat(newMessages: ChatMessage[], newMode?: string, newChatId?: string): void {
         isLoadingRef.current = true
         setInput('')
         if (inputRef.current) {
@@ -448,6 +449,9 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         setIsAwaitingResponse(false)
         if (newMode !== undefined) {
           setMode(newMode)
+        }
+        if (newChatId !== undefined) {
+          setChatId(newChatId)
         }
         setMessages(newMessages)
         isNearBottomRef.current = true
@@ -724,6 +728,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         onScroll={handleScroll}
       >
         <div
+          key={chatId}
           style={{
             height: virtualizer.getTotalSize(),
             width: '100%',

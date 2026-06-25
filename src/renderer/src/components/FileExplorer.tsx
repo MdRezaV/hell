@@ -576,9 +576,20 @@ function FileExplorer({
         )}
       </div>
       {loading ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-3 text-text-muted">
-          <Loader2 size={24} className="animate-spin" />
-          <p className="text-[12px]">Loading folder...</p>
+        <div className="explorer-skeleton">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div
+              key={i}
+              className="explorer-skeleton-row"
+              style={{ paddingLeft: `${(i % 3) * 16 + 24}px` }}
+            >
+              <div className="explorer-skeleton-checkbox" />
+              <div
+                className="explorer-skeleton-bar"
+                style={{ width: `${35 + ((i * 19) % 50)}%` }}
+              />
+            </div>
+          ))}
         </div>
       ) : (
         <div ref={scrollRef} className="explorer-tree">

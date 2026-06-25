@@ -81,17 +81,28 @@ export default memo(function ChatHistory({
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [search, setSearch] = useState('')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (!workspace) {
+      setSessions([])
+      setLoading(false)
+      return
+    }
     let ignore = false
+    setLoading(true)
     window.electron.ipcRenderer
       .invoke('db:get-chat-sessions', workspace)
       .then((result: ChatSession[]) => {
         if (!ignore) {
           setSessions(result || [])
+          setLoading(false)
         }
       })
-      .catch((e) => log.error('Failed to get chat sessions:', e))
+      .catch((e) => {
+        log.error('Failed to get chat sessions:', e)
+        if (!ignore) setLoading(false)
+      })
     return () => {
       ignore = true
     }
@@ -160,7 +171,25 @@ export default memo(function ChatHistory({
         )}
       </div>
       <div className="chat-history-list">
-        {filtered.length === 0 && (
+        {loading ? (
+          <div className="chat-history-skeleton">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="chat-history-skeleton-item">
+                <div className="chat-history-skeleton-icon" />
+                <div className="chat-history-skeleton-content">
+                  <div
+                    className="chat-history-skeleton-bar"
+                    style={{ width: `${45 + ((i * 17) % 45)}%` }}
+                  />
+                  <div
+                    className="chat-history-skeleton-bar chat-history-skeleton-bar--sm"
+                    style={{ width: `${25 + ((i * 11) % 30)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="chat-history-empty">
             {search ? (
               <Search size={24} strokeWidth={1.5} className="chat-history-empty-icon" />
@@ -171,57 +200,58 @@ export default memo(function ChatHistory({
               {search ? 'No matching chats' : 'No chat history'}
             </p>
           </div>
-        )}
-        {GROUP_ORDER.map((groupKey) => {
-          const items = grouped.get(groupKey)
-          if (!items || items.length === 0) return null
-          const collapsed = collapsedGroups.has(groupKey)
-          return (
-            <div key={groupKey} className="chat-history-group">
-              <div className="chat-history-group-header" onClick={() => toggleGroup(groupKey)}>
-                <ChevronDown
-                  size={12}
-                  className={`chat-history-group-chevron ${collapsed ? 'collapsed' : ''}`}
-                />
-                <span className="chat-history-group-title">{groupKey}</span>
-                <span className="chat-history-group-count">{items.length}</span>
-              </div>
-              {!collapsed && (
-                <div className="chat-history-group-items">
-                  {items.map((session) => (
-                    <div
-                      key={session.id}
-                      className={`chat-history-item ${activeChatId === session.id ? 'active' : ''}`}
-                      onClick={() => onSelectChat(session.id)}
-                    >
-                      <MessageSquare size={13} className="chat-history-icon" />
-                      <div className="chat-history-item-content">
-                        <span className="chat-history-item-title">
-                          {session.title || 'New Chat'}
-                        </span>
-                        <span className="chat-history-item-meta">
-                          {session.mode && (
-                            <span className="chat-history-item-mode">{session.mode}</span>
-                          )}
-                          <span className="chat-history-item-date">
-                            {formatItemTime(session.created_at)}
-                          </span>
-                        </span>
-                      </div>
-                      <button
-                        className="chat-history-delete"
-                        onClick={(e) => handleDelete(e, session.id)}
-                        title="Delete"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
+        ) : (
+          GROUP_ORDER.map((groupKey) => {
+            const items = grouped.get(groupKey)
+            if (!items || items.length === 0) return null
+            const collapsed = collapsedGroups.has(groupKey)
+            return (
+              <div key={groupKey} className="chat-history-group">
+                <div className="chat-history-group-header" onClick={() => toggleGroup(groupKey)}>
+                  <ChevronDown
+                    size={12}
+                    className={`chat-history-group-chevron ${collapsed ? 'collapsed' : ''}`}
+                  />
+                  <span className="chat-history-group-title">{groupKey}</span>
+                  <span className="chat-history-group-count">{items.length}</span>
                 </div>
-              )}
-            </div>
-          )
-        })}
+                {!collapsed && (
+                  <div className="chat-history-group-items">
+                    {items.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`chat-history-item ${activeChatId === session.id ? 'active' : ''}`}
+                        onClick={() => onSelectChat(session.id)}
+                      >
+                        <MessageSquare size={13} className="chat-history-icon" />
+                        <div className="chat-history-item-content">
+                          <span className="chat-history-item-title">
+                            {session.title || 'New Chat'}
+                          </span>
+                          <span className="chat-history-item-meta">
+                            {session.mode && (
+                              <span className="chat-history-item-mode">{session.mode}</span>
+                            )}
+                            <span className="chat-history-item-date">
+                              {formatItemTime(session.created_at)}
+                            </span>
+                          </span>
+                        </div>
+                        <button
+                          className="chat-history-delete"
+                          onClick={(e) => handleDelete(e, session.id)}
+                          title="Delete"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
       </div>
     </div>
   )

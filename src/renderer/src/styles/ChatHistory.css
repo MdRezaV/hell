@@ -153,3 +153,27 @@
     transform: translateY(0);
   }
 }
+
+.chat-history-skeleton {
+  @apply flex flex-col py-0.5;
+}
+
+.chat-history-skeleton-item {
+  @apply flex items-center gap-2 px-3 py-1.5;
+}
+
+.chat-history-skeleton-icon {
+  @apply w-3.5 h-3.5 rounded-sm bg-surface-1 animate-pulse flex-shrink-0;
+}
+
+.chat-history-skeleton-content {
+  @apply flex flex-col gap-1.5 flex-1 min-w-0;
+}
+
+.chat-history-skeleton-bar {
+  @apply h-2.5 rounded-sm bg-surface-1 animate-pulse;
+}
+
+.chat-history-skeleton-bar--sm {
+  @apply h-2;
+}
