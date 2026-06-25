@@ -1,9 +1,59 @@
-import React, { memo, useCallback, useRef } from 'react'
+import React, { createContext, memo, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, Play, Terminal } from 'lucide-react'
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { normalizeLineEndings } from '../../utils/markdownParser'
+
+export const DeferredHighlightingContext = createContext(false)
+
+export function useDeferHeavyRendering(): boolean {
+  return useContext(DeferredHighlightingContext)
+}
+
+function scheduleWhenIdle(callback: () => void): void {
+  const w = window as unknown as { requestIdleCallback?: (cb: () => void) => number }
+  if (typeof w.requestIdleCallback === 'function') {
+    w.requestIdleCallback(callback)
+  } else {
+    setTimeout(callback, 0)
+  }
+}
+
+function useDeferredHighlighting(
+  defer: boolean,
+  observeRef: { current: HTMLElement | null }
+): boolean {
+  const [ready, setReady] = useState(!defer)
+
+  useEffect(() => {
+    if (!defer) setReady(true)
+  }, [defer])
+
+  useEffect(() => {
+    if (!defer || ready) return
+    const el = observeRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            scheduleWhenIdle(() => setReady(true))
+            observer.disconnect()
+            break
+          }
+        }
+      },
+      { rootMargin: '300px 0px' }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [defer, ready, observeRef])
+
+  return ready
+}
 
 export const LinesDisplay = memo(function LinesDisplay({
   code,
@@ -22,6 +72,9 @@ export const LinesDisplay = memo(function LinesDisplay({
   const gutterRef = useRef<HTMLDivElement>(null)
   const codeRef = useRef<HTMLDivElement>(null)
   const syncing = useRef(false)
+  const deferHeavy = useDeferHeavyRendering()
+  const highlightReady = useDeferredHighlighting(deferHeavy, codeRef)
+  const showPlain = isStreaming || (deferHeavy && !highlightReady)
 
   const handleCodeScroll = useCallback(() => {
     if (syncing.current) return
@@ -56,7 +109,7 @@ export const LinesDisplay = memo(function LinesDisplay({
         ))}
       </div>
       <div className="md-file-code-scroll" onScroll={handleCodeScroll} ref={codeRef}>
-        {hasSyntax && !isStreaming ? (
+        {hasSyntax && !showPlain ? (
           <SyntaxHighlighter language={language} style={oneDark} className="md-file-syntax">
             {normalizedCode}
           </SyntaxHighlighter>
@@ -157,10 +210,15 @@ export const GenericCodeBlock = memo(function GenericCodeBlock({
   showLangLabel: boolean
   isStreaming?: boolean
 }): React.JSX.Element {
+  const deferHeavy = useDeferHeavyRendering()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const highlightReady = useDeferredHighlighting(deferHeavy, containerRef)
+  const showPlain = isStreaming || (deferHeavy && !highlightReady)
+
   return (
-    <div className="md-code-block-wrapper">
+    <div className="md-code-block-wrapper" ref={containerRef}>
       {showLangLabel && <div className="md-code-lang">{language}</div>}
-      {isStreaming ? (
+      {showPlain ? (
         <pre className="md-syntax-block md-plain-pre">
           <code>{code}</code>
         </pre>

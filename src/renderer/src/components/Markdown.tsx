@@ -23,13 +23,19 @@ import {
   TaskBlock
 } from './markdown/FileBlocks'
 
-import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
+import {
+  CommandBlock,
+  CommitBlock,
+  DeferredHighlightingContext,
+  GenericCodeBlock
+} from './markdown/CodeBlocks'
 import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
 import { useLazyMount } from '../hooks/useLazyMount'
 
 interface MarkdownProps {
   content: string
   isStreaming?: boolean
+  deferHeavyRendering?: boolean
 }
 
 // Indicates whether the currently-rendering segment is the active (streaming)
@@ -258,25 +264,28 @@ const LazySegment = memo(function LazySegment({
 
 const Markdown = memo(function Markdown({
   content,
-  isStreaming = false
+  isStreaming = false,
+  deferHeavyRendering = false
 }: MarkdownProps): React.JSX.Element {
   const processedContent = useMemo(() => getActiveParser().preprocess(content), [content])
   const segments = useMemo(() => segmentContent(processedContent), [processedContent])
   const lastIndex = segments.length - 1
 
   return (
-    <ApplyAllProvider>
-      <div className="md-content">
-        {segments.map((segment, i) => (
-          <LazySegment
-            key={segment.startIndex}
-            content={segment.content}
-            isStreaming={isStreaming && i === lastIndex}
-          />
-        ))}
-        <ApplyAllBar />
-      </div>
-    </ApplyAllProvider>
+    <DeferredHighlightingContext.Provider value={deferHeavyRendering}>
+      <ApplyAllProvider>
+        <div className="md-content">
+          {segments.map((segment, i) => (
+            <LazySegment
+              key={segment.startIndex}
+              content={segment.content}
+              isStreaming={isStreaming && i === lastIndex}
+            />
+          ))}
+          <ApplyAllBar />
+        </div>
+      </ApplyAllProvider>
+    </DeferredHighlightingContext.Provider>
   )
 })
 
