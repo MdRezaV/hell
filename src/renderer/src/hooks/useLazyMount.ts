@@ -4,6 +4,7 @@ export interface UseLazyMountResult {
   containerRef: (el: HTMLDivElement | null) => void
   shouldMount: boolean
   placeholderHeight: number | null
+  placeholderWidth: number | null
 }
 
 const ROOT_MARGIN = '200px 0px'
@@ -19,6 +20,7 @@ export function useLazyMount(): UseLazyMountResult {
   // Start mounted so the first render can be measured.
   const [isNearViewport, setIsNearViewport] = useState(true)
   const [height, setHeight] = useState<number | null>(null)
+  const [width, setWidth] = useState<number | null>(null)
 
   const containerRef = useCallback((el: HTMLDivElement | null) => {
     setContainerEl(el)
@@ -40,8 +42,12 @@ export function useLazyMount(): UseLazyMountResult {
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const h = entry.contentRect.height
+        const w = entry.contentRect.width
         if (h > 0) {
           setHeight(h)
+        }
+        if (w > 0) {
+          setWidth(w)
         }
       }
     })
@@ -53,9 +59,9 @@ export function useLazyMount(): UseLazyMountResult {
     }
   }, [containerEl])
 
-  // Keep content mounted until we have a measured height, otherwise the
-  // placeholder would render with 0 height and never recover.
-  const shouldMount = isNearViewport || height === null
+  // Keep content mounted until we have measured dimensions, otherwise the
+  // placeholder would render with 0 size and never recover.
+  const shouldMount = isNearViewport || height === null || width === null
 
-  return { containerRef, shouldMount, placeholderHeight: height }
+  return { containerRef, shouldMount, placeholderHeight: height, placeholderWidth: width }
 }

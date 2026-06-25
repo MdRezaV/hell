@@ -250,13 +250,19 @@ const LazySegment = memo(function LazySegment({
   content: string
   isStreaming?: boolean
 }): React.JSX.Element {
-  const { containerRef, shouldMount, placeholderHeight } = useLazyMount()
+  const { containerRef, shouldMount, placeholderHeight, placeholderWidth } = useLazyMount()
   return (
     <div ref={containerRef} className="md-lazy-segment">
       {shouldMount ? (
         <MarkdownSegment content={content} isStreaming={isStreaming} />
       ) : (
-        <div style={{ height: placeholderHeight ?? 0 }} aria-hidden />
+        <div
+          style={{
+            height: placeholderHeight ?? 0,
+            width: placeholderWidth ?? '100%'
+          }}
+          aria-hidden
+        />
       )}
     </div>
   )
