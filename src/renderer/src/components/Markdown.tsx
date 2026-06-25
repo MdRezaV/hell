@@ -17,6 +17,7 @@ import {
 
 import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
 import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
+import { useLazyMount } from '../hooks/useLazyMount'
 
 interface MarkdownProps {
   content: string
@@ -201,6 +202,27 @@ const MarkdownSegment = memo(function MarkdownSegment({
   )
 })
 
+// Wraps a MarkdownSegment with viewport-aware lazy mounting. Off-screen
+// segments are unmounted and replaced by a height-preserved placeholder,
+// freeing DOM nodes, memory, and any ApplyAll context registrations
+// associated with the segment's file blocks.
+const LazySegment = memo(function LazySegment({
+  content
+}: {
+  content: string
+}): React.JSX.Element {
+  const { containerRef, shouldMount, placeholderHeight } = useLazyMount()
+  return (
+    <div ref={containerRef} className="md-lazy-segment">
+      {shouldMount ? (
+        <MarkdownSegment content={content} />
+      ) : (
+        <div style={{ height: placeholderHeight ?? 0 }} aria-hidden />
+      )}
+    </div>
+  )
+})
+
 const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.Element {
   const processedContent = useMemo(() => getActiveParser().preprocess(content), [content])
   const segments = useMemo(() => segmentContent(processedContent), [processedContent])
@@ -209,7 +231,7 @@ const Markdown = memo(function Markdown({ content }: MarkdownProps): React.JSX.E
     <ApplyAllProvider>
       <div className="md-content">
         {segments.map((segment, i) => (
-          <MarkdownSegment key={i} content={segment} />
+          <LazySegment key={i} content={segment} />
         ))}
         <ApplyAllBar />
       </div>
