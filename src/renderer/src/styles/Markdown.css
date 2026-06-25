@@ -83,6 +83,9 @@
 
 .md-code-block-wrapper {
   @apply relative min-w-0 overflow-hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+  contain: layout style paint;
 }
 
 .md-code-lang {
@@ -95,6 +98,8 @@
 
 .md-command-block {
   @apply my-2.5 bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
 }
 
 .md-command-header {
@@ -230,6 +235,9 @@
 
 .md-file-block {
   @apply bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+  contain: layout style paint;
 }
 
 .md-file-header {

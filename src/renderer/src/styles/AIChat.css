@@ -163,6 +163,8 @@
 
 .chat-message {
   @apply flex max-w-[80%] min-w-0 animate-fade-in;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
 }
 
 @media (max-width: 1080px) {
