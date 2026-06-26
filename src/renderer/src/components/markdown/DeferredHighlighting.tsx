@@ -11,15 +11,10 @@ export function useDeferredHighlighting(
   _observeRef?: { current: HTMLElement | null }
 ): boolean {
   void _observeRef
-  const [ready, setReady] = useState(!defer)
+  const [deferredReady, setDeferredReady] = useState(false)
 
   useEffect(() => {
-    if (ready) return
-
-    if (!defer) {
-      setReady(true)
-      return
-    }
+    if (!defer) return
 
     // Defer past the next paint using a double rAF. In virtualized lists,
     // items only mount when visible, so intersection observation is
@@ -32,7 +27,7 @@ export function useDeferredHighlighting(
 
     raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        if (!cancelled) setReady(true)
+        if (!cancelled) setDeferredReady(true)
       })
     })
 
@@ -41,7 +36,7 @@ export function useDeferredHighlighting(
       if (raf1) cancelAnimationFrame(raf1)
       if (raf2) cancelAnimationFrame(raf2)
     }
-  }, [defer, ready])
+  }, [defer])
 
-  return ready
+  return !defer || deferredReady
 }
