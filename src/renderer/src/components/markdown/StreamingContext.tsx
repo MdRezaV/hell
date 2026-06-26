@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components -- context-only module */
 import { createContext, useContext } from 'react'
 
 // Indicates whether the currently-rendering segment is the active (streaming)

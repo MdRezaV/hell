@@ -38,7 +38,7 @@ export function useApplyRegistration(
   status: ApplyBlockStatus,
   unapplyFn?: () => Promise<void>,
   stableKey?: string
-): void {
+): ApplyBlockStatus {
   const ctx = useApplyAllContext()
   const idRef = useRef(stableKey ? `stable-${hashString(stableKey)}` : `apply-${++applyIdCounter}`)
   const applyRef = useRef(applyFn)
@@ -90,4 +90,6 @@ export function useApplyRegistration(
     }
     ctx.setStatus(id, status)
   }, [ctx, status])
+
+  return ctx?.blocks.get(idRef.current)?.status ?? status
 }

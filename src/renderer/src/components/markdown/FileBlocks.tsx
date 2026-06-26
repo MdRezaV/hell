@@ -109,12 +109,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
 
   const detectedState = useMemo(
     () =>
-      detectReplaceState(
-        fileState?.content ?? null,
-        fileState?.exists ?? false,
-        oldCode,
-        newCode
-      ),
+      detectReplaceState(fileState?.content ?? null, fileState?.exists ?? false, oldCode, newCode),
     [fileState, oldCode, newCode]
   )
 
@@ -162,7 +157,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
 
   const applyStatus: ApplyBlockStatus = notFound ? 'notFound' : applyState
   const stableKey = `replace:${path}:${oldCode}:${newCode}`
-  useApplyRegistration(handleApply, applyStatus, handleUnapply, stableKey)
+  const effectiveStatus = useApplyRegistration(handleApply, applyStatus, handleUnapply, stableKey)
 
   return (
     <div className="md-file-block md-file-replace-block">
@@ -179,33 +174,33 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
         <div className="md-file-header-actions">
           <button
             type="button"
-            className={`md-file-apply unapply${applyState === 'applied' ? '' : ' disabled'}`}
+            className={`md-file-apply unapply${effectiveStatus === 'applied' ? '' : ' disabled'}`}
             onClick={handleUnapply}
-            disabled={applyState !== 'applied'}
-            title={applyState === 'applied' ? 'Revert applied changes' : 'Apply changes first'}
+            disabled={effectiveStatus !== 'applied'}
+            title={effectiveStatus === 'applied' ? 'Revert applied changes' : 'Apply changes first'}
           >
             <Undo2 size={12} />
             <span>UnApply</span>
           </button>
           <button
             type="button"
-            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            className={`md-file-apply${effectiveStatus === 'applied' ? ' applied' : ''}${effectiveStatus === 'error' ? ' error' : ''}`}
             onClick={handleApply}
-            disabled={applyState === 'applied'}
+            disabled={effectiveStatus === 'applied'}
             title={
-              applyState === 'applied'
+              effectiveStatus === 'applied'
                 ? 'Already applied'
-                : applyState === 'error'
+                : effectiveStatus === 'error'
                   ? 'Failed to apply'
                   : 'Apply changes'
             }
           >
-            {applyState === 'applied' ? (
+            {effectiveStatus === 'applied' ? (
               <>
                 <Check size={12} />
                 <span>Applied</span>
               </>
-            ) : applyState === 'error' ? (
+            ) : effectiveStatus === 'error' ? (
               <>
                 <X size={12} />
                 <span>Error</span>
@@ -293,8 +288,8 @@ export const FileMoveBlock = memo(function FileMoveBlock({
       applyState === 'idle' &&
       oldFileState !== null &&
       newFileState !== null &&
-      oldFileState.exists === false &&
-      newFileState.exists === true
+      !oldFileState.exists &&
+      newFileState.exists
     ) {
       setApplyState('applied')
     }
@@ -314,7 +309,7 @@ export const FileMoveBlock = memo(function FileMoveBlock({
   }, [workspace, oldPath, newPath])
 
   const stableKey = `move:${oldPath}:${newPath}`
-  useApplyRegistration(handleApply, applyState, undefined, stableKey)
+  const effectiveStatus = useApplyRegistration(handleApply, applyState, undefined, stableKey)
 
   return (
     <div className="md-file-block">
@@ -331,22 +326,22 @@ export const FileMoveBlock = memo(function FileMoveBlock({
         <div className="md-file-header-actions">
           <button
             type="button"
-            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            className={`md-file-apply${effectiveStatus === 'applied' ? ' applied' : ''}${effectiveStatus === 'error' ? ' error' : ''}`}
             onClick={handleApply}
             title={
-              applyState === 'applied'
+              effectiveStatus === 'applied'
                 ? 'Applied'
-                : applyState === 'error'
+                : effectiveStatus === 'error'
                   ? 'Failed to apply'
                   : 'Apply move'
             }
           >
-            {applyState === 'applied' ? (
+            {effectiveStatus === 'applied' ? (
               <>
                 <Check size={12} />
                 <span>Applied</span>
               </>
-            ) : applyState === 'error' ? (
+            ) : effectiveStatus === 'error' ? (
               <>
                 <X size={12} />
                 <span>Error</span>
@@ -405,7 +400,7 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
       ? 'applied'
       : applyState
   const stableKey = `delete:${path}`
-  useApplyRegistration(handleApply, deleteStatus, undefined, stableKey)
+  const effectiveStatus = useApplyRegistration(handleApply, deleteStatus, undefined, stableKey)
 
   if (fileState === null) {
     return (
@@ -433,9 +428,7 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
               <FilePathDisplay path={path} />
             </div>
           </div>
-          <div className="md-file-error">
-            File not found — the path is invalid
-          </div>
+          <div className="md-file-error">File not found — the path is invalid</div>
         </div>
       )
     }
@@ -450,12 +443,7 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
             <FilePathDisplay path={path} />
           </div>
           <div className="md-file-header-actions">
-            <button
-              type="button"
-              className="md-file-apply applied"
-              disabled
-              title="Applied"
-            >
+            <button type="button" className="md-file-apply applied" disabled title="Applied">
               <Check size={12} />
               <span>Applied</span>
             </button>
@@ -487,22 +475,22 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
           </button>
           <button
             type="button"
-            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            className={`md-file-apply${effectiveStatus === 'applied' ? ' applied' : ''}${effectiveStatus === 'error' ? ' error' : ''}`}
             onClick={handleApply}
             title={
-              applyState === 'applied'
+              effectiveStatus === 'applied'
                 ? 'Applied'
-                : applyState === 'error'
+                : effectiveStatus === 'error'
                   ? 'Failed to apply'
                   : 'Apply changes'
             }
           >
-            {applyState === 'applied' ? (
+            {effectiveStatus === 'applied' ? (
               <>
                 <Check size={12} />
                 <span>Applied</span>
               </>
-            ) : applyState === 'error' ? (
+            ) : effectiveStatus === 'error' ? (
               <>
                 <X size={12} />
                 <span>Error</span>
@@ -570,7 +558,7 @@ export const FileBlock = memo(function FileBlock({
   }, [fileState, code, applyState])
 
   const stableKey = `file:${path}`
-  useApplyRegistration(handleApply, applyState, undefined, stableKey)
+  const effectiveStatus = useApplyRegistration(handleApply, applyState, undefined, stableKey)
 
   const isCreated = fileState !== null && !fileState.exists
 
@@ -578,7 +566,7 @@ export const FileBlock = memo(function FileBlock({
     <div className="md-file-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          {applyState === 'applied' ? (
+          {effectiveStatus === 'applied' ? (
             <span className="md-file-status-label applied">
               <Check size={12} />
               APPLIED
@@ -603,22 +591,22 @@ export const FileBlock = memo(function FileBlock({
           </button>
           <button
             type="button"
-            className={`md-file-apply${applyState === 'applied' ? ' applied' : ''}${applyState === 'error' ? ' error' : ''}`}
+            className={`md-file-apply${effectiveStatus === 'applied' ? ' applied' : ''}${effectiveStatus === 'error' ? ' error' : ''}`}
             onClick={handleApply}
             title={
-              applyState === 'applied'
+              effectiveStatus === 'applied'
                 ? 'Applied'
-                : applyState === 'error'
+                : effectiveStatus === 'error'
                   ? 'Failed to apply'
                   : 'Apply changes'
             }
           >
-            {applyState === 'applied' ? (
+            {effectiveStatus === 'applied' ? (
               <>
                 <Check size={12} />
                 <span>Applied</span>
               </>
-            ) : applyState === 'error' ? (
+            ) : effectiveStatus === 'error' ? (
               <>
                 <X size={12} />
                 <span>Error</span>
@@ -633,11 +621,7 @@ export const FileBlock = memo(function FileBlock({
         </div>
       </div>
       <div className="md-file-code">
-        <LinesDisplay
-          code={code}
-          language={getLanguageFromPath(path)}
-          isStreaming={isStreaming}
-        />
+        <LinesDisplay code={code} language={getLanguageFromPath(path)} isStreaming={isStreaming} />
       </div>
     </div>
   )

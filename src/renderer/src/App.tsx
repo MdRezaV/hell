@@ -216,9 +216,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     let cancelled = false
     withLoading(async () => {
-      const path: string | null = await window.electron.ipcRenderer.invoke(
-        'db:get-last-workspace'
-      )
+      const path: string | null = await window.electron.ipcRenderer.invoke('db:get-last-workspace')
       if (!cancelled && path) {
         await handleWorkspaceChange(path)
       }

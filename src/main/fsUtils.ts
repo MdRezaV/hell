@@ -1,4 +1,4 @@
-import { basename, join, relative } from 'path'
+import { join, relative } from 'path'
 import { promises as fsp } from 'fs'
 import ignore, { type Ignore } from 'ignore'
 import pLimit from 'p-limit'
