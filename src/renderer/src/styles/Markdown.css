@@ -281,7 +281,7 @@
 }
 
 .md-file-gutter .md-file-line-number {
-  @apply block px-3 text-ctp-overlay0 text-[12px] font-medium leading-snug whitespace-nowrap;
+  @apply block px-3 text-ctp-overlay0 text-[12px] font-medium leading-snug whitespace-nowrap min-h-[1.55em];
 }
 
 .md-file-code-scroll {
