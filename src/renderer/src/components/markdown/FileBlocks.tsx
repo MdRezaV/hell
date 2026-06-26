@@ -113,13 +113,15 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
     [fileState, oldCode, newCode]
   )
 
-  useEffect(() => {
+  const [prevDetectedState, setPrevDetectedState] = useState(detectedState)
+  if (detectedState !== prevDetectedState) {
+    setPrevDetectedState(detectedState)
     if (detectedState === 'applied' && applyState === 'idle') {
       setApplyState('applied')
     } else if (detectedState === 'idle' && applyState === 'applied') {
       setApplyState('idle')
     }
-  }, [detectedState, applyState])
+  }
 
   const notFound = detectedState === 'notFound' && applyState !== 'applied'
 
@@ -283,17 +285,16 @@ export const FileMoveBlock = memo(function FileMoveBlock({
   const newFileState = useFileContent(newPath)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
-  useEffect(() => {
-    if (
-      applyState === 'idle' &&
-      oldFileState !== null &&
-      newFileState !== null &&
-      !oldFileState.exists &&
-      newFileState.exists
-    ) {
+  const isMoveApplied =
+    oldFileState !== null && newFileState !== null && !oldFileState.exists && newFileState.exists
+
+  const [prevIsMoveApplied, setPrevIsMoveApplied] = useState(isMoveApplied)
+  if (isMoveApplied !== prevIsMoveApplied) {
+    setPrevIsMoveApplied(isMoveApplied)
+    if (isMoveApplied && applyState === 'idle') {
       setApplyState('applied')
     }
-  }, [oldFileState, newFileState, applyState])
+  }
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
@@ -388,11 +389,15 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
     }
   }, [workspace, path, fileState])
 
-  useEffect(() => {
-    if (fileState !== null && !fileState.exists && applyState === 'idle') {
+  const isDeleteApplied = fileState !== null && !fileState.exists
+
+  const [prevIsDeleteApplied, setPrevIsDeleteApplied] = useState(isDeleteApplied)
+  if (isDeleteApplied !== prevIsDeleteApplied) {
+    setPrevIsDeleteApplied(isDeleteApplied)
+    if (isDeleteApplied && applyState === 'idle') {
       setApplyState('applied')
     }
-  }, [fileState, applyState])
+  }
 
   const deleteStatus: ApplyBlockStatus = !fileState
     ? 'idle'
@@ -545,17 +550,19 @@ export const FileBlock = memo(function FileBlock({
     }
   }, [workspace, path, code])
 
-  useEffect(() => {
-    if (
-      applyState === 'idle' &&
-      fileState !== null &&
-      fileState.exists &&
-      fileState.content !== null &&
-      normalizeLineEndings(fileState.content) === normalizeLineEndings(code)
-    ) {
+  const isFileApplied =
+    fileState !== null &&
+    fileState.exists &&
+    fileState.content !== null &&
+    normalizeLineEndings(fileState.content) === normalizeLineEndings(code)
+
+  const [prevIsFileApplied, setPrevIsFileApplied] = useState(isFileApplied)
+  if (isFileApplied !== prevIsFileApplied) {
+    setPrevIsFileApplied(isFileApplied)
+    if (isFileApplied && applyState === 'idle') {
       setApplyState('applied')
     }
-  }, [fileState, code, applyState])
+  }
 
   const stableKey = `file:${path}`
   const effectiveStatus = useApplyRegistration(handleApply, applyState, undefined, stableKey)
