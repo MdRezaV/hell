@@ -15,12 +15,8 @@ import {
   TaskBlock
 } from './markdown/FileBlocks'
 
-import {
-  CommandBlock,
-  CommitBlock,
-  DeferredHighlightingContext,
-  GenericCodeBlock
-} from './markdown/CodeBlocks'
+import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
+import { DeferredHighlightingContext } from './markdown/DeferredHighlighting'
 import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
 import { useLazyMount } from '../hooks/useLazyMount'
 import { StreamingContext, useIsStreaming } from './markdown/StreamingContext'

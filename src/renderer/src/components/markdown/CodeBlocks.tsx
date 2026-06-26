@@ -1,59 +1,10 @@
-import React, { createContext, memo, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import React, { memo, useCallback, useRef } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, Play, Terminal } from 'lucide-react'
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { normalizeLineEndings } from '../../utils/markdownParser'
-
-export const DeferredHighlightingContext = createContext(false)
-
-export function useDeferHeavyRendering(): boolean {
-  return useContext(DeferredHighlightingContext)
-}
-
-function scheduleWhenIdle(callback: () => void): void {
-  const w = window as unknown as { requestIdleCallback?: (cb: () => void) => number }
-  if (typeof w.requestIdleCallback === 'function') {
-    w.requestIdleCallback(callback)
-  } else {
-    setTimeout(callback, 0)
-  }
-}
-
-function useDeferredHighlighting(
-  defer: boolean,
-  observeRef: { current: HTMLElement | null }
-): boolean {
-  const [ready, setReady] = useState(!defer)
-
-  useEffect(() => {
-    if (!defer) setReady(true)
-  }, [defer])
-
-  useEffect(() => {
-    if (!defer || ready) return
-    const el = observeRef.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            scheduleWhenIdle(() => setReady(true))
-            observer.disconnect()
-            break
-          }
-        }
-      },
-      { rootMargin: '300px 0px' }
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [defer, ready, observeRef])
-
-  return ready
-}
+import { useDeferHeavyRendering, useDeferredHighlighting } from './DeferredHighlighting'
 
 export const LinesDisplay = memo(function LinesDisplay({
   code,
