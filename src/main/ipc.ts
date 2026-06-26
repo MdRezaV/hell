@@ -1,5 +1,5 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import { dirname, join } from 'path'
+import { basename, dirname, join } from 'path'
 import { createReadStream } from 'fs'
 import { access, mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { getEncoding } from 'js-tiktoken'
@@ -376,6 +376,6 @@ export function registerIpcHandlers(): void {
   safeHandle('read-directory-tree', async (_, dirPath: string, rootDir?: string) => {
     const effectiveRoot = rootDir ?? dirPath
     const nodes = await readDirTree(dirPath, [], true, effectiveRoot)
-    return formatTreeText(nodes)
+    return formatTreeText(basename(effectiveRoot), nodes)
   })
 }

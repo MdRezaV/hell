@@ -20,11 +20,13 @@ import { useScrollSync } from '../../hooks/useScrollSync'
 import { useFileContent } from '../../hooks/useFileContent'
 import { useWorkspace } from '../../WorkspaceContext'
 import { getLanguageFromPath } from '../../utils/markdownLanguages'
+import { normalizeLineEndings } from '../../utils/markdownParser'
 import {
   applyFileDelete,
   applyFileMove,
   applyFileReplace,
   applyFileWrite,
+  detectReplaceState,
   invalidateFileContentCache,
   unapplyFileReplace
 } from '../../utils/fileApply'
@@ -105,25 +107,26 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const { workspace } = useWorkspace()
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
-  const notFound = useMemo(() => {
-    if (applyState === 'applied') return false
-    if (fileState === null) return false
-    return !fileState.exists || fileState.content === null || !fileState.content.includes(oldCode)
-  }, [fileState, oldCode, applyState])
+  const detectedState = useMemo(
+    () =>
+      detectReplaceState(
+        fileState?.content ?? null,
+        fileState?.exists ?? false,
+        oldCode,
+        newCode
+      ),
+    [fileState, oldCode, newCode]
+  )
 
-  const replaceInFile = useMemo(() => {
-    if (fileState === null) return false
-    return (
-      fileState.exists &&
-      fileState.content !== null &&
-      fileState.content.includes(newCode) &&
-      !fileState.content.includes(oldCode)
-    )
-  }, [fileState, oldCode, newCode])
+  useEffect(() => {
+    if (detectedState === 'applied' && applyState === 'idle') {
+      setApplyState('applied')
+    } else if (detectedState === 'idle' && applyState === 'applied') {
+      setApplyState('idle')
+    }
+  }, [detectedState, applyState])
 
-  if (applyState === 'idle' && replaceInFile) {
-    setApplyState('applied')
-  }
+  const notFound = detectedState === 'notFound' && applyState !== 'applied'
 
   const handleCopyOld = useCallback(async (): Promise<void> => {
     await copyOld(oldCode)
@@ -281,7 +284,21 @@ export const FileMoveBlock = memo(function FileMoveBlock({
   newPath: string
 }): React.JSX.Element {
   const { workspace } = useWorkspace()
+  const oldFileState = useFileContent(oldPath)
+  const newFileState = useFileContent(newPath)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
+
+  useEffect(() => {
+    if (
+      applyState === 'idle' &&
+      oldFileState !== null &&
+      newFileState !== null &&
+      oldFileState.exists === false &&
+      newFileState.exists === true
+    ) {
+      setApplyState('applied')
+    }
+  }, [oldFileState, newFileState, applyState])
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace) return
@@ -376,10 +393,16 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
     }
   }, [workspace, path, fileState])
 
+  useEffect(() => {
+    if (fileState !== null && !fileState.exists && applyState === 'idle') {
+      setApplyState('applied')
+    }
+  }, [fileState, applyState])
+
   const deleteStatus: ApplyBlockStatus = !fileState
     ? 'idle'
     : !fileState.exists
-      ? 'notFound'
+      ? 'applied'
       : applyState
   const stableKey = `delete:${path}`
   useApplyRegistration(handleApply, deleteStatus, undefined, stableKey)
@@ -397,19 +420,46 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
   }
 
   if (!fileState.exists) {
+    const isMalformedPath = !path || !path.trim()
+    if (isMalformedPath) {
+      return (
+        <div className="md-file-block">
+          <div className="md-file-header">
+            <div className="md-file-header-left">
+              <span className="md-file-status-label error">
+                <CircleAlert size={12} />
+                NOT FOUND
+              </span>
+              <FilePathDisplay path={path} />
+            </div>
+          </div>
+          <div className="md-file-error">
+            File not found — the path is invalid
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="md-file-block">
         <div className="md-file-header">
           <div className="md-file-header-left">
-            <span className="md-file-status-label error">
-              <CircleAlert size={12} />
-              NOT FOUND
+            <span className="md-file-status-label deleted">
+              <Trash2 size={12} />
+              DELETED
             </span>
             <FilePathDisplay path={path} />
           </div>
-        </div>
-        <div className="md-file-error">
-          File not found — may already be deleted or the path is incorrect
+          <div className="md-file-header-actions">
+            <button
+              type="button"
+              className="md-file-apply applied"
+              disabled
+              title="Applied"
+            >
+              <Check size={12} />
+              <span>Applied</span>
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -507,7 +557,19 @@ export const FileBlock = memo(function FileBlock({
     }
   }, [workspace, path, code])
 
-  const stableKey = `file:${path}:${code}`
+  useEffect(() => {
+    if (
+      applyState === 'idle' &&
+      fileState !== null &&
+      fileState.exists &&
+      fileState.content !== null &&
+      normalizeLineEndings(fileState.content) === normalizeLineEndings(code)
+    ) {
+      setApplyState('applied')
+    }
+  }, [fileState, code, applyState])
+
+  const stableKey = `file:${path}`
   useApplyRegistration(handleApply, applyState, undefined, stableKey)
 
   const isCreated = fileState !== null && !fileState.exists
@@ -516,12 +578,17 @@ export const FileBlock = memo(function FileBlock({
     <div className="md-file-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          {isCreated && (
+          {applyState === 'applied' ? (
+            <span className="md-file-status-label applied">
+              <Check size={12} />
+              APPLIED
+            </span>
+          ) : isCreated ? (
             <span className="md-file-status-label created">
               <FilePlus size={12} />
               CREATED
             </span>
-          )}
+          ) : null}
           <FilePathDisplay path={path} />
         </div>
         <div className="md-file-header-actions">

@@ -160,6 +160,29 @@ export async function unapplyFileReplace(
   }
 }
 
+export type ReplaceState = 'idle' | 'applied' | 'notFound'
+
+export function detectReplaceState(
+  content: string | null,
+  exists: boolean,
+  oldCode: string,
+  newCode: string
+): ReplaceState {
+  if (!exists || content === null) return 'notFound'
+
+  const normalizedContent = normalizeLineEndings(content)
+  const normalizedOldCode = normalizeLineEndings(oldCode)
+  const normalizedNewCode = normalizeLineEndings(newCode)
+
+  if (normalizedContent.indexOf(normalizedOldCode) !== -1) return 'idle'
+  if (findLooseMatch(normalizedContent, normalizedOldCode)) return 'idle'
+
+  if (normalizedContent.includes(normalizedNewCode)) return 'applied'
+  if (findLooseMatch(normalizedContent, normalizedNewCode)) return 'applied'
+
+  return 'notFound'
+}
+
 export async function applyFileMove(
   workspace: string,
   oldPath: string,

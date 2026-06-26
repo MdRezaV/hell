@@ -1,4 +1,4 @@
-import { join, relative } from 'path'
+import { basename, join, relative } from 'path'
 import { promises as fsp } from 'fs'
 import ignore, { type Ignore } from 'ignore'
 import pLimit from 'p-limit'
@@ -221,8 +221,8 @@ export async function readDirTree(
   }
 }
 
-export function formatTreeText(nodes: FileNode[]): string {
-  let result = ''
+export function formatTreeText(rootName: string, nodes: FileNode[]): string {
+  let result = `- ${rootName}/\n`
   const walk = (list: FileNode[], indent: string): void => {
     for (const node of list) {
       if (node.type === 'directory') {
@@ -235,6 +235,6 @@ export function formatTreeText(nodes: FileNode[]): string {
       }
     }
   }
-  walk(nodes, '')
+  walk(nodes, '  ')
   return result
 }

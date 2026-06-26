@@ -43,6 +43,7 @@ export function useApplyRegistration(
   const idRef = useRef(stableKey ? `stable-${hashString(stableKey)}` : `apply-${++applyIdCounter}`)
   const applyRef = useRef(applyFn)
   const unapplyRef = useRef(unapplyFn)
+  const initialSyncRef = useRef(true)
 
   useEffect(() => {
     applyRef.current = applyFn
@@ -81,6 +82,12 @@ export function useApplyRegistration(
 
   useEffect(() => {
     if (!ctx) return
-    ctx.setStatus(idRef.current, status)
+    const id = idRef.current
+    if (initialSyncRef.current) {
+      initialSyncRef.current = false
+      const existing = ctx.blocks.get(id)?.status
+      if (existing) return
+    }
+    ctx.setStatus(id, status)
   }, [ctx, status])
 }

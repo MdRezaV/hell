@@ -9,6 +9,7 @@ import { useLoading } from './LoadingContext'
 import { useResizableLayout } from './hooks/useResizableLayout'
 import { deriveTitle, joinWithWorkspace } from './utils/appUtils'
 import { invalidateWorkspaceFileCache } from './utils/fileApply'
+import { resetPreprocessCache } from './utils/markdownParser'
 
 type FileStates = Map<string, FileTag>
 
@@ -435,6 +436,7 @@ function App(): React.JSX.Element {
       const prevActiveChatId = activeChatIdRef.current
       const savedDirStructureTag = dirStructureTagRef.current ?? ''
 
+      resetPreprocessCache()
       chatRef.current?.loadChat([])
 
       copySnapshotRef.current = new Set()
@@ -509,6 +511,7 @@ function App(): React.JSX.Element {
       await withLoading(async () => {
         try {
           await saveCurrentChat()
+          resetPreprocessCache()
           chatRef.current?.loadChat([])
           setActiveChatId(null)
 

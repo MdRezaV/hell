@@ -450,6 +450,12 @@ let _incRawPrefix = ''
 let _incProcessedPrefix = ''
 let _incLastFilePath = ''
 
+export function resetPreprocessCache(): void {
+  _incRawPrefix = ''
+  _incProcessedPrefix = ''
+  _incLastFilePath = ''
+}
+
 export function preprocess(content: string): string {
   const normalized = content.indexOf('\r') === -1 ? content : normalizeLineEndings(content)
 
