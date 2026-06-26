@@ -43,6 +43,7 @@ export const LoadingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return <LoadingContext.Provider value={value}>{children}</LoadingContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLoading = (): LoadingContextValue => {
   const ctx = useContext(LoadingContext)
   if (!ctx) {

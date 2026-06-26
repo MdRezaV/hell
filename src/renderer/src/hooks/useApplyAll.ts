@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 export type ApplyBlockStatus = 'idle' | 'applied' | 'error' | 'notFound'
 
@@ -40,7 +40,9 @@ export function useApplyRegistration(
   stableKey?: string
 ): ApplyBlockStatus {
   const ctx = useApplyAllContext()
-  const idRef = useRef(stableKey ? `stable-${hashString(stableKey)}` : `apply-${++applyIdCounter}`)
+  const [stableId] = useState(() =>
+    stableKey ? `stable-${hashString(stableKey)}` : `apply-${++applyIdCounter}`
+  )
   const applyRef = useRef(applyFn)
   const unapplyRef = useRef(unapplyFn)
   const initialSyncRef = useRef(true)
@@ -55,7 +57,7 @@ export function useApplyRegistration(
 
   useEffect(() => {
     if (!ctx) return
-    const id = idRef.current
+    const id = stableId
     const wrappedApply = async (): Promise<void> => {
       try {
         await applyRef.current()
@@ -78,18 +80,18 @@ export function useApplyRegistration(
     // Don't unregister on unmount — registrations persist so ApplyAllBar
     // can track off-screen blocks. Remounting with the same stableKey
     // updates the functions without creating duplicates.
-  }, [ctx])
+  }, [ctx, stableId])
 
   useEffect(() => {
     if (!ctx) return
-    const id = idRef.current
+    const id = stableId
     if (initialSyncRef.current) {
       initialSyncRef.current = false
       const existing = ctx.blocks.get(id)?.status
       if (existing) return
     }
     ctx.setStatus(id, status)
-  }, [ctx, status])
+  }, [ctx, status, stableId])
 
-  return ctx?.blocks.get(idRef.current)?.status ?? status
+  return ctx?.blocks.get(stableId)?.status ?? status
 }
