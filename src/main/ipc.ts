@@ -376,7 +376,6 @@ export function registerIpcHandlers(): void {
   safeHandle('read-directory-tree', async (_, dirPath: string, rootDir?: string) => {
     const effectiveRoot = rootDir ?? dirPath
     const nodes = await readDirTree(dirPath, [], true, effectiveRoot)
-    const dirName = dirPath.split(/[/\\]/).pop() || dirPath
-    return formatTreeText(dirName, nodes)
+    return formatTreeText(nodes)
   })
 }
