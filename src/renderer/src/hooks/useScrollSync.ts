@@ -12,20 +12,31 @@ export function useScrollSync(): {
 
   const sync = useCallback((source: 'left' | 'right') => {
     if (isSyncing.current) return
-    isSyncing.current = true
     const from = source === 'left' ? leftRef.current : rightRef.current
     const to = source === 'left' ? rightRef.current : leftRef.current
-    if (from && to) {
+    if (!from || !to) return
+
+    let didSync = false
+
+    if (to.scrollTop !== from.scrollTop) {
+      isSyncing.current = true
       to.scrollTop = from.scrollTop
-      const fromH = from.querySelector('.md-file-code-scroll')
-      const toH = to.querySelector('.md-file-code-scroll')
-      if (fromH && toH) {
-        toH.scrollLeft = fromH.scrollLeft
-      }
+      didSync = true
     }
-    window.requestAnimationFrame(() => {
-      isSyncing.current = false
-    })
+
+    const fromH = from.querySelector('.md-file-code-scroll')
+    const toH = to.querySelector('.md-file-code-scroll')
+    if (fromH && toH && toH.scrollLeft !== fromH.scrollLeft) {
+      isSyncing.current = true
+      toH.scrollLeft = fromH.scrollLeft
+      didSync = true
+    }
+
+    if (didSync) {
+      setTimeout(() => {
+        isSyncing.current = false
+      }, 50)
+    }
   }, [])
 
   const handleLeftScroll = useCallback(() => sync('left'), [sync])

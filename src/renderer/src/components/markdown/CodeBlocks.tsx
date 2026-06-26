@@ -29,25 +29,29 @@ export const LinesDisplay = memo(function LinesDisplay({
 
   const handleCodeScroll = useCallback(() => {
     if (syncing.current) return
-    syncing.current = true
     if (gutterRef.current && codeRef.current) {
-      gutterRef.current.scrollTop = codeRef.current.scrollTop
+      if (gutterRef.current.scrollTop !== codeRef.current.scrollTop) {
+        syncing.current = true
+        gutterRef.current.scrollTop = codeRef.current.scrollTop
+        setTimeout(() => {
+          syncing.current = false
+        }, 50)
+      }
     }
-    requestAnimationFrame(() => {
-      syncing.current = false
-    })
     onScroll?.()
   }, [onScroll])
 
   const handleGutterScroll = useCallback(() => {
     if (syncing.current) return
-    syncing.current = true
     if (gutterRef.current && codeRef.current) {
-      codeRef.current.scrollTop = gutterRef.current.scrollTop
+      if (codeRef.current.scrollTop !== gutterRef.current.scrollTop) {
+        syncing.current = true
+        codeRef.current.scrollTop = gutterRef.current.scrollTop
+        setTimeout(() => {
+          syncing.current = false
+        }, 50)
+      }
     }
-    requestAnimationFrame(() => {
-      syncing.current = false
-    })
   }, [])
 
   return (
