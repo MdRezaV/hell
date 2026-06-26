@@ -6,44 +6,42 @@ export function useDeferHeavyRendering(): boolean {
   return useContext(DeferredHighlightingContext)
 }
 
-function scheduleWhenIdle(callback: () => void): void {
-  const w = window as unknown as { requestIdleCallback?: (cb: () => void) => number }
-  if (typeof w.requestIdleCallback === 'function') {
-    w.requestIdleCallback(callback)
-  } else {
-    setTimeout(callback, 0)
-  }
-}
-
 export function useDeferredHighlighting(
   defer: boolean,
-  observeRef: { current: HTMLElement | null }
+  _observeRef?: { current: HTMLElement | null }
 ): boolean {
-  const [observedReady, setObservedReady] = useState(false)
-
-  const ready = !defer || observedReady
+  void _observeRef
+  const [ready, setReady] = useState(!defer)
 
   useEffect(() => {
-    if (!defer || observedReady) return
-    const el = observeRef.current
-    if (!el) return
+    if (ready) return
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            scheduleWhenIdle(() => setObservedReady(true))
-            observer.disconnect()
-            break
-          }
-        }
-      },
-      { rootMargin: '300px 0px' }
-    )
+    if (!defer) {
+      setReady(true)
+      return
+    }
 
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [defer, observedReady, observeRef])
+    // Defer past the next paint using a double rAF. In virtualized lists,
+    // items only mount when visible, so intersection observation is
+    // unnecessary — we just need a brief, reliable defer to avoid blocking
+    // the initial render of many messages at once. requestIdleCallback was
+    // avoided because it can be starved indefinitely by heavy render work.
+    let cancelled = false
+    let raf1 = 0
+    let raf2 = 0
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (!cancelled) setReady(true)
+      })
+    })
+
+    return () => {
+      cancelled = true
+      if (raf1) cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
+    }
+  }, [defer, ready])
 
   return ready
 }
