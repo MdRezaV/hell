@@ -229,6 +229,7 @@ const MessageBubble = memo(function MessageBubble({
                   <Markdown
                     key={`${message.id}-${message.activeVariant}`}
                     content={variant.content}
+                    deferHeavyRendering={true}
                   />
                 </div>
               )}

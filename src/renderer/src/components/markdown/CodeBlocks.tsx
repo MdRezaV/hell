@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useRef } from 'react'
+import React, { memo, useCallback, useMemo, useRef } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, Play, Terminal } from 'lucide-react'
@@ -17,9 +17,9 @@ export const LinesDisplay = memo(function LinesDisplay({
   onScroll?: () => void
   isStreaming?: boolean
 }): React.JSX.Element {
-  const normalizedCode = normalizeLineEndings(code)
-  const lines = normalizedCode.split('\n')
-  const hasSyntax = !!language && language !== 'text'
+  const normalizedCode = useMemo(() => normalizeLineEndings(code), [code])
+  const lines = useMemo(() => normalizedCode.split('\n'), [normalizedCode])
+  const hasSyntax = useMemo(() => language && language !== 'text', [language])
   const gutterRef = useRef<HTMLDivElement>(null)
   const codeRef = useRef<HTMLDivElement>(null)
   const syncing = useRef(false)
@@ -88,6 +88,7 @@ export const CommandBlock = memo(function CommandBlock({
   code: string
 }): React.JSX.Element {
   const { copied, copy } = useCopyToClipboard()
+  const memoizedCode = useMemo(() => code, [code])
 
   const handleRun = useCallback(async (): Promise<void> => {
     await copy(code)
@@ -120,7 +121,7 @@ export const CommandBlock = memo(function CommandBlock({
         </button>
       </div>
       <SyntaxHighlighter language="bash" style={oneDark} className="md-command-syntax">
-        {code}
+        {memoizedCode}
       </SyntaxHighlighter>
     </div>
   )
@@ -169,17 +170,18 @@ export const GenericCodeBlock = memo(function GenericCodeBlock({
   const containerRef = useRef<HTMLDivElement>(null)
   const highlightReady = useDeferredHighlighting(deferHeavy, containerRef)
   const showPlain = isStreaming || (deferHeavy && !highlightReady)
+  const memoizedCode = useMemo(() => code, [code])
 
   return (
     <div className="md-code-block-wrapper" ref={containerRef}>
       {showLangLabel && <div className="md-code-lang">{language}</div>}
       {showPlain ? (
         <pre className="md-syntax-block md-plain-pre">
-          <code>{code}</code>
+          <code>{memoizedCode}</code>
         </pre>
       ) : (
         <SyntaxHighlighter language={language} style={oneDark} className="md-syntax-block">
-          {code}
+          {memoizedCode}
         </SyntaxHighlighter>
       )}
     </div>

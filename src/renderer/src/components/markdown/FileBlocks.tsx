@@ -107,13 +107,23 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const { workspace } = useWorkspace()
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
-  const detectedState = useMemo(
-    () =>
-      detectReplaceState(fileState?.content ?? null, fileState?.exists ?? false, oldCode, newCode),
-    [fileState, oldCode, newCode]
-  )
+  const normalizedOldCode = useMemo(() => normalizeLineEndings(oldCode), [oldCode])
+  const normalizedNewCode = useMemo(() => normalizeLineEndings(newCode), [newCode])
+  const language = useMemo(() => getLanguageFromPath(path), [path])
+
+  const detectedState = useMemo(() => {
+    const content = fileState?.content ?? null
+    const normalizedContent = content !== null ? normalizeLineEndings(content) : null
+    return detectReplaceState(
+      normalizedContent,
+      fileState?.exists ?? false,
+      normalizedOldCode,
+      normalizedNewCode
+    )
+  }, [fileState, normalizedOldCode, normalizedNewCode])
 
   const [prevDetectedState, setPrevDetectedState] = useState(detectedState)
+
   if (detectedState !== prevDetectedState) {
     setPrevDetectedState(detectedState)
     if (detectedState === 'applied' && applyState === 'idle') {
@@ -235,8 +245,8 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
           </div>
           <div ref={leftRef} className="md-file-code md-file-diff-code">
             <LinesDisplay
-              code={oldCode}
-              language={getLanguageFromPath(path)}
+              code={normalizedOldCode}
+              language={language}
               onScroll={handleLeftScroll}
               isStreaming={isStreaming}
             />
@@ -261,8 +271,8 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
           </div>
           <div ref={rightRef} className="md-file-code md-file-diff-code">
             <LinesDisplay
-              code={newCode}
-              language={getLanguageFromPath(path)}
+              code={normalizedNewCode}
+              language={language}
               onScroll={handleRightScroll}
               isStreaming={isStreaming}
             />
@@ -285,10 +295,14 @@ export const FileMoveBlock = memo(function FileMoveBlock({
   const newFileState = useFileContent(newPath)
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
 
-  const isMoveApplied =
-    oldFileState !== null && newFileState !== null && !oldFileState.exists && newFileState.exists
+  const isMoveApplied = useMemo(
+    () =>
+      oldFileState !== null && newFileState !== null && !oldFileState.exists && newFileState.exists,
+    [oldFileState, newFileState]
+  )
 
   const [prevIsMoveApplied, setPrevIsMoveApplied] = useState(isMoveApplied)
+
   if (isMoveApplied !== prevIsMoveApplied) {
     setPrevIsMoveApplied(isMoveApplied)
     if (isMoveApplied && applyState === 'idle') {
@@ -371,6 +385,7 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
   const { copied, copy } = useCopyToClipboard()
   const { workspace } = useWorkspace()
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
+  const language = useMemo(() => getLanguageFromPath(path), [path])
 
   const handleCopy = useCallback(async (): Promise<void> => {
     if (!fileState?.content) return
@@ -389,9 +404,10 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
     }
   }, [workspace, path, fileState])
 
-  const isDeleteApplied = fileState !== null && !fileState.exists
+  const isDeleteApplied = useMemo(() => fileState !== null && !fileState.exists, [fileState])
 
   const [prevIsDeleteApplied, setPrevIsDeleteApplied] = useState(isDeleteApplied)
+
   if (isDeleteApplied !== prevIsDeleteApplied) {
     setPrevIsDeleteApplied(isDeleteApplied)
     if (isDeleteApplied && applyState === 'idle') {
@@ -512,7 +528,7 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
       <div className="md-file-code">
         <LinesDisplay
           code={fileState.content || ''}
-          language={getLanguageFromPath(path)}
+          language={language}
           isStreaming={isStreaming}
         />
       </div>
@@ -533,6 +549,7 @@ export const FileBlock = memo(function FileBlock({
   const fileState = useFileContent(path)
   const { workspace } = useWorkspace()
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
+  const language = useMemo(() => getLanguageFromPath(path), [path])
 
   const handleCopy = useCallback(async (): Promise<void> => {
     await copy(code)
@@ -550,13 +567,17 @@ export const FileBlock = memo(function FileBlock({
     }
   }, [workspace, path, code])
 
-  const isFileApplied =
-    fileState !== null &&
-    fileState.exists &&
-    fileState.content !== null &&
-    normalizeLineEndings(fileState.content) === normalizeLineEndings(code)
+  const isFileApplied = useMemo(
+    () =>
+      fileState !== null &&
+      fileState.exists &&
+      fileState.content !== null &&
+      normalizeLineEndings(fileState.content) === normalizeLineEndings(code),
+    [fileState, code]
+  )
 
   const [prevIsFileApplied, setPrevIsFileApplied] = useState(isFileApplied)
+
   if (isFileApplied !== prevIsFileApplied) {
     setPrevIsFileApplied(isFileApplied)
     if (isFileApplied && applyState === 'idle') {
@@ -628,7 +649,7 @@ export const FileBlock = memo(function FileBlock({
         </div>
       </div>
       <div className="md-file-code">
-        <LinesDisplay code={code} language={getLanguageFromPath(path)} isStreaming={isStreaming} />
+        <LinesDisplay code={code} language={language} isStreaming={isStreaming} />
       </div>
     </div>
   )

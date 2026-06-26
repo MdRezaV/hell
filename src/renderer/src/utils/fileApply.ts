@@ -162,23 +162,45 @@ export async function unapplyFileReplace(
 
 export type ReplaceState = 'idle' | 'applied' | 'notFound'
 
-export function detectReplaceState(
-  content: string | null,
-  exists: boolean,
-  oldCode: string,
-  newCode: string
-): ReplaceState {
-  if (!exists || content === null) return 'notFound'
+let cachedLooseMatchContent: string | null = null
+const cachedLooseMatchResults = new Map<string, boolean>()
 
-  const normalizedContent = normalizeLineEndings(content)
-  const normalizedOldCode = normalizeLineEndings(oldCode)
-  const normalizedNewCode = normalizeLineEndings(newCode)
+function cachedFindLooseMatch(content: string, search: string): boolean {
+  if (search.length > content.length) return false
+
+  if (content !== cachedLooseMatchContent) {
+    cachedLooseMatchContent = content
+    cachedLooseMatchResults.clear()
+  }
+
+  const cached = cachedLooseMatchResults.get(search)
+  if (cached !== undefined) return cached
+
+  const result = Boolean(findLooseMatch(content, search))
+  cachedLooseMatchResults.set(search, result)
+  return result
+}
+
+/**
+ * All string inputs must already be normalized via `normalizeLineEndings`.
+ * Returns early on the first exact or loose match, skipping the expensive
+ * `findLooseMatch` call when `indexOf` succeeds. Loose-match results are
+ * memoized per content reference with a length-based fast-path rejection
+ * to avoid redundant tokenization across re-renders.
+ */
+export function detectReplaceState(
+  normalizedContent: string | null,
+  exists: boolean,
+  normalizedOldCode: string,
+  normalizedNewCode: string
+): ReplaceState {
+  if (!exists || normalizedContent === null) return 'notFound'
 
   if (normalizedContent.indexOf(normalizedOldCode) !== -1) return 'idle'
-  if (findLooseMatch(normalizedContent, normalizedOldCode)) return 'idle'
+  if (cachedFindLooseMatch(normalizedContent, normalizedOldCode)) return 'idle'
 
-  if (normalizedContent.includes(normalizedNewCode)) return 'applied'
-  if (findLooseMatch(normalizedContent, normalizedNewCode)) return 'applied'
+  if (normalizedContent.indexOf(normalizedNewCode) !== -1) return 'applied'
+  if (cachedFindLooseMatch(normalizedContent, normalizedNewCode)) return 'applied'
 
   return 'notFound'
 }
