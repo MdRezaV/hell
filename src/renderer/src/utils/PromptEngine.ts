@@ -289,9 +289,15 @@ Questions:
 
 <planning_standards>
 - **Atomic Tasks**: Each task should represent a single, logical unit of work that can be implemented and verified independently.
-- **Comprehensive File Scope**: List all files required to execute the task. This includes files being created, modified, or deleted, AS WELL AS any files needed for context (e.g., configuration files, interfaces, base classes, or related modules that must be read to ensure correct implementation).
+- **Comprehensive File Scope**: The Files line must include **every existing file** required to complete the task. This means:
+  - All files to be **modified** or **deleted**.
+  - Every file needed for **context** (interfaces, types, configs, parent classes, constants, fixtures) that already exists.
+  If you are unsure whether a file is needed, include it. Omission breaks the task.
+  **Only list files that already exist.** Never list files that are to be created. For new files, mention the creation explicitly in the Description (e.g., “Create a file at path/to/file.ext with …”).
 - **Sequential Logic**: Order tasks logically. Establish foundations and interfaces first, then implement core logic, and finally handle integration, edge cases, and tests.
 - **Actionable Descriptions**: Describe exactly *what* needs to be done and *why*, without dictating the exact syntax. Highlight potential pitfalls or edge cases to watch out for in the description.
+- **Self-Contained Tasks**: Each task must be written as if it is the only instruction a developer will receive. Do **not** reference other tasks (e.g., “After Task 3, do X” or “Use the interface created in the previous task”). Include all required context, file paths, and specifications directly in the task description. The numbering is only a suggested reading order; every task must be independently executable.
+- **No Forward Dependencies**: The Files list must only contain files that already exist or that the developer can read *without running another task first*. If a task would require a file that has not yet been created, the breakdown must be restructured so the dependent file is always created earlier, or the task must include its definition locally.
 </planning_standards>
 
 <communication_style>
@@ -308,7 +314,9 @@ You may include brief explanatory text before the tasks to summarize the archite
 - Include a brief summary describing the overall strategy before listing tasks.
 - Every task must be enclosed in the \`[TASK X]\` and \`[END]\` tags.
 - The \`Files\` line must consist solely of a single-line, comma-separated list of all relevant files (including both modification targets and necessary context files), with no extra text before or after the file paths.
-- The \`Description\` line must contain a clear, actionable description of the task.
+  - **Only list files that already exist.** Never include files that are to be created.
+  - **Do not omit any contextual file.** If a task requires reading a type definition, a configuration file, a base class, or a test fixture to be implemented correctly, that file MUST appear in the Files list.
+- The \`Description\` line must contain a clear, actionable, and **self-contained** description of the task. Never mention other task numbers. If a dependency is required, repeat the specification inline or refer to an existing file that defines it.
 - To request files during clarification, use the \`[INCLUDE path/to/file.ext]\` tag.
 - **NO BACKTICKS ON TAGS**: Never wrap \`[TASK]\` or \`[INCLUDE]\` tags in backticks or markdown code formatting. They must be raw plain text (e.g., DO NOT output \`\`\`[TASK N]\`\`\`).
 
@@ -317,7 +325,7 @@ You may include brief explanatory text before the tasks to summarize the archite
 1. Task definition:
 [TASK <number>]
 Files: <path/to/file1.ext>, <path/to/file2.ext>
-Description: <Complete Task Description.>
+Description: <Complete, self-contained task description.>
 [END]
 
 2. Request a file (In clarification):
@@ -327,8 +335,8 @@ Description: <Complete Task Description.>
 To migrate the notification system to an event-driven architecture, we will decouple the synchronous email/SMS sending logic from the main API request lifecycle. We will introduce a message queue, define strict event schemas, implement a producer in the API, and create a dedicated worker service to process the messages. This will improve API response times and allow for retry mechanisms on notification failures.
 
 [TASK 1]
-Files: infra/docker-compose.yml, .env.example, src/config/queue.ts, src/types/events.ts
-Description: Add the message queue service to the local development \`docker-compose.yml\` and update \`.env.example\` with the new queue connection variables. Create a centralized queue configuration module in \`src/config/queue.ts\` to manage connection strings. Define strict TypeScript interfaces for \`UserCreatedEvent\` and \`PasswordResetEvent\` in \`src/types/events.ts\` to ensure payload consistency.
+Files: infra/docker-compose.yml, .env.example
+Description: Add the message queue service to the local development \`docker-compose.yml\` and update \`.env.example\` with the new queue connection variables. Create \`src/config/queue.ts\` with a centralized queue configuration module. Create \`src/types/events.ts\` and define strict TypeScript interfaces for \`UserCreatedEvent\` and \`PasswordResetEvent\`.
 [END]
 
 [TASK 2]
@@ -338,17 +346,17 @@ Description: Implement the \`EventPublisher\` service responsible for connecting
 
 [TASK 3]
 Files: src/services/UserService.ts, src/services/AuthService.ts, src/services/NotificationService.ts
-Description: Refactor \`UserService.createUser\` and \`AuthService.requestPasswordReset\` to remove synchronous calls to the legacy \`NotificationService\` (included for context on existing method signatures and DB transactions). Instead, inject the \`EventPublisher\` and emit the corresponding events immediately after the database transaction commits. Ensure events are only published if the DB transaction succeeds.
+Description: Refactor \`UserService.createUser\` and \`AuthService.requestPasswordReset\` to remove synchronous calls to the legacy \`NotificationService\` (included for context on existing method signatures and DB transactions). Instead, inject the \`EventPublisher\` (defined in \`src/services/EventPublisher.ts\`) and emit the corresponding events immediately after the database transaction commits. Ensure events are only published if the DB transaction succeeds.
 [END]
 
 [TASK 4]
-Files: workers/notification-worker/src/index.ts, workers/notification-worker/src/handlers/EmailHandler.ts, workers/notification-worker/src/handlers/SmsHandler.ts, src/config/email.ts
-Description: Create the standalone worker service entry point that listens to the notification queues. Implement \`EmailHandler\` and \`SmsHandler\` to process the respective events, referencing \`src/config/email.ts\` for existing SMTP provider configurations. Implement idempotency checks using the event ID to prevent duplicate notifications.
+Files: src/config/email.ts
+Description: Create \`workers/notification-worker/src/index.ts\` as the standalone worker service entry point that listens to the notification queues. Create \`workers/notification-worker/src/handlers/EmailHandler.ts\` and \`workers/notification-worker/src/handlers/SmsHandler.ts\` to process the respective events, referencing \`src/config/email.ts\` for existing SMTP provider configurations. Implement idempotency checks using the event ID to prevent duplicate notifications.
 [END]
 
 [TASK 5]
-Files: tests/integration/notification-flow.test.ts, tests/setup.ts, docs/architecture/notifications.md
-Description: Write an end-to-end integration test that triggers a user creation via the API, waits for the worker to process the message, and asserts that the mock email/SMS providers received the correct payloads. Utilize \`tests/setup.ts\` to initialize the test queue. Update the architecture documentation to reflect the new asynchronous flow.
+Files: tests/setup.ts, docs/architecture/notifications.md
+Description: Create \`tests/integration/notification-flow.test.ts\` with an end-to-end integration test that triggers a user creation via the API, waits for the worker to process the message, and asserts that the mock email/SMS providers received the correct payloads. Utilize \`tests/setup.ts\` to initialize the test queue. Update the architecture documentation at \`docs/architecture/notifications.md\` to reflect the new asynchronous flow.
 [END]
 </example>
 </output_format>
