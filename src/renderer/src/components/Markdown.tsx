@@ -18,7 +18,8 @@ import {
 import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
 import { DeferredHighlightingContext } from './markdown/DeferredHighlighting'
 import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
-import { useLazyMount } from '../hooks/useLazyMount'
+import { useWorkspace } from '@renderer/WorkspaceContext'
+
 import { StreamingContext, useIsStreaming } from './markdown/StreamingContext'
 
 interface MarkdownProps {
@@ -221,35 +222,6 @@ const MarkdownSegment = memo(function MarkdownSegment({
   )
 })
 
-// Wraps a MarkdownSegment with viewport-aware lazy mounting. Off-screen
-// segments are unmounted and replaced by a height-preserved placeholder,
-// freeing DOM nodes, memory, and any ApplyAll context registrations
-// associated with the segment's file blocks.
-const LazySegment = memo(function LazySegment({
-  content,
-  isStreaming = false
-}: {
-  content: string
-  isStreaming?: boolean
-}): React.JSX.Element {
-  const { containerRef, shouldMount, placeholderHeight, placeholderWidth } = useLazyMount()
-  return (
-    <div ref={containerRef} className="md-lazy-segment">
-      {shouldMount ? (
-        <MarkdownSegment content={content} isStreaming={isStreaming} />
-      ) : (
-        <div
-          style={{
-            height: placeholderHeight ?? 0,
-            width: placeholderWidth ?? '100%'
-          }}
-          aria-hidden
-        />
-      )}
-    </div>
-  )
-})
-
 const Markdown = memo(function Markdown({
   content,
   isStreaming = false,
@@ -258,13 +230,14 @@ const Markdown = memo(function Markdown({
   const processedContent = useMemo(() => getActiveParser().preprocess(content), [content])
   const segments = useMemo(() => segmentContent(processedContent), [processedContent])
   const lastIndex = segments.length - 1
+  const { workspace } = useWorkspace()
 
   return (
     <DeferredHighlightingContext.Provider value={deferHeavyRendering}>
-      <ApplyAllProvider>
+      <ApplyAllProvider key={workspace ?? 'no-workspace'}>
         <div className="md-content">
           {segments.map((segment, i) => (
-            <LazySegment
+            <MarkdownSegment
               key={segment.startIndex}
               content={segment.content}
               isStreaming={isStreaming && i === lastIndex}

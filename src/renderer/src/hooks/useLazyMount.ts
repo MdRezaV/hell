@@ -18,7 +18,7 @@ const ROOT_MARGIN = '200px 0px'
 export function useLazyMount(): UseLazyMountResult {
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null)
   // Start mounted so the first render can be measured.
-  const [isNearViewport, setIsNearViewport] = useState(true)
+  const [isNearViewport, setIsNearViewport] = useState(false)
   const [height, setHeight] = useState<number | null>(null)
   const [width, setWidth] = useState<number | null>(null)
 
@@ -61,7 +61,7 @@ export function useLazyMount(): UseLazyMountResult {
 
   // Keep content mounted until we have measured dimensions, otherwise the
   // placeholder would render with 0 size and never recover.
-  const shouldMount = isNearViewport || height === null || width === null
+  const shouldMount = isNearViewport
 
   return { containerRef, shouldMount, placeholderHeight: height, placeholderWidth: width }
 }
