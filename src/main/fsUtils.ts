@@ -221,8 +221,8 @@ export async function readDirTree(
   }
 }
 
-export function formatTreeText(rootName: string, nodes: FileNode[]): string {
-  let result = `- ${rootName}/\n`
+export function formatTreeText(nodes: FileNode[]): string {
+  let result = ''
   const walk = (list: FileNode[], indent: string): void => {
     for (const node of list) {
       if (node.type === 'directory') {
@@ -235,6 +235,6 @@ export function formatTreeText(rootName: string, nodes: FileNode[]): string {
       }
     }
   }
-  walk(nodes, '  ')
+  walk(nodes, '')
   return result
 }
