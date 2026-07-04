@@ -45,6 +45,7 @@ export function useApplyRegistration(
   )
   const applyRef = useRef(applyFn)
   const unapplyRef = useRef(unapplyFn)
+  const ctxRef = useRef(ctx)
   useEffect(() => {
     applyRef.current = applyFn
   }, [applyFn])
@@ -54,23 +55,27 @@ export function useApplyRegistration(
   }, [unapplyFn])
 
   useEffect(() => {
+    ctxRef.current = ctx
+  }, [ctx])
+
+  useEffect(() => {
     if (!ctx) return
     const id = stableId
     const wrappedApply = async (): Promise<void> => {
       try {
         await applyRef.current()
-        ctx.setStatus(id, 'applied')
+        ctxRef.current?.setStatus(id, 'applied')
       } catch {
-        ctx.setStatus(id, 'error')
+        ctxRef.current?.setStatus(id, 'error')
       }
     }
     const wrappedUnapply = unapplyRef.current
       ? async (): Promise<void> => {
           try {
             await unapplyRef.current!()
-            ctx.setStatus(id, 'idle')
+            ctxRef.current?.setStatus(id, 'idle')
           } catch {
-            ctx.setStatus(id, 'error')
+            ctxRef.current?.setStatus(id, 'error')
           }
         }
       : undefined
@@ -81,9 +86,9 @@ export function useApplyRegistration(
   }, [ctx, stableId])
 
   useEffect(() => {
-    if (!ctx) return
-    ctx.setStatus(stableId, status)
-  }, [ctx, status, stableId])
+    if (!ctxRef.current) return
+    ctxRef.current.setStatus(stableId, status)
+  }, [status, stableId])
 
   return ctx?.blocks.get(stableId)?.status ?? status
 }
