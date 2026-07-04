@@ -45,6 +45,9 @@ export function useApplyRegistration(
   )
   const applyRef = useRef(applyFn)
   const unapplyRef = useRef(unapplyFn)
+  const ctxRef = useRef(ctx)
+  ctxRef.current = ctx
+
   useEffect(() => {
     applyRef.current = applyFn
   }, [applyFn])
@@ -54,36 +57,37 @@ export function useApplyRegistration(
   }, [unapplyFn])
 
   useEffect(() => {
-    if (!ctx) return
+    const currentCtx = ctxRef.current
+    if (!currentCtx) return
     const id = stableId
     const wrappedApply = async (): Promise<void> => {
       try {
         await applyRef.current()
-        ctx.setStatus(id, 'applied')
+        currentCtx.setStatus(id, 'applied')
       } catch {
-        ctx.setStatus(id, 'error')
+        currentCtx.setStatus(id, 'error')
       }
     }
     const wrappedUnapply = unapplyRef.current
       ? async (): Promise<void> => {
           try {
             await unapplyRef.current!()
-            ctx.setStatus(id, 'idle')
+            currentCtx.setStatus(id, 'idle')
           } catch {
-            ctx.setStatus(id, 'error')
+            currentCtx.setStatus(id, 'error')
           }
         }
       : undefined
-    ctx.register(id, wrappedApply, wrappedUnapply)
+    currentCtx.register(id, wrappedApply, wrappedUnapply)
     // Don't unregister on unmount — registrations persist so ApplyAllBar
     // can track off-screen blocks. Remounting with the same stableKey
     // updates the functions without creating duplicates.
-  }, [ctx, stableId])
+  }, [stableId])
 
   useEffect(() => {
-    if (!ctx) return
-    ctx.setStatus(stableId, status)
-  }, [ctx, status, stableId])
+    if (!ctxRef.current) return
+    ctxRef.current.setStatus(stableId, status)
+  }, [status, stableId])
 
   return ctx?.blocks.get(stableId)?.status ?? status
 }
