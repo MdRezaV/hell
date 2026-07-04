@@ -26,19 +26,33 @@ function startOfDay(year: number, month: number, date: number): Date {
   return new Date(year, month, date)
 }
 
-function formatItemTime(ts: number): string {
-  const d = new Date(ts)
-  const now = new Date()
-  const todayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterdayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
+]
 
-  if (d >= todayStart) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+function formatItemTime(ts: number, todayStart: number, yesterdayStart: number): string {
+  if (ts >= todayStart) {
+    const offset = ts - todayStart
+    const h = Math.floor(offset / 3600000)
+    const m = Math.floor((offset % 3600000) / 60000)
+    return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`
   }
-  if (d >= yesterdayStart) {
+  if (ts >= yesterdayStart) {
     return 'Yesterday'
   }
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const d = new Date(ts)
+  return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`
 }
 
 function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
@@ -69,6 +83,43 @@ function groupByTime(sessions: ChatSession[]): Map<string, ChatSession[]> {
 
   return groups
 }
+
+interface ChatHistoryItemProps {
+  session: ChatSession
+  isActive: boolean
+  formattedTime: string
+  onSelect: (id: string) => void
+  onDelete: (e: React.MouseEvent, id: string) => void
+}
+
+const ChatHistoryItem = memo(function ChatHistoryItem({
+  session,
+  isActive,
+  formattedTime,
+  onSelect,
+  onDelete
+}: ChatHistoryItemProps): React.JSX.Element {
+  const handleClick = useCallback(() => onSelect(session.id), [onSelect, session.id])
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent) => onDelete(e, session.id),
+    [onDelete, session.id]
+  )
+  return (
+    <div className={`chat-history-item ${isActive ? 'active' : ''}`} onClick={handleClick}>
+      <MessageSquare size={13} className="chat-history-icon" />
+      <div className="chat-history-item-content">
+        <span className="chat-history-item-title">{session.title || 'New Chat'}</span>
+        <span className="chat-history-item-meta">
+          {session.mode && <span className="chat-history-item-mode">{session.mode}</span>}
+          <span className="chat-history-item-date">{formattedTime}</span>
+        </span>
+      </div>
+      <button className="chat-history-delete" onClick={handleDeleteClick} title="Delete">
+        <Trash2 size={12} />
+      </button>
+    </div>
+  )
+})
 
 export default memo(function ChatHistory({
   workspace,
@@ -169,6 +220,21 @@ export default memo(function ChatHistory({
     })
   }, [])
 
+  const formattedTimes = useMemo(() => {
+    const now = new Date()
+    const todayStart = startOfDay(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const yesterdayStart = startOfDay(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 1
+    ).getTime()
+    const map = new Map<string, string>()
+    for (const s of filtered) {
+      map.set(s.id, formatItemTime(s.created_at, todayStart, yesterdayStart))
+    }
+    return map
+  }, [filtered])
+
   return (
     <div className="chat-history">
       <div className="chat-history-header">
@@ -240,33 +306,14 @@ export default memo(function ChatHistory({
                 {!collapsed && (
                   <div className="chat-history-group-items">
                     {items.map((session) => (
-                      <div
+                      <ChatHistoryItem
                         key={session.id}
-                        className={`chat-history-item ${activeChatId === session.id ? 'active' : ''}`}
-                        onClick={() => onSelectChat(session.id)}
-                      >
-                        <MessageSquare size={13} className="chat-history-icon" />
-                        <div className="chat-history-item-content">
-                          <span className="chat-history-item-title">
-                            {session.title || 'New Chat'}
-                          </span>
-                          <span className="chat-history-item-meta">
-                            {session.mode && (
-                              <span className="chat-history-item-mode">{session.mode}</span>
-                            )}
-                            <span className="chat-history-item-date">
-                              {formatItemTime(session.created_at)}
-                            </span>
-                          </span>
-                        </div>
-                        <button
-                          className="chat-history-delete"
-                          onClick={(e) => handleDelete(e, session.id)}
-                          title="Delete"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                        session={session}
+                        isActive={activeChatId === session.id}
+                        formattedTime={formattedTimes.get(session.id) ?? ''}
+                        onSelect={onSelectChat}
+                        onDelete={handleDelete}
+                      />
                     ))}
                   </div>
                 )}
