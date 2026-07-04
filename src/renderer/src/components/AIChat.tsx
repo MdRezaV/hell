@@ -325,6 +325,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const modeRef = useRef(mode)
   const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string } | null>(null)
   const isNearBottomRef = useRef(true)
+  const loadChatGenerationRef = useRef(0)
   const resizeTextarea = useAutoResizeTextarea()
   const { workspace } = useWorkspace()
 
@@ -471,6 +472,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         setMode(newMode)
       },
       loadChat(newMessages: ChatMessage[], newMode?: string, newChatId?: string): void {
+        const generation = ++loadChatGenerationRef.current
         isLoadingRef.current = true
         setInput('')
         if (inputRef.current) {
@@ -490,7 +492,9 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
         if (newMessages.length === 0) {
           setTimeout(() => {
-            isLoadingRef.current = false
+            if (loadChatGenerationRef.current === generation) {
+              isLoadingRef.current = false
+            }
           }, 0)
           return
         }
@@ -502,6 +506,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           let stableFrames = 0
 
           const checkAndScroll = (): void => {
+            if (loadChatGenerationRef.current !== generation) return
             attempts++
             const currentCount = virtualizerRef.current.options.count
             const currentTotalSize = virtualizerRef.current.getTotalSize()
