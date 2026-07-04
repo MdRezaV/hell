@@ -588,8 +588,8 @@ function App(): React.JSX.Element {
             modeLabel
           )
           setActiveChatId(id)
+          setChatHistoryKey((k) => k + 1)
         }
-        setChatHistoryKey((k) => k + 1)
       } catch (e) {
         log.error('Failed to handle messages change:', e)
       }

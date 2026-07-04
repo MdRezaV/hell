@@ -17,6 +17,7 @@ import {
   getWorkspaceState,
   pruneWorkspaceState,
   removeFileState,
+  searchChatSessions,
   setDirExpanded,
   setFileState,
   snapshotWorkspaceStateToSession,
@@ -260,6 +261,10 @@ export function registerIpcHandlers(): void {
 
   safeHandle('db:get-chat-sessions', async (_, workspacePath: string | null) => {
     return getChatSessions(workspacePath)
+  })
+
+  safeHandle('db:search-chat-sessions', async (_, workspacePath: string | null, query: string) => {
+    return searchChatSessions(workspacePath, query)
   })
 
   safeHandle('db:get-chat-session', async (_, id: string) => {

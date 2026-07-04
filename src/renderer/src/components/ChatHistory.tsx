@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, Clock, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react'
 import log from 'electron-log/renderer'
 import '../styles/ChatHistory.css'
@@ -7,7 +7,6 @@ export interface ChatSession {
   id: string
   workspace_path: string | null
   title: string
-  messages: string
   created_at: number
   updated_at: number
   mode?: string
@@ -128,13 +127,36 @@ export default memo(function ChatHistory({
     [activeChatId, onNewChat, workspace]
   )
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return sessions
-    const q = search.toLowerCase()
-    return sessions.filter(
-      (s) => s.title.toLowerCase().includes(q) || s.messages.toLowerCase().includes(q)
-    )
-  }, [sessions, search])
+  const [searchResults, setSearchResults] = useState<ChatSession[] | null>(null)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => {
+    if (!search.trim() || !workspace) {
+      setSearchResults(null)
+      clearTimeout(searchDebounceRef.current)
+      return
+    }
+    const q = search.trim()
+    clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const results: ChatSession[] = await window.electron.ipcRenderer.invoke(
+          'db:search-chat-sessions',
+          workspace,
+          q
+        )
+        setSearchResults(results || [])
+      } catch (e) {
+        log.error('Failed to search chat sessions:', e)
+        setSearchResults([])
+      }
+    }, 200)
+    return () => {
+      clearTimeout(searchDebounceRef.current)
+    }
+  }, [search, workspace])
+
+  const filtered = searchResults ?? sessions
 
   const grouped = useMemo(() => groupByTime(filtered), [filtered])
 
