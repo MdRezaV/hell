@@ -59,7 +59,8 @@ export function useApplyRegistration(
   }, [ctx])
 
   useEffect(() => {
-    if (!ctx) return
+    const currentCtx = ctxRef.current
+    if (!currentCtx) return
     const id = stableId
     const wrappedApply = async (): Promise<void> => {
       try {
@@ -79,11 +80,16 @@ export function useApplyRegistration(
           }
         }
       : undefined
-    ctx.register(id, wrappedApply, wrappedUnapply)
+    currentCtx.register(id, wrappedApply, wrappedUnapply)
     // Don't unregister on unmount — registrations persist so ApplyAllBar
     // can track off-screen blocks. Remounting with the same stableKey
     // updates the functions without creating duplicates.
-  }, [ctx, stableId])
+    // Intentionally omit `ctx` from deps: ctx identity changes every time
+    // the blocks Map updates, which would re-run this effect and call
+    // register again, producing an infinite update loop. The wrapped
+    // callbacks close over refs, so they always invoke the latest
+    // functions without needing to re-register.
+  }, [stableId])
 
   useEffect(() => {
     if (!ctxRef.current) return
