@@ -17,7 +17,7 @@ import {
 
 describe('formatTreeText', () => {
   it('formats empty node list', () => {
-    expect(formatTreeText('root', [])).toBe('- root/\n')
+    expect(formatTreeText([])).toBe('')
   })
 
   it('formats flat file list', () => {
@@ -25,8 +25,8 @@ describe('formatTreeText', () => {
       { name: 'a.ts', path: '/x/a.ts', type: 'file' },
       { name: 'b.ts', path: '/x/b.ts', type: 'file' }
     ]
-    const out = formatTreeText('root', nodes)
-    expect(out).toBe('- root/\n  - a.ts\n  - b.ts\n')
+    const out = formatTreeText(nodes)
+    expect(out).toBe('- a.ts\n- b.ts\n')
   })
 
   it('formats nested directories', () => {
@@ -46,18 +46,17 @@ describe('formatTreeText', () => {
         ]
       }
     ]
-    const out = formatTreeText('root', nodes)
-    expect(out).toContain('- root/')
-    expect(out).toContain('  - src/')
-    expect(out).toContain('    - index.ts')
-    expect(out).toContain('    - utils/')
-    expect(out).toContain('      - a.ts')
+    const out = formatTreeText(nodes)
+    expect(out).toContain('- src/')
+    expect(out).toContain('  - index.ts')
+    expect(out).toContain('  - utils/')
+    expect(out).toContain('    - a.ts')
   })
 
   it('does not recurse into empty directory children', () => {
     const nodes: FileNode[] = [{ name: 'empty', path: '/x/empty', type: 'directory', children: [] }]
-    const out = formatTreeText('root', nodes)
-    expect(out).toBe('- root/\n  - empty/\n')
+    const out = formatTreeText(nodes)
+    expect(out).toBe('- empty/\n')
   })
 })
 

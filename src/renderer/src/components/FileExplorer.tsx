@@ -278,6 +278,9 @@ function FileExplorer({
   const cancelRef = useRef(false)
   const onFilePathsChangeRef = useRef(onFilePathsChange)
   onFilePathsChangeRef.current = onFilePathsChange
+  const filePathSetRef = useRef<Set<string>>(new Set())
+  const onToggleFileRef = useRef(onToggleFile)
+  onToggleFileRef.current = onToggleFile
 
   if (workspace !== prevWorkspace) {
     setPrevWorkspace(workspace)
@@ -361,6 +364,7 @@ function FileExplorer({
   }
 
   const filePathSet = useMemo(() => collectFilePaths(tree), [tree])
+  filePathSetRef.current = filePathSet
   const fileCount = filePathSet.size
 
   const checkedCount = useMemo(() => {
@@ -422,22 +426,24 @@ function FileExplorer({
           }
         | undefined
       if (!detail?.path) return
+      const currentFilePaths = filePathSetRef.current
+      const currentOnToggle = onToggleFileRef.current
       const targetRaw = detail.path
       const target = normalize(targetRaw)
 
       const found = (matchedPath: string): void => {
-        onToggleFile([matchedPath], true)
+        currentOnToggle([matchedPath], true)
         detail.matched = true
       }
 
       // 1. Exact match
-      if (filePathSet.has(targetRaw)) {
+      if (currentFilePaths.has(targetRaw)) {
         found(targetRaw)
         return
       }
 
       // 2. Normalized exact match (handles separator differences)
-      for (const p of filePathSet) {
+      for (const p of currentFilePaths) {
         if (normalize(p) === target) {
           found(p)
           return
@@ -448,7 +454,7 @@ function FileExplorer({
       const targetWithSlash = target.startsWith('/') ? target : `/${target}`
       let bestMatch: string | null = null
       let bestLen = -1
-      for (const p of filePathSet) {
+      for (const p of currentFilePaths) {
         const norm = normalize(p)
         if (norm === target || norm.endsWith(targetWithSlash) || norm.endsWith('/' + target)) {
           if (norm.length > bestLen) {
@@ -466,7 +472,7 @@ function FileExplorer({
       const baseName = target.split('/').pop()?.toLowerCase()
       if (baseName) {
         const candidates: string[] = []
-        for (const p of filePathSet) {
+        for (const p of currentFilePaths) {
           if (p.split(/[/\\]/).pop()?.toLowerCase() === baseName) {
             candidates.push(p)
           }
@@ -501,7 +507,7 @@ function FileExplorer({
     return () => {
       window.removeEventListener('file-include-add', handler)
     }
-  }, [filePathSet, onToggleFile])
+  }, [])
 
   const filteredTree = useMemo(() => {
     const q = search.trim().toLowerCase()
