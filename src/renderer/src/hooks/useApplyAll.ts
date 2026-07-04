@@ -46,7 +46,6 @@ export function useApplyRegistration(
   const applyRef = useRef(applyFn)
   const unapplyRef = useRef(unapplyFn)
   const ctxRef = useRef(ctx)
-  ctxRef.current = ctx
 
   useEffect(() => {
     applyRef.current = applyFn

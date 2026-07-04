@@ -164,7 +164,7 @@ export function registerIpcHandlers(): void {
       return
     }
     const win = BrowserWindow.fromWebContents(event.sender)
-    startWatching(workspacePath, () => {
+    await startWatching(workspacePath, () => {
       if (win && !win.isDestroyed()) {
         win.webContents.send('workspace:changed')
       }

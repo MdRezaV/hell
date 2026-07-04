@@ -397,10 +397,16 @@ export function getChatSessions(workspacePath: string | null): ChatSession[] {
   const d = getDb()
   if (workspacePath) {
     return d
-      .prepare(`SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE workspace_path = ? ORDER BY updated_at DESC`)
+      .prepare(
+        `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE workspace_path = ? ORDER BY updated_at DESC`
+      )
       .all(workspacePath) as ChatSession[]
   }
-  return d.prepare(`SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions ORDER BY updated_at DESC`).all() as ChatSession[]
+  return d
+    .prepare(
+      `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions ORDER BY updated_at DESC`
+    )
+    .all() as ChatSession[]
 }
 
 export function searchChatSessions(workspacePath: string | null, query: string): ChatSession[] {
@@ -408,11 +414,15 @@ export function searchChatSessions(workspacePath: string | null, query: string):
   const q = `%${query}%`
   if (workspacePath) {
     return d
-      .prepare(`SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE workspace_path = ? AND (title LIKE ? OR messages LIKE ?) ORDER BY updated_at DESC`)
+      .prepare(
+        `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE workspace_path = ? AND (title LIKE ? OR messages LIKE ?) ORDER BY updated_at DESC`
+      )
       .all(workspacePath, q, q) as ChatSession[]
   }
   return d
-    .prepare(`SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE title LIKE ? OR messages LIKE ? ORDER BY updated_at DESC`)
+    .prepare(
+      `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE title LIKE ? OR messages LIKE ? ORDER BY updated_at DESC`
+    )
     .all(q, q) as ChatSession[]
 }
 
@@ -466,14 +476,14 @@ export function pruneWorkspaceState(
     }
 
     d.prepare(
-      `DELETE FROM file_states 
-       WHERE workspace_path = ? 
+      `DELETE FROM file_states
+       WHERE workspace_path = ?
        AND relative_path NOT IN (SELECT relative_path FROM temp_valid_files)`
     ).run(workspacePath)
 
     d.prepare(
-      `DELETE FROM expanded_dirs 
-       WHERE workspace_path = ? 
+      `DELETE FROM expanded_dirs
+       WHERE workspace_path = ?
        AND relative_path NOT IN (SELECT relative_path FROM temp_valid_dirs)`
     ).run(workspacePath)
 
