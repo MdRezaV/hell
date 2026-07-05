@@ -314,6 +314,7 @@
 
 .md-file-replace-block {
   @apply w-full min-w-0;
+  @apply mb-2;
 }
 
 .md-file-diff {
