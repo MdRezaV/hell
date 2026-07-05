@@ -14,9 +14,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Flame,
   Pencil,
   Plus,
-  Sparkles,
   X
 } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -47,6 +47,14 @@ function generateId(): string {
 const NEAR_BOTTOM_THRESHOLD = 100
 
 type ChatMode = string
+
+const WELCOME_LINES = [
+  'what the HELL is going on?',
+  'what the HELL is coding on?',
+  'coding feels like HELL',
+  'what the HELL?',
+  'another day living in HELL'
+]
 
 function ModeSelector({
   mode,
@@ -749,16 +757,24 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   }
 
   const isChatMode = messages.length > 0
+  const [welcomeText, setWelcomeText] = useState(
+    () => WELCOME_LINES[Math.floor(Math.random() * WELCOME_LINES.length)]
+  )
+
+  useEffect(() => {
+    if (!isChatMode) {
+      setWelcomeText(WELCOME_LINES[Math.floor(Math.random() * WELCOME_LINES.length)])
+    }
+  }, [isChatMode])
 
   if (!isChatMode) {
     return (
       <div className="ai-chat ai-chat-welcome">
         <div className="ai-chat-welcome-content">
           <div className="ai-chat-welcome-icon">
-            <Sparkles size={40} strokeWidth={1.25} />
+            <Flame size={40} strokeWidth={1.25} />
           </div>
-          <h2>AI Assistant</h2>
-          <p>Ask me anything about code, architecture, or design.</p>
+          <p className="ai-chat-welcome-tagline">{welcomeText}</p>
         </div>
         <div className="ai-chat-input-bar ai-chat-input-bar-centered">
           <div className="ai-chat-input-wrapper">

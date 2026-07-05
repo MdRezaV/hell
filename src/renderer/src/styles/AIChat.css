@@ -10,6 +10,10 @@
   @apply text-center min-w-0;
 }
 
+.ai-chat-welcome-tagline {
+  @apply text-text text-[15px] font-medium leading-snug m-0;
+}
+
 .ai-chat-welcome-icon {
   @apply inline-flex items-center justify-center w-[72px] h-[72px] rounded-xl mb-5 text-ctp-mauve bg-[linear-gradient(135deg,rgba(203,166,247,0.12),rgba(137,180,250,0.12))] border border-[rgba(203,166,247,0.15)];
 }
