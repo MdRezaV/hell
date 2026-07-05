@@ -1,31 +1,14 @@
 .progress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  z-index: 9999;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: 0;
-  transition: opacity 120ms ease-out;
-  background: transparent;
+  @apply fixed top-0 left-0 w-full h-0.5 z-[9999] pointer-events-none overflow-hidden opacity-0 transition-opacity duration-[120ms] ease-out;
 }
 
 .progress-bar--active {
-  opacity: 1;
+  @apply opacity-100;
 }
 
 .progress-bar__track {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 40%;
-  background: var(--color-accent, #646cff);
-  transform: translateX(-100%);
+  @apply absolute inset-y-0 left-0 w-2/5 bg-accent -translate-x-full will-change-transform;
   animation: progress-slide 1.2s infinite cubic-bezier(0.65, 0, 0.35, 1);
-  will-change: transform;
 }
 
 @keyframes progress-slide {
