@@ -60,7 +60,7 @@
 }
 
 .explorer-search-input {
-  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0 px-0 leading-none;
+  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint p-0 leading-none;
 }
 
 .explorer-search-input:focus {
@@ -118,7 +118,7 @@
 }
 
 .tree-tag {
-  @apply ml-1.5 px-1 py-0 text-[10px] font-mono font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
+  @apply ml-1.5 px-1 text-[10px] font-mono font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
 }
 
 .tree-tag--PND {
@@ -147,7 +147,7 @@
 }
 
 .tree-label--binary {
-  opacity: 0.5;
+  @apply opacity-50;
 }
 
 .explorer-footer {
@@ -155,12 +155,7 @@
 }
 
 .explorer-footer-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  user-select: none;
+  @apply flex items-center gap-1.5 text-[12px] cursor-pointer select-none;
 }
 
 .explorer-skeleton {

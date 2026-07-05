@@ -27,11 +27,7 @@
 }
 
 .chat-history-search-input {
-  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0 px-0 leading-none;
-}
-
-.chat-history-search-input:focus {
-  @apply shadow-none;
+  @apply flex-1 min-w-0 bg-transparent border-none outline-none text-[12px] font-[inherit] text-text placeholder:text-text-faint py-0 px-0 leading-none focus:shadow-none;
 }
 
 .chat-history-search-clear {
@@ -52,10 +48,6 @@
 
 .chat-history-empty-text {
   @apply text-[12px];
-}
-
-.chat-history-group {
-  @apply mb-0;
 }
 
 .chat-history-group-header {
@@ -79,7 +71,7 @@
 }
 
 .chat-history-group-items {
-  animation: chat-history-expand 0.15s ease;
+  @apply animate-[chat-history-expand_0.15s_ease];
 }
 
 .chat-history-item {
@@ -87,10 +79,6 @@
 
   &.active {
     @apply bg-surface-0 border-l-accent;
-
-    .chat-history-icon {
-      @apply text-accent;
-    }
 
     .chat-history-item-title {
       @apply text-text font-medium;
@@ -102,12 +90,8 @@
   }
 }
 
-.chat-history-icon {
-  @apply flex-shrink-0 text-text-faint;
-}
-
 .chat-history-item-content {
-  @apply flex flex-col min-w-0 flex-1 gap-0;
+  @apply flex flex-col min-w-0 flex-1;
 }
 
 .chat-history-item-title {
@@ -115,39 +99,23 @@
 }
 
 .chat-history-item-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
+  @apply flex items-center gap-1.5 text-[10px];
 }
 
 .chat-history-item-mode {
-  display: inline-block;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(128, 128, 128, 0.15);
-  color: #888;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  line-height: 1.3;
+  @apply inline-block py-px px-[5px] rounded-[3px] bg-[rgba(128,128,128,0.15)] text-[#888] font-mono text-[10px] uppercase tracking-[0.3px] whitespace-nowrap leading-[1.3];
 }
 
 .chat-history-item-mode--coding {
-  background: rgba(137, 180, 250, 0.15);
-  color: var(--ctp-blue, #89b4fa);
+  @apply bg-[rgba(137,180,250,0.15)] text-ctp-blue;
 }
 
 .chat-history-item-mode--planning {
-  background: rgba(203, 166, 247, 0.15);
-  color: var(--ctp-mauve, #cba6f7);
+  @apply bg-[rgba(203,166,247,0.15)] text-ctp-mauve;
 }
 
 .chat-history-item-mode--initialize {
-  background: rgba(166, 227, 161, 0.15);
-  color: var(--ctp-green, #a6e3a1);
+  @apply bg-[rgba(166,227,161,0.15)] text-ctp-green;
 }
 
 .chat-history-item-date {

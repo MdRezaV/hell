@@ -858,7 +858,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         </div>
       </div>
       <div className="ai-chat-input-bar ai-chat-input-bar-floating">
-        <div className="ai-chat-input-wrapper ai-chat-input-floating">
+        <div className="ai-chat-input-wrapper">
           <textarea
             ref={inputRef}
             className="ai-chat-input"

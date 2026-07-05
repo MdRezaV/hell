@@ -3,7 +3,7 @@
 }
 
 .ai-chat-welcome {
-  @apply items-center justify-center gap-8 p-6 min-w-0;
+  @apply items-center justify-center gap-8 p-6;
 }
 
 .ai-chat-welcome-content {
@@ -19,7 +19,7 @@
 }
 
 .ai-chat-input-bar {
-  @apply p-3 px-4 border-t border-border bg-background-soft flex-shrink-0;
+  @apply py-3 px-4 border-t border-border bg-background-soft flex-shrink-0;
 }
 
 .ai-chat-input-bar-centered {
@@ -31,7 +31,7 @@
 }
 
 .ai-chat-input-wrapper {
-  @apply flex flex-col gap-1 p-2 px-3 bg-surface-0 border border-border rounded-lg min-w-0 transition-colors duration-normal;
+  @apply flex flex-col gap-1 py-2 px-3 bg-surface-0 border border-border rounded-lg min-w-0 transition-colors duration-normal;
 }
 
 .ai-chat-input-wrapper:focus-within {
@@ -59,7 +59,7 @@
 }
 
 .ai-chat-input-mode-trigger {
-  @apply inline-flex items-center justify-between gap-2.5 min-w-[140px] p-1.5 px-2.5 text-[12px] font-medium text-text bg-transparent border border-border rounded-sm cursor-pointer transition-colors duration-fast hover:border-ctp-overlay0 hover:bg-surface-1;
+  @apply inline-flex items-center justify-between gap-2.5 min-w-[140px] py-1.5 px-2.5 text-[12px] font-medium text-text bg-transparent border border-border rounded-sm cursor-pointer transition-colors duration-fast hover:border-ctp-overlay0 hover:bg-surface-1;
 }
 
 .ai-chat-input-mode-trigger svg.chevron {
@@ -71,7 +71,7 @@
 }
 
 .ai-chat-mode-option {
-  @apply flex items-center justify-between w-full p-1.5 px-2.5 text-[12px] font-medium text-text bg-transparent border-none rounded-sm cursor-pointer text-left transition-colors duration-fast hover:bg-surface-2;
+  @apply flex items-center justify-between w-full py-1.5 px-2.5 text-[12px] font-medium text-text bg-transparent border-none rounded-sm cursor-pointer text-left transition-colors duration-fast hover:bg-surface-2;
 }
 
 .ai-chat-mode-option.active {
@@ -87,15 +87,24 @@
 }
 
 .ai-chat-input {
-  @apply w-full bg-transparent border-none outline-none text-text text-[13px] leading-snug resize-none py-1 max-h-[99px] overflow-y-auto;
+  @apply w-full bg-transparent text-text text-[13px] leading-snug resize-none py-1 max-h-[99px] overflow-y-auto;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ai-chat-input:hover,
+.ai-chat-input:focus,
+.ai-chat-input:active {
+  border: 0;
+  outline: none;
+  box-shadow: none;
 }
 
 .ai-chat-input::placeholder {
   @apply text-text-faint;
-}
-
-.ai-chat-input:focus {
-  @apply outline-none border-none shadow-none;
 }
 
 .ai-chat-input:disabled {
@@ -103,17 +112,11 @@
 }
 
 .ai-chat-input-bar-floating {
-  @apply bg-transparent border-t-0 p-2.5 px-4;
+  @apply bg-transparent border-t-0 py-2.5 px-4;
 }
 
-.ai-chat-input-bar-floating .ai-chat-input-wrapper,
-.ai-chat-input-floating {
-  @apply bg-surface-0 border border-border-subtle shadow-sm p-2 px-3 gap-0 rounded-lg;
-}
-
-.ai-chat-input-bar-floating .ai-chat-input-wrapper:focus-within,
-.ai-chat-input-floating:focus-within {
-  @apply bg-surface-0;
+.ai-chat-input-bar-floating .ai-chat-input-wrapper {
+  @apply border-border-subtle shadow-sm gap-0;
 }
 
 .ai-chat-input-bar-floating .ai-chat-input {
@@ -198,7 +201,7 @@
 }
 
 .chat-bubble {
-  @apply p-2.5 px-3.5 rounded-lg text-[13px] leading-relaxed min-w-0 w-full overflow-hidden;
+  @apply py-2.5 px-3.5 rounded-lg text-[13px] leading-relaxed min-w-0 w-full overflow-hidden;
 }
 
 .chat-bubble-user {
@@ -238,7 +241,7 @@
 }
 
 .chat-edit-area {
-  @apply w-full p-2.5 px-3.5 text-[13px] text-text bg-surface-0 border border-accent rounded-lg resize-none leading-relaxed outline-none shadow-[0_0_0_var(--focus-ring-width)_rgba(137,180,250,0.15)];
+  @apply w-full py-2.5 px-3.5 text-[13px] text-text bg-surface-0 border border-accent rounded-lg resize-none leading-relaxed outline-none shadow-[0_0_0_var(--focus-ring-width)_rgba(137,180,250,0.15)];
 }
 
 .chat-edit-actions {
@@ -263,8 +266,4 @@
 
 .chat-typing-dot:nth-child(2) {
   animation-delay: -0.16s;
-}
-
-.chat-typing-dot:nth-child(3) {
-  animation-delay: 0s;
 }

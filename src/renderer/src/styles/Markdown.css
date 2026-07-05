@@ -106,14 +106,6 @@
   @apply flex items-center justify-between px-2.5 py-1.5 bg-surface-0 border-b border-border-subtle;
 }
 
-.md-command-pre {
-  @apply m-0 px-3.5 py-2.5 bg-transparent border-none rounded-none overflow-x-auto text-[12.5px] leading-snug;
-}
-
-.md-command-pre code {
-  @apply p-0 bg-none rounded-none text-inherit;
-}
-
 .md-content table {
   @apply my-2.5 w-full border-collapse text-[12.5px];
 }
@@ -256,10 +248,6 @@
   @apply inline-flex items-center gap-1.5 min-w-0 text-[12px] font-semibold text-ctp-blue overflow-hidden text-ellipsis whitespace-nowrap tracking-wide;
 }
 
-.md-file-path-icon {
-  @apply flex-shrink-0 text-ctp-blue;
-}
-
 .md-file-path-text {
   @apply overflow-hidden text-ellipsis whitespace-nowrap;
 }
@@ -313,8 +301,7 @@
 }
 
 .md-file-replace-block {
-  @apply w-full min-w-0;
-  @apply mb-2;
+  @apply w-full min-w-0 mb-2;
 }
 
 .md-file-diff {
@@ -385,27 +372,19 @@
 }
 
 .md-syntax-block {
-  margin: 0 !important;
+  @apply !m-0 !text-[12.5px] !leading-[1.5];
   border-radius: 0 0 6px 6px !important;
-  font-size: 12.5px !important;
-  line-height: 1.5 !important;
 }
 
 .md-plain-pre {
+  @apply py-3 px-3.5 overflow-auto whitespace-pre font-mono;
   background: #282c34;
   color: #abb2bf;
-  padding: 12px 14px;
-  overflow: auto;
-  white-space: pre;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 .md-plain-pre code {
-  background: transparent;
-  color: inherit;
-  padding: 0;
+  @apply bg-transparent text-inherit p-0 font-[inherit];
   font-size: inherit;
-  font-family: inherit;
 }
 .md-command-syntax code,
 .md-syntax-block code {
