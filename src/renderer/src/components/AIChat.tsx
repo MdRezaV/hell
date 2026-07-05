@@ -53,7 +53,134 @@ const WELCOME_LINES = [
   'what the HELL is coding on?',
   'coding feels like HELL',
   'what the HELL?',
-  'another day living in HELL'
+  'another day living in HELL',
+  'go to HELL (and write some code)',
+  'welcome to HELL — commits are forever',
+  'HELL freezes over... eventually, when the tests pass',
+  'HELL is where the bugs are',
+  'merge conflict? straight to HELL',
+  'it works on my machine — said no one in HELL',
+  'HELL is a warm, cozy IDE',
+  'in HELL, all errors are unhandled',
+  'in HELL, the AI does the coding and you do the debugging',
+  'HELL yeah!',
+  'straight outta HELL',
+  'HELL is open for business',
+  'welcome to the inferno',
+  'HELL hath no fury like a failing CI',
+  'abandon hope, ye who enter HELL',
+  'no rest for the wicked (or the devs in HELL)',
+  'the 9th circle of HELL is legacy code',
+  'in HELL, the linter watches you sleep',
+  'HELL is just production with more honesty',
+  'welcome to HELL — git push --force',
+  'in HELL, PRs go to rot',
+  'in HELL, git blame tells no lies',
+  'in HELL, merge conflicts are a lifestyle',
+  'welcome to HELL — the sprint never ends',
+  'HELL is the only place where NaN === NaN is still false',
+  'in HELL, the compiler is always right',
+  'in HELL, semicolons go missing',
+  'in HELL, TODO comments live forever',
+  'every npm install in HELL is a fresh torment',
+  'in HELL, indentation wars are eternal',
+  'in HELL, stack traces go to die',
+  'welcome to HELL — pair program with the devil',
+  'HELL has 9 circles of debugging',
+  'welcome to HELL — the coffee is stale and so are the deps',
+  'welcome to HELL — the build is always red',
+  'in HELL, every bug is a feature request',
+  'in HELL, your backlog has a backlog',
+  "in HELL, `console.log('here')` is a debugging strategy",
+  'HELL is the only place where `git push --force` feels like therapy',
+  'in HELL, every // TODO becomes a // NEVER',
+  'in HELL, your tests pass locally but fail in CI — forever',
+  'in HELL, `undefined is not a function` is the official greeting',
+  'in HELL, all your dependencies are 3 major versions behind',
+  'in HELL, `npm audit fix` just adds more vulnerabilities',
+  'in HELL, the stack trace goes so deep it wraps around',
+  "in HELL, `null` and `undefined` are not equal — they're roommates",
+  'in HELL, `git blame` always points at you',
+  'HELL has standups that never sit down',
+  'in HELL, every sprint retro is a roast session',
+  'in HELL, the PM adds scope during the deploy',
+  'in HELL, your PR has been open since the last ice age',
+  "in HELL, 'it's just a quick fix' is the most dangerous phrase",
+  'in HELL, code review is a blood sport',
+  'in HELL, the linter has more authority than the tech lead',
+  'in HELL, the AI writes the code and you write the excuses',
+  'in HELL, even the AI asks for more context',
+  "in HELL, copilot is the pilot and you're the passenger",
+  'in HELL, the AI generates code faster than you can reject it',
+  'in HELL, hallucinations are a workplace hazard',
+  'in HELL, production is just staging with more anxiety',
+  'in HELL, every deploy is a leap of faith',
+  "in HELL, dark mode isn't a theme — it's a warning",
+  'in HELL, rebasing is a circle of its own',
+  'in HELL, your .env file is publicly committed and everyone knows',
+  'in HELL, the coffee is decaf and the wifi is throttled',
+  'in HELL, the only constant is technical debt',
+  'welcome to HELL — where the debugger fears to tread',
+  'HELL runs on caffeine and bad decisions',
+  'one does not simply exit HELL',
+  'HELL now comes with 100% more edge cases',
+  'your code has been sentenced to HELL',
+  'welcome to HELL — please ignore the screaming compiler',
+  "HELL exists because production wasn't painful enough",
+  'git commit first, panic later',
+  'in HELL, undefined behavior is a feature',
+  'welcome to HELL — enjoy your infinite loading spinner',
+  'in HELL, every fix creates two new bugs',
+  'abandon stack overflow, all ye who enter here',
+  'HELL is now compiling... eventually',
+  'there is no escape from HELL, only hot reload',
+  'in HELL, stack traces are bedtime stories',
+  'welcome to HELL — hope you like merge conflicts',
+  'the bugs were already here when we arrived',
+  'in HELL, rubber ducks cry',
+  'your technical debt has accrued interest',
+  'in HELL, every branch is a feature branch',
+  'welcome to HELL — the CI is judging you',
+  "there's a special place in HELL for force pushes",
+  'in HELL, hope returns a 404',
+  'segmentation fault (of the soul)',
+  'in HELL, "it works locally" isn\'t enough',
+  'welcome to HELL — please sacrifice another dependency',
+  'in HELL, npm installs measure geological time',
+  'loading HELL... this may take forever',
+  'in HELL, the garbage collector missed this one',
+  'warning: entering HELL may cause spontaneous refactoring',
+  'HELLo world',
+  'HELL now features premium existential errors',
+  'sudo enter HELL',
+  'the only way out is through the debugger',
+  'welcome to HELL — your PR has 173 comments',
+  'HELL is home to the recursive bug report',
+  'your semicolon has been found guilty',
+  'in HELL, exceptions are the rule',
+  'welcome to HELL — AI writes code, humans explain it',
+  "CTRL+Z doesn't work here",
+  'every path leads to HELL',
+  'in HELL, TODO means "not today"',
+  'you have reached the final boss: legacy code',
+  'in HELL, there are 99 little bugs in the code',
+  'the compiler hungers',
+  'welcome to HELL — please resolve the conflicts within yourself',
+  'commit messages are forever, shame is eternal',
+  'in HELL, undefined is defined by vibes',
+  'error 666: developer not found',
+  'here we code again',
+  'HELL-o there',
+  'HELLvetica is the only font here',
+  'what the shell? welcome to HELL',
+  "HELL yeah, let's ship bugs",
+  'go to HELL, but bring unit tests',
+  'HELLo from the other IDE',
+  'HELL hath no fury like a missing semicolon',
+  "HELL is other people's code",
+  'HELLo darkness, my old compiler',
+  'HELL now comes with extra 🔥... figuratively',
+  'the 10th circle of HELL is CSS'
 ]
 
 function ModeSelector({
@@ -124,6 +251,110 @@ function TypingIndicator(): React.JSX.Element {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+type TypingState = 'typing' | 'pausing' | 'glitching' | 'waiting' | 'deleting' | 'idle'
+
+interface TypingResult {
+  text: string
+  glitch: string | null
+  state: TypingState
+}
+
+const GLITCH_CHARS = '!@#$%^&*<>{}[]|/\\~`0123456789'
+
+function useTypingAnimation(lines: string[], active: boolean): TypingResult {
+  const [displayText, setDisplayText] = useState('')
+  const [lineIndex, setLineIndex] = useState(() => Math.floor(Math.random() * lines.length))
+  const [charIndex, setCharIndex] = useState(0)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [state, setState] = useState<TypingState>('idle')
+  const [glitch, setGlitch] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!active) {
+      setState('idle')
+      setGlitch(null)
+      return
+    }
+
+    const currentLine = lines[lineIndex]
+    let timeout: number
+    let glitchTimeout: number | undefined
+
+    if (!isDeleting) {
+      if (charIndex >= currentLine.length) {
+        setState('waiting')
+        const pauseDuration = 1400 + Math.random() * 1600
+        timeout = window.setTimeout(() => {
+          setIsDeleting(true)
+        }, pauseDuration)
+      } else {
+        const roll = Math.random()
+        const nextChar = currentLine[charIndex]
+
+        if (roll < 0.035) {
+          setState('glitching')
+          const wrongChar = GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
+          setGlitch(wrongChar)
+          const glitchDuration = 80 + Math.random() * 80
+          glitchTimeout = window.setTimeout(() => {
+            setGlitch(null)
+            setDisplayText(currentLine.slice(0, charIndex + 1))
+            setCharIndex(charIndex + 1)
+          }, glitchDuration)
+        } else if (roll < 0.09) {
+          setState('pausing')
+          timeout = window.setTimeout(() => {
+            setDisplayText(currentLine.slice(0, charIndex + 1))
+            setCharIndex(charIndex + 1)
+          }, 180 + Math.random() * 520)
+        } else {
+          setState('typing')
+          let delay = 35 + Math.random() * 55
+          if (nextChar === ' ') {
+            delay *= 0.5
+          } else if ('.,!?;:'.includes(nextChar)) {
+            delay += 100 + Math.random() * 150
+          } else if ('—-'.includes(nextChar)) {
+            delay += 50 + Math.random() * 80
+          }
+          timeout = window.setTimeout(() => {
+            setDisplayText(currentLine.slice(0, charIndex + 1))
+            setCharIndex(charIndex + 1)
+          }, delay)
+        }
+      }
+    } else {
+      setState('deleting')
+      if (charIndex > 0) {
+        const roll = Math.random()
+        let delay = 16 + Math.random() * 22
+        if (roll < 0.2) delay *= 0.35
+        timeout = window.setTimeout(() => {
+          setDisplayText(currentLine.slice(0, charIndex - 1))
+          setCharIndex(charIndex - 1)
+        }, delay)
+      } else {
+        setState('waiting')
+        timeout = window.setTimeout(() => {
+          let nextIndex = Math.floor(Math.random() * lines.length)
+          if (lines.length > 1 && nextIndex === lineIndex) {
+            nextIndex = (nextIndex + 1) % lines.length
+          }
+          setLineIndex(nextIndex)
+          setIsDeleting(false)
+        }, 250 + Math.random() * 350)
+      }
+    }
+
+    return () => {
+      clearTimeout(timeout)
+      if (glitchTimeout !== undefined) clearTimeout(glitchTimeout)
+    }
+  }, [active, charIndex, isDeleting, lineIndex, lines])
+
+  return { text: displayText, glitch, state }
 }
 
 interface EditMessageProps {
@@ -757,15 +988,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   }
 
   const isChatMode = messages.length > 0
-  const [welcomeText, setWelcomeText] = useState(
-    () => WELCOME_LINES[Math.floor(Math.random() * WELCOME_LINES.length)]
-  )
-
-  useEffect(() => {
-    if (!isChatMode) {
-      setWelcomeText(WELCOME_LINES[Math.floor(Math.random() * WELCOME_LINES.length)])
-    }
-  }, [isChatMode])
+  const typedWelcome = useTypingAnimation(WELCOME_LINES, !isChatMode)
 
   if (!isChatMode) {
     return (
@@ -774,7 +997,18 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           <div className="ai-chat-welcome-icon">
             <Flame size={40} strokeWidth={1.25} />
           </div>
-          <p className="ai-chat-welcome-tagline">{welcomeText}</p>
+          <p className="ai-chat-welcome-tagline">
+            {typedWelcome.text}
+            {typedWelcome.glitch && (
+              <span className="typing-glitch" aria-hidden="true">
+                {typedWelcome.glitch}
+              </span>
+            )}
+            <span
+              className={`typing-cursor typing-cursor--${typedWelcome.state}`}
+              aria-hidden="true"
+            />
+          </p>
         </div>
         <div className="ai-chat-input-bar ai-chat-input-bar-centered">
           <div className="ai-chat-input-wrapper">

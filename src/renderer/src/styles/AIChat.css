@@ -11,7 +11,44 @@
 }
 
 .ai-chat-welcome-tagline {
-  @apply text-text text-[15px] font-medium leading-snug m-0;
+  @apply text-text text-[24px] font-normal leading-snug m-0 min-h-[1.5em] tracking-wide;
+  font-family: 'Patrick Hand', 'Fira Sans', sans-serif;
+}
+
+.typing-cursor {
+  @apply inline-block w-[2px] h-[0.9em] bg-ctp-mauve ml-0.5 align-[-0.1em] rounded-sm;
+  animation: typing-blink 1s step-end infinite;
+}
+
+.typing-cursor--typing {
+  animation: typing-blink 0.85s step-end infinite;
+}
+
+.typing-cursor--pausing {
+  animation: typing-blink 0.45s step-end infinite;
+}
+
+.typing-cursor--deleting {
+  animation: typing-blink 0.55s step-end infinite;
+}
+
+.typing-cursor--glitching {
+  @apply bg-ctp-red;
+  animation: typing-glitch-flash 0.12s step-end infinite;
+}
+
+.typing-glitch {
+  @apply text-ctp-red;
+}
+
+@keyframes typing-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes typing-glitch-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .ai-chat-welcome-icon {
