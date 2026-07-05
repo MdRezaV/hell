@@ -26,6 +26,10 @@
   @apply border-t-0 bg-transparent w-full max-w-[560px] min-w-0 p-0;
 }
 
+.ai-chat-input-bar-centered .ai-chat-input {
+  @apply max-h-[60vh];
+}
+
 .ai-chat-input-wrapper {
   @apply flex flex-col gap-1 p-2 px-3 bg-surface-0 border border-border rounded-lg min-w-0 transition-colors duration-normal;
 }

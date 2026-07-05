@@ -83,6 +83,18 @@ export default {
         slow: 'var(--transition-slow)'
       },
       fontFamily: {
+        sans: [
+          "'Fira Sans'",
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          "'Segoe UI'",
+          'Roboto',
+          "'Helvetica Neue'",
+          'Arial',
+          'sans-serif'
+        ],
         mono: [
           "'JetBrains Mono'",
           'ui-monospace',
