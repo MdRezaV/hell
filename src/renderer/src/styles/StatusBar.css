@@ -3,7 +3,7 @@
 }
 
 .statusbar-item {
-  @apply text-[11px] font-semibold;
+  @apply text-[13px];
 }
 
 .statusbar-spacer {

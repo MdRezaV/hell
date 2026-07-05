@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Clock, MessageSquare, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChevronDown, Clock, Plus, Search, Trash2, X } from 'lucide-react'
 import log from 'electron-log/renderer'
 import '../styles/ChatHistory.css'
 
@@ -106,11 +106,16 @@ const ChatHistoryItem = memo(function ChatHistoryItem({
   )
   return (
     <div className={`chat-history-item ${isActive ? 'active' : ''}`} onClick={handleClick}>
-      <MessageSquare size={13} className="chat-history-icon" />
       <div className="chat-history-item-content">
         <span className="chat-history-item-title">{session.title || 'New Chat'}</span>
         <span className="chat-history-item-meta">
-          {session.mode && <span className="chat-history-item-mode">{session.mode}</span>}
+          {session.mode && (
+            <span
+              className={`chat-history-item-mode chat-history-item-mode--${session.mode.toLowerCase()}`}
+            >
+              {session.mode}
+            </span>
+          )}
           <span className="chat-history-item-date">{formattedTime}</span>
         </span>
       </div>

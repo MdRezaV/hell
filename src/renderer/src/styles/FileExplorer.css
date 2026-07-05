@@ -118,7 +118,7 @@
 }
 
 .tree-tag {
-  @apply ml-1.5 px-1 py-0 text-[10px] font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
+  @apply ml-1.5 px-1 py-0 text-[10px] font-mono font-bold uppercase tracking-wider rounded-sm leading-[1.4] flex-shrink-0;
 }
 
 .tree-tag--PND {

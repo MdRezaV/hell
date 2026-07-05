@@ -305,7 +305,7 @@
 }
 
 .md-commit-block {
-  @apply flex items-center justify-between p-1.5 bg-surface-0 border border-border-subtle rounded-md gap-2 text-[12px] leading-snug min-w-0 my-2.5 transition-colors duration-normal hover:border-ctp-overlay0;
+  @apply flex items-center justify-between p-1.5 bg-surface-0 border border-border-subtle rounded-md gap-2 leading-snug min-w-0 my-2.5 transition-colors duration-normal hover:border-ctp-overlay0;
 }
 
 .md-commit-text {
@@ -397,9 +397,7 @@
   padding: 12px 14px;
   overflow: auto;
   white-space: pre;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 .md-plain-pre code {

@@ -111,7 +111,7 @@
 }
 
 .chat-history-item-title {
-  @apply text-text-secondary truncate text-[12px] leading-snug;
+  @apply text-text-secondary truncate text-[13px] leading-snug;
 }
 
 .chat-history-item-meta {
@@ -127,12 +127,27 @@
   border-radius: 3px;
   background: rgba(128, 128, 128, 0.15);
   color: #888;
-  font-size: 9px;
-  font-weight: 500;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   white-space: nowrap;
   line-height: 1.3;
+}
+
+.chat-history-item-mode--coding {
+  background: rgba(137, 180, 250, 0.15);
+  color: var(--ctp-blue, #89b4fa);
+}
+
+.chat-history-item-mode--planning {
+  background: rgba(203, 166, 247, 0.15);
+  color: var(--ctp-mauve, #cba6f7);
+}
+
+.chat-history-item-mode--initialize {
+  background: rgba(166, 227, 161, 0.15);
+  color: var(--ctp-green, #a6e3a1);
 }
 
 .chat-history-item-date {
