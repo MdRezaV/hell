@@ -270,11 +270,30 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
   const [isDeleting, setIsDeleting] = useState(false)
   const [state, setState] = useState<TypingState>('idle')
   const [glitch, setGlitch] = useState<string | null>(null)
+  const [prevActive, setPrevActive] = useState(active)
 
-  useEffect(() => {
+  // Reset state during rendering when active changes
+  if (active !== prevActive) {
+    setPrevActive(active)
     if (!active) {
       setState('idle')
       setGlitch(null)
+    }
+  }
+
+  let derivedState: TypingState = state
+  if (!active) {
+    derivedState = 'idle'
+  } else if (isDeleting) {
+    derivedState = 'deleting'
+  } else if (charIndex >= (lines[lineIndex]?.length ?? 0)) {
+    derivedState = 'waiting'
+  } else if (glitch !== null) {
+    derivedState = 'glitching'
+  }
+
+  useEffect(() => {
+    if (!active) {
       return
     }
 
@@ -284,7 +303,6 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
 
     if (!isDeleting) {
       if (charIndex >= currentLine.length) {
-        setState('waiting')
         const pauseDuration = 1400 + Math.random() * 1600
         timeout = window.setTimeout(() => {
           setIsDeleting(true)
@@ -294,9 +312,8 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
         const nextChar = currentLine[charIndex]
 
         if (roll < 0.035) {
-          setState('glitching')
           const wrongChar = GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
-          setGlitch(wrongChar)
+          Promise.resolve().then(() => setGlitch(wrongChar))
           const glitchDuration = 80 + Math.random() * 80
           glitchTimeout = window.setTimeout(() => {
             setGlitch(null)
@@ -304,13 +321,16 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
             setCharIndex(charIndex + 1)
           }, glitchDuration)
         } else if (roll < 0.09) {
-          setState('pausing')
-          timeout = window.setTimeout(() => {
-            setDisplayText(currentLine.slice(0, charIndex + 1))
-            setCharIndex(charIndex + 1)
-          }, 180 + Math.random() * 520)
+          Promise.resolve().then(() => setState('pausing'))
+          timeout = window.setTimeout(
+            () => {
+              setDisplayText(currentLine.slice(0, charIndex + 1))
+              setCharIndex(charIndex + 1)
+            },
+            180 + Math.random() * 520
+          )
         } else {
-          setState('typing')
+          Promise.resolve().then(() => setState('typing'))
           let delay = 35 + Math.random() * 55
           if (nextChar === ' ') {
             delay *= 0.5
@@ -326,7 +346,6 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
         }
       }
     } else {
-      setState('deleting')
       if (charIndex > 0) {
         const roll = Math.random()
         let delay = 16 + Math.random() * 22
@@ -336,15 +355,17 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
           setCharIndex(charIndex - 1)
         }, delay)
       } else {
-        setState('waiting')
-        timeout = window.setTimeout(() => {
-          let nextIndex = Math.floor(Math.random() * lines.length)
-          if (lines.length > 1 && nextIndex === lineIndex) {
-            nextIndex = (nextIndex + 1) % lines.length
-          }
-          setLineIndex(nextIndex)
-          setIsDeleting(false)
-        }, 250 + Math.random() * 350)
+        timeout = window.setTimeout(
+          () => {
+            let nextIndex = Math.floor(Math.random() * lines.length)
+            if (lines.length > 1 && nextIndex === lineIndex) {
+              nextIndex = (nextIndex + 1) % lines.length
+            }
+            setLineIndex(nextIndex)
+            setIsDeleting(false)
+          },
+          250 + Math.random() * 350
+        )
       }
     }
 
@@ -354,7 +375,7 @@ function useTypingAnimation(lines: string[], active: boolean): TypingResult {
     }
   }, [active, charIndex, isDeleting, lineIndex, lines])
 
-  return { text: displayText, glitch, state }
+  return { text: displayText, glitch, state: derivedState }
 }
 
 interface EditMessageProps {
