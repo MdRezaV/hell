@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'path'
 import { createReadStream } from 'fs'
 import { access, mkdir, readFile, unlink, writeFile } from 'fs/promises'
@@ -58,6 +58,14 @@ export function registerIpcHandlers(): void {
     if (result.canceled || result.filePaths.length === 0) return null
     log.info('Workspace opened:', result.filePaths[0])
     return result.filePaths[0]
+  })
+
+  safeHandle('clipboard:write-text', async (_, text: string) => {
+    clipboard.writeText(text)
+  })
+
+  safeHandle('clipboard:read-text', async () => {
+    return clipboard.readText()
   })
 
   safeHandle('read-file', async (_, workspace: string, relativePath: string) => {

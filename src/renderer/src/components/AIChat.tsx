@@ -839,7 +839,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           hellMdContent
         )
         try {
-          await navigator.clipboard.writeText(promptText)
+          await window.electron.ipcRenderer.invoke('clipboard:write-text', promptText)
           return true
         } catch {
           return false
@@ -874,7 +874,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           hellMdContent
         )
         try {
-          await navigator.clipboard.writeText(promptText)
+          await window.electron.ipcRenderer.invoke('clipboard:write-text', promptText)
           return true
         } catch {
           return false
@@ -882,7 +882,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       },
       async pasteAsAssistant(): Promise<boolean> {
         try {
-          const text = await navigator.clipboard.readText()
+          const text = await window.electron.ipcRenderer.invoke('clipboard:read-text')
           if (!text) return false
           setIsAwaitingResponse(false)
           setMessages((prev) => {
@@ -981,7 +981,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   const handleCopy = useCallback(async (messageId: string, content: string): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(content)
+      await window.electron.ipcRenderer.invoke('clipboard:write-text', content)
       setCopiedId(messageId)
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
