@@ -241,6 +241,10 @@
   @apply py-2.5 px-3.5 rounded-lg text-[13px] leading-relaxed min-w-0 w-full overflow-hidden;
 }
 
+.chat-bubble-content {
+  user-select: text;
+}
+
 .chat-bubble-user {
   @apply bg-surface-1 text-text rounded-br-xs;
 }
