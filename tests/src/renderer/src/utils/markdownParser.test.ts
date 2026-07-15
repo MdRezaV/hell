@@ -186,7 +186,7 @@ describe('preprocess — FILE blocks', () => {
   it('handles FILE path with spaces', () => {
     const input = '[FILE my file.ts]\ncontent\n[END]'
     const out = preprocess(input)
-    expect(out).toContain('```file:my file.ts')
+    expect(out).toContain('```file:my%20file.ts')
   })
 
   it('handles FILE path with special characters', () => {
@@ -511,7 +511,7 @@ describe('preprocess — TASK blocks', () => {
   it('handles TASK id with spaces', () => {
     const input = '[TASK my task]\ncontent\n[END]'
     const out = preprocess(input)
-    expect(out).toContain('```task:my task')
+    expect(out).toContain('```task:my%20task')
   })
 
   it('handles TASK id with special characters', () => {

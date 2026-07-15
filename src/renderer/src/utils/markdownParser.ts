@@ -72,6 +72,10 @@ function processIncludeInline(line: string): string {
   })
 }
 
+function safePath(path: string): string {
+  return path.replace(/\s/g, '%20')
+}
+
 function isCodeFenceOpen(line: string): { char: string; len: number } | null {
   const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
   if (!m) return null
@@ -201,7 +205,7 @@ function preprocessImpl(
         if (pairs.length > 0) {
           for (const pair of pairs) {
             const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
-            const fenced = wrapInFence(combined, `file-replace:${path}`)
+            const fenced = wrapInFence(combined, `file-replace:${safePath(path)}`)
             result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
           }
         } else {
@@ -216,17 +220,17 @@ function preprocessImpl(
               j++
             }
             const combined = `[SEARCH]\n${searchContent.join('\n')}\n[REPLACE]\n\n[END]`
-            const fenced = wrapInFence(combined, `file-replace:${path}`)
+            const fenced = wrapInFence(combined, `file-replace:${safePath(path)}`)
             result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
           } else {
             const code = contentLines.join('\n')
-            const fenced = wrapInFence(code, `file:${path}`)
+            const fenced = wrapInFence(code, `file:${safePath(path)}`)
             result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
           }
         }
       } else {
         const code = contentLines.join('\n')
-        const fenced = wrapInFence(code, `file:${path}`)
+        const fenced = wrapInFence(code, `file:${safePath(path)}`)
         result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       }
       continue
@@ -236,7 +240,7 @@ function preprocessImpl(
     const deleteMatch = /^\s*\[DELETE FILE (.+)]\s*$/.exec(line)
     if (deleteMatch) {
       const path = deleteMatch[1].trim()
-      const fenced = wrapInFence('', `file-delete:${path}`)
+      const fenced = wrapInFence('', `file-delete:${safePath(path)}`)
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       i++
       continue
@@ -247,7 +251,7 @@ function preprocessImpl(
     if (moveMatch) {
       const oldPath = moveMatch[1].trim()
       const newPath = moveMatch[2].trim()
-      const fenced = wrapInFence('', `file-move:${oldPath}->${newPath}`)
+      const fenced = wrapInFence('', `file-move:${safePath(oldPath)}->${safePath(newPath)}`)
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       i++
       continue
@@ -269,7 +273,7 @@ function preprocessImpl(
         i++
       }
       const code = contentLines.join('\n')
-      const fenced = wrapInFence(code, `task:${taskId}`)
+      const fenced = wrapInFence(code, `task:${safePath(taskId)}`)
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       continue
     }
@@ -303,7 +307,7 @@ function preprocessImpl(
       if (pairs.length > 0) {
         for (const pair of pairs) {
           const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
-          const fenced = wrapInFence(combined, `file-replace:${lastFilePath}`)
+          const fenced = wrapInFence(combined, `file-replace:${safePath(lastFilePath)}`)
           result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
         }
       } else {

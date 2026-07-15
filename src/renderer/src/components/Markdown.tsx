@@ -80,19 +80,21 @@ function Pre({
       }
       if (childProps.className) {
         if (childProps.className.startsWith('language-file-replace:')) {
-          filePath = childProps.className.slice('language-file-replace:'.length)
+          filePath = childProps.className
+            .slice('language-file-replace:'.length)
+            .replace(/%20/g, ' ')
           language = 'file-replace'
         } else if (childProps.className.startsWith('language-file-delete:')) {
-          filePath = childProps.className.slice('language-file-delete:'.length)
+          filePath = childProps.className.slice('language-file-delete:'.length).replace(/%20/g, ' ')
           language = 'file-delete'
         } else if (childProps.className.startsWith('language-file-move:')) {
-          filePath = childProps.className.slice('language-file-move:'.length)
+          filePath = childProps.className.slice('language-file-move:'.length).replace(/%20/g, ' ')
           language = 'file-move'
         } else if (childProps.className.startsWith('language-file:')) {
-          filePath = childProps.className.slice('language-file:'.length)
+          filePath = childProps.className.slice('language-file:'.length).replace(/%20/g, ' ')
           language = 'file'
         } else if (childProps.className.startsWith('language-task:')) {
-          filePath = childProps.className.slice('language-task:'.length)
+          filePath = childProps.className.slice('language-task:'.length).replace(/%20/g, ' ')
           language = 'task'
         } else {
           const match = /language-(\w+)/.exec(childProps.className)
