@@ -1,4 +1,14 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type ForwardedRef,
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -227,6 +237,24 @@ function collectDirPaths(nodes: FileNode[]): Set<string> {
   return paths
 }
 
+export interface FileExplorerHandle {
+  focusSearch: () => void
+}
+
+interface FileExplorerProps {
+  workspace: string | null
+  onWorkspaceChange: (path: string | null) => void
+  fileStates: Map<string, FileTag>
+  expandedDirs: Set<string>
+  onToggleFile: (paths: string[], checked: boolean) => void
+  onToggleExpand: (path: string, expanded: boolean) => void
+  onClearSelections: () => void
+  onFilePathsChange: (paths: Set<string>) => void
+  onDirPathsChange: (paths: Set<string>) => void
+  dirStructureTag: FileTag | null
+  onDirStructureTagChange: (tag: FileTag | null) => void
+}
+
 function filterTree(nodes: FileNode[], q: string, contentMatches?: Set<string>): FileNode[] {
   if (!q) return nodes
   const result: FileNode[] = []
@@ -245,29 +273,22 @@ function filterTree(nodes: FileNode[], q: string, contentMatches?: Set<string>):
   return result
 }
 
-function FileExplorer({
-  workspace,
-  onWorkspaceChange,
-  fileStates,
-  expandedDirs,
-  onToggleFile,
-  onToggleExpand,
-  onClearSelections,
-  onFilePathsChange,
-  dirStructureTag,
-  onDirStructureTagChange
-}: {
-  workspace: string | null
-  onWorkspaceChange: (path: string | null) => void
-  fileStates: Map<string, FileTag>
-  expandedDirs: Set<string>
-  onToggleFile: (paths: string[], checked: boolean) => void
-  onToggleExpand: (path: string, expanded: boolean) => void
-  onClearSelections: () => void
-  onFilePathsChange: (paths: Set<string>) => void
-  dirStructureTag: FileTag | null
-  onDirStructureTagChange: (tag: FileTag | null) => void
-}): React.JSX.Element {
+const FileExplorer = forwardRef(function FileExplorer(
+  {
+    workspace,
+    onWorkspaceChange,
+    fileStates,
+    expandedDirs,
+    onToggleFile,
+    onToggleExpand,
+    onClearSelections,
+    onFilePathsChange,
+    onDirPathsChange,
+    dirStructureTag,
+    onDirStructureTagChange
+  }: FileExplorerProps,
+  ref: ForwardedRef<FileExplorerHandle>
+): React.JSX.Element {
   const [tree, setTree] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
   const [prevWorkspace, setPrevWorkspace] = useState<string | null>(workspace)
@@ -278,9 +299,20 @@ function FileExplorer({
   const cancelRef = useRef(false)
   const onFilePathsChangeRef = useRef(onFilePathsChange)
   onFilePathsChangeRef.current = onFilePathsChange
+  const onDirPathsChangeRef = useRef(onDirPathsChange)
+  onDirPathsChangeRef.current = onDirPathsChange
   const filePathSetRef = useRef<Set<string>>(new Set())
   const onToggleFileRef = useRef(onToggleFile)
   onToggleFileRef.current = onToggleFile
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focusSearch: () => searchInputRef.current?.focus()
+    }),
+    []
+  )
 
   if (workspace !== prevWorkspace) {
     setPrevWorkspace(workspace)
@@ -309,6 +341,7 @@ function FileExplorer({
       const filePaths = collectFilePaths(sorted)
       const dirPaths = collectDirPaths(sorted)
       onFilePathsChangeRef.current(filePaths)
+      onDirPathsChangeRef.current(dirPaths)
       window.electron.ipcRenderer
         .invoke('db:prune-workspace-state', workspace, Array.from(filePaths), Array.from(dirPaths))
         .catch((e) => log.error('Failed to prune workspace state:', e))
@@ -521,7 +554,6 @@ function FileExplorer({
     [filteredTree, expandedDirs, fileStates]
   )
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe to use
   const rowVirtualizer = useVirtualizer({
     count: flatNodes.length,
     getScrollElement: () => scrollRef.current,
@@ -568,6 +600,7 @@ function FileExplorer({
       <div className="explorer-search">
         <Search size={13} className="explorer-search-icon" />
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search files..."
           value={search}
@@ -669,6 +702,6 @@ function FileExplorer({
       )}
     </div>
   )
-}
+})
 
 export default memo(FileExplorer)

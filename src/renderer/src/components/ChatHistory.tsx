@@ -1,4 +1,13 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { ChevronDown, Clock, Plus, Search, Trash2, X } from 'lucide-react'
 import log from 'electron-log/renderer'
 import '../styles/ChatHistory.css'
@@ -132,13 +141,15 @@ const ChatHistoryItem = memo(function ChatHistoryItem({
   )
 })
 
-export default memo(function ChatHistory({
-  workspace,
-  activeChatId,
-  onSelectChat,
-  onNewChat,
-  refreshKey
-}: ChatHistoryProps): React.JSX.Element {
+export interface ChatHistoryHandle {
+  navigateUp: () => void
+  navigateDown: () => void
+}
+
+const ChatHistory = forwardRef<ChatHistoryHandle, ChatHistoryProps>(function ChatHistory(
+  { workspace, activeChatId, onSelectChat, onNewChat, refreshKey },
+  ref
+): React.JSX.Element {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [search, setSearch] = useState('')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
@@ -246,6 +257,47 @@ export default memo(function ChatHistory({
     return map
   }, [filtered])
 
+  const visibleIds = useMemo(() => {
+    const ids: string[] = []
+    for (const groupKey of GROUP_ORDER) {
+      if (collapsedGroups.has(groupKey)) continue
+      const items = grouped.get(groupKey)
+      if (!items) continue
+      for (const s of items) ids.push(s.id)
+    }
+    return ids
+  }, [grouped, collapsedGroups])
+
+  const navigate = useCallback(
+    (direction: 'up' | 'down') => {
+      if (visibleIds.length === 0) return
+      const currentIdx = activeChatId ? visibleIds.indexOf(activeChatId) : -1
+      let nextIdx: number
+      if (currentIdx === -1) {
+        nextIdx = direction === 'up' ? visibleIds.length - 1 : 0
+      } else {
+        nextIdx =
+          direction === 'up'
+            ? Math.max(0, currentIdx - 1)
+            : Math.min(visibleIds.length - 1, currentIdx + 1)
+      }
+      const nextId = visibleIds[nextIdx]
+      if (nextId && nextId !== activeChatId) {
+        onSelectChat(nextId)
+      }
+    },
+    [visibleIds, activeChatId, onSelectChat]
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      navigateUp: () => navigate('up'),
+      navigateDown: () => navigate('down')
+    }),
+    [navigate]
+  )
+
   return (
     <div className="chat-history">
       <div className="chat-history-header">
@@ -336,3 +388,5 @@ export default memo(function ChatHistory({
     </div>
   )
 })
+
+export default memo(ChatHistory)

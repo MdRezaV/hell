@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import log from 'electron-log/renderer'
-import FileExplorer, { type FileTag } from './components/FileExplorer'
+import FileExplorer, { type FileExplorerHandle, type FileTag } from './components/FileExplorer'
 import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat'
-import ChatHistory from './components/ChatHistory'
 import StatusBar from './components/StatusBar'
 import { WorkspaceContext } from './WorkspaceContext'
 import { useLoading } from './LoadingContext'
@@ -10,6 +9,9 @@ import { useResizableLayout } from './hooks/useResizableLayout'
 import { deriveTitle, joinWithWorkspace } from './utils/appUtils'
 import { invalidateWorkspaceFileCache } from './utils/fileApply'
 import { resetPreprocessCache } from './utils/markdownParser'
+import { CHAT_MODES } from './utils/PromptEngine'
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
+import ChatHistory, { type ChatHistoryHandle } from './components/ChatHistory'
 
 type FileStates = Map<string, FileTag>
 
@@ -21,6 +23,7 @@ function App(): React.JSX.Element {
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [filePaths, setFilePaths] = useState<Set<string>>(new Set())
+  const [allDirPaths, setAllDirPaths] = useState<Set<string>>(new Set())
   const [dirStructureTag, setDirStructureTag] = useState<FileTag | null>('PND')
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
@@ -28,6 +31,8 @@ function App(): React.JSX.Element {
   const lastPasteAddedRef = useRef<Set<string>>(new Set())
   const lastCopiedUserIndexRef = useRef<number>(-1)
   const chatRef = useRef<AIChatHandle>(null)
+  const fileExplorerRef = useRef<FileExplorerHandle>(null)
+  const chatHistoryRef = useRef<ChatHistoryHandle>(null)
   const activeChatIdRef = useRef<string | null>(null)
   const workspaceRef = useRef<string | null>(null)
   const fileStatesRef = useRef<FileStates>(new Map())
@@ -190,6 +195,7 @@ function App(): React.JSX.Element {
           chatRef.current?.loadChat([])
           setWorkspace(path)
           setFilePaths(new Set())
+          setAllDirPaths(new Set())
           copySnapshotRef.current = new Set()
           await window.electron.ipcRenderer.invoke('workspace:watch', path)
           if (path) {
@@ -326,6 +332,68 @@ function App(): React.JSX.Element {
 
   const handleFilePathsChange = useCallback((paths: Set<string>): void => {
     setFilePaths(paths)
+  }, [])
+
+  const handleDirPathsChange = useCallback((paths: Set<string>): void => {
+    setAllDirPaths(paths)
+  }, [])
+
+  const handleOpenWorkspaceShortcut = useCallback(async (): Promise<void> => {
+    try {
+      const path = await window.electron.ipcRenderer.invoke('open-workspace')
+      if (path) {
+        await handleWorkspaceChange(path)
+      }
+    } catch (e) {
+      log.error('Failed to open workspace:', e)
+    }
+  }, [handleWorkspaceChange])
+
+  const handleFocusFileSearch = useCallback((): void => {
+    fileExplorerRef.current?.focusSearch()
+  }, [])
+
+  const handleCollapseAll = useCallback((): void => {
+    setExpandedDirs((prev) => {
+      if (workspace) {
+        prev.forEach((p) => {
+          window.electron.ipcRenderer
+            .invoke('db:set-dir-expanded', workspace, p, false)
+            .catch((e) => log.error('Failed to set dir expanded:', e))
+        })
+      }
+      return new Set()
+    })
+  }, [workspace])
+
+  const handleExpandAll = useCallback((): void => {
+    setExpandedDirs(new Set(allDirPaths))
+    if (workspace && allDirPaths.size > 0) {
+      allDirPaths.forEach((p) => {
+        window.electron.ipcRenderer
+          .invoke('db:set-dir-expanded', workspace, p, true)
+          .catch((e) => log.error('Failed to set dir expanded:', e))
+      })
+    }
+  }, [workspace, allDirPaths])
+
+  const handleNavigateHistoryUp = useCallback((): void => {
+    chatHistoryRef.current?.navigateUp()
+  }, [])
+
+  const handleNavigateHistoryDown = useCallback((): void => {
+    chatHistoryRef.current?.navigateDown()
+  }, [])
+
+  const handleModeKey = useCallback((digit: number): void => {
+    const index = digit - 1
+    if (index < 0 || index >= CHAT_MODES.length) return
+    const label = CHAT_MODES[index].label
+    chatRef.current?.setMode(label)
+  }, [])
+
+  const isWelcomeScreen = useCallback((): boolean => {
+    return (chatRef.current?.getMessages().length ?? 0) === 0
   }, [])
 
   const latestCopyFnRef = useRef<(() => Promise<void>) | undefined>(undefined)
@@ -669,6 +737,21 @@ function App(): React.JSX.Element {
     dirStructureTagRef.current = tag
   }, [])
 
+  useGlobalShortcuts({
+    onNewChat: handleNewChat,
+    onOpenWorkspace: handleOpenWorkspaceShortcut,
+    onFocusFileSearch: handleFocusFileSearch,
+    onClearSelections: handleClearSelections,
+    onCollapseAll: handleCollapseAll,
+    onExpandAll: handleExpandAll,
+    onNavigateHistoryUp: handleNavigateHistoryUp,
+    onNavigateHistoryDown: handleNavigateHistoryDown,
+    onCopy: handleCopy,
+    onPaste: handlePaste,
+    onModeKey: handleModeKey,
+    isWelcomeScreen
+  })
+
   useEffect(() => {
     const handleTaskRun = async (e: Event): Promise<void> => {
       const detail = (e as CustomEvent).detail as {
@@ -879,6 +962,7 @@ function App(): React.JSX.Element {
             }}
           >
             <FileExplorer
+              ref={fileExplorerRef}
               workspace={workspace}
               onWorkspaceChange={handleWorkspaceChange}
               fileStates={fileStates}
@@ -887,6 +971,7 @@ function App(): React.JSX.Element {
               onToggleExpand={handleToggleExpand}
               onClearSelections={handleClearSelections}
               onFilePathsChange={handleFilePathsChange}
+              onDirPathsChange={handleDirPathsChange}
               dirStructureTag={dirStructureTag}
               onDirStructureTagChange={handleDirStructureTagChange}
             />
@@ -916,6 +1001,7 @@ function App(): React.JSX.Element {
             }}
           >
             <ChatHistory
+              ref={chatHistoryRef}
               workspace={workspace}
               activeChatId={activeChatId}
               onSelectChat={handleSelectChat}
