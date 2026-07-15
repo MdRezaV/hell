@@ -10,6 +10,7 @@ export interface ChatSession {
   created_at: number
   updated_at: number
   mode?: string
+  task_id?: string
 }
 
 interface ChatHistoryProps {
@@ -114,6 +115,11 @@ const ChatHistoryItem = memo(function ChatHistoryItem({
               className={`chat-history-item-mode chat-history-item-mode--${session.mode.toLowerCase()}`}
             >
               {session.mode}
+            </span>
+          )}
+          {session.task_id && (
+            <span className="chat-history-item-mode chat-history-item-mode--task">
+              TASK {session.task_id}
             </span>
           )}
           <span className="chat-history-item-date">{formattedTime}</span>

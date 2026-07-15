@@ -554,14 +554,20 @@ export interface AIChatHandle {
   getResolvedUserIndex(): number
   getMessages(): ChatMessage[]
   getMode(): string
+  getTaskId(): string
   setMode(mode: string): void
-  loadChat(messages: ChatMessage[], mode?: string, chatId?: string): void
-  runTask(description: string, files: FileContext[], dirStructure?: string): Promise<boolean>
+  loadChat(messages: ChatMessage[], mode?: string, chatId?: string, taskId?: string): void
+  runTask(
+    description: string,
+    files: FileContext[],
+    dirStructure?: string,
+    taskId?: string
+  ): Promise<boolean>
 }
 
 interface AIChatProps {
   onNewChat?: () => void
-  onMessagesChange?: (messages: ChatMessage[], mode: string) => void
+  onMessagesChange?: (messages: ChatMessage[], mode: string, taskId: string) => void
 }
 
 const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
@@ -573,6 +579,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const [editingId, setEditingId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [mode, setMode] = useState<ChatMode>(CHAT_MODES[0].label)
+  const [taskId, setTaskId] = useState('')
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false)
   const [chatId, setChatId] = useState<string | undefined>(undefined)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -583,7 +590,10 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const inputValueRef = useRef('')
   const onMessagesChangeRef = useRef(onMessagesChange)
   const modeRef = useRef(mode)
-  const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string } | null>(null)
+  const taskIdRef = useRef('')
+  const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string; taskId: string } | null>(
+    null
+  )
   const isNearBottomRef = useRef(true)
   const loadChatGenerationRef = useRef(0)
   const resizeTextarea = useAutoResizeTextarea()
@@ -654,6 +664,10 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     modeRef.current = mode
   }, [mode])
 
+  useEffect(() => {
+    taskIdRef.current = taskId
+  }, [taskId])
+
   const readHellMd = useCallback(async (): Promise<string | null> => {
     if (!workspace) return null
     try {
@@ -674,21 +688,21 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   useEffect(() => {
     if (isLoadingRef.current) return
     if (messages.length === 0) return
-    const pending = { messages, mode: modeRef.current }
+    const pending = { messages, mode: modeRef.current, taskId: taskIdRef.current }
     pendingSaveRef.current = pending
     const timeout = setTimeout(() => {
       pendingSaveRef.current = null
-      onMessagesChangeRef.current?.(pending.messages, pending.mode)
+      onMessagesChangeRef.current?.(pending.messages, pending.mode, pending.taskId)
     }, 300)
     return () => {
       clearTimeout(timeout)
       if (pendingSaveRef.current) {
         const toFlush = pendingSaveRef.current
         pendingSaveRef.current = null
-        onMessagesChangeRef.current?.(toFlush.messages, toFlush.mode)
+        onMessagesChangeRef.current?.(toFlush.messages, toFlush.mode, toFlush.taskId)
       }
     }
-  }, [messages])
+  }, [messages, taskId])
 
   useEffect(() => {
     if (!isNearBottomRef.current) return
@@ -732,10 +746,18 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       getMode(): string {
         return modeRef.current
       },
+      getTaskId(): string {
+        return taskIdRef.current
+      },
       setMode(newMode: string): void {
         setMode(newMode)
       },
-      loadChat(newMessages: ChatMessage[], newMode?: string, newChatId?: string): void {
+      loadChat(
+        newMessages: ChatMessage[],
+        newMode?: string,
+        newChatId?: string,
+        newTaskId?: string
+      ): void {
         const generation = ++loadChatGenerationRef.current
         isLoadingRef.current = true
         setInput('')
@@ -751,6 +773,8 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         if (newChatId !== undefined) {
           setChatId(newChatId)
         }
+        setTaskId(newTaskId || '')
+        taskIdRef.current = newTaskId || ''
         setMessages(newMessages)
         isNearBottomRef.current = true
 
@@ -852,9 +876,13 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       async runTask(
         description: string,
         files: FileContext[],
-        dirStructure?: string
+        dirStructure?: string,
+        newTaskId?: string
       ): Promise<boolean> {
         setMode('Coding')
+        modeRef.current = 'Coding'
+        setTaskId(newTaskId || '')
+        taskIdRef.current = newTaskId || ''
         const userMessage: ChatMessage = {
           id: generateId(),
           role: 'user',

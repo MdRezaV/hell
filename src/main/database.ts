@@ -9,7 +9,7 @@ const MAX_WORKSPACES = 5
 // backwards-incompatible way. On startup, if the stored
 // `PRAGMA user_version` does not match, the database is wiped
 // and recreated from scratch.
-const SCHEMA_VERSION = 5
+const SCHEMA_VERSION = 6
 
 let db: Database.Database | null = null
 
@@ -125,6 +125,12 @@ function createTables(d: Database.Database): void {
       NOT
       NULL
       DEFAULT
+      '',
+      task_id
+      TEXT
+      NOT
+      NULL
+      DEFAULT
       ''
     );
 
@@ -235,8 +241,7 @@ export function getWorkspaceState(workspacePath: string): WorkspaceState {
 export function getLastWorkspace(): string | null {
   const d = getDb()
   const row = d.prepare('SELECT path FROM workspaces ORDER BY last_opened DESC LIMIT 1').get() as
-    | { path: string }
-    | undefined
+    { path: string } | undefined
   return row?.path ?? null
 }
 
@@ -323,6 +328,7 @@ export interface ChatSession {
   expanded_dirs: string
   dir_structure_tag: string
   mode: string
+  task_id: string
 }
 
 export function createChatSession(
@@ -332,13 +338,14 @@ export function createChatSession(
   fileStates: string = '[]',
   expandedDirs: string = '[]',
   dirStructureTag: string = '',
-  mode: string = ''
+  mode: string = '',
+  taskId: string = ''
 ): string {
   const d = getDb()
   const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   d.prepare(
-    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag, mode)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag, mode, task_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     workspacePath ?? null,
@@ -349,7 +356,8 @@ export function createChatSession(
     fileStates,
     expandedDirs,
     dirStructureTag,
-    mode
+    mode,
+    taskId
   )
   return id
 }
@@ -361,12 +369,13 @@ export function updateChatSession(
   fileStates: string = '[]',
   expandedDirs: string = '[]',
   dirStructureTag: string = '',
-  mode: string = ''
+  mode: string = '',
+  taskId: string = ''
 ): void {
   const d = getDb()
   d.prepare(
-    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ?, mode = ? WHERE id = ?`
-  ).run(title, messages, Date.now(), fileStates, expandedDirs, dirStructureTag, mode, id)
+    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ?, mode = ?, task_id = ? WHERE id = ?`
+  ).run(title, messages, Date.now(), fileStates, expandedDirs, dirStructureTag, mode, taskId, id)
 }
 
 export function snapshotWorkspaceStateToSession(workspacePath: string): {
@@ -398,13 +407,13 @@ export function getChatSessions(workspacePath: string | null): ChatSession[] {
   if (workspacePath) {
     return d
       .prepare(
-        `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE workspace_path = ? ORDER BY updated_at DESC`
+        `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE workspace_path = ? ORDER BY updated_at DESC`
       )
       .all(workspacePath) as ChatSession[]
   }
   return d
     .prepare(
-      `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions ORDER BY updated_at DESC`
+      `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions ORDER BY updated_at DESC`
     )
     .all() as ChatSession[]
 }
@@ -415,13 +424,13 @@ export function searchChatSessions(workspacePath: string | null, query: string):
   if (workspacePath) {
     return d
       .prepare(
-        `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE workspace_path = ? AND (title LIKE ? OR messages LIKE ?) ORDER BY updated_at DESC`
+        `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE workspace_path = ? AND (title LIKE ? OR messages LIKE ?) ORDER BY updated_at DESC`
       )
       .all(workspacePath, q, q) as ChatSession[]
   }
   return d
     .prepare(
-      `SELECT id, workspace_path, title, created_at, updated_at, mode FROM chat_sessions WHERE title LIKE ? OR messages LIKE ? ORDER BY updated_at DESC`
+      `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE title LIKE ? OR messages LIKE ? ORDER BY updated_at DESC`
     )
     .all(q, q) as ChatSession[]
 }
@@ -429,8 +438,7 @@ export function searchChatSessions(workspacePath: string | null, query: string):
 export function getChatSession(id: string): ChatSession | null {
   const d = getDb()
   const row = d.prepare('SELECT * FROM chat_sessions WHERE id = ?').get(id) as
-    | ChatSession
-    | undefined
+    ChatSession | undefined
   return row ?? null
 }
 

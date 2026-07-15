@@ -196,7 +196,8 @@ export function registerIpcHandlers(): void {
       fileStates?: string,
       expandedDirs?: string,
       dirStructureTag?: string,
-      mode?: string
+      mode?: string,
+      taskId?: string
     ) => {
       if (fileStates !== undefined && expandedDirs !== undefined) {
         return createChatSession(
@@ -206,7 +207,8 @@ export function registerIpcHandlers(): void {
           fileStates,
           expandedDirs,
           dirStructureTag,
-          mode
+          mode,
+          taskId
         )
       }
       if (workspacePath) {
@@ -218,7 +220,8 @@ export function registerIpcHandlers(): void {
           snapshot.fileStates,
           snapshot.expandedDirs,
           dirStructureTag,
-          mode
+          mode,
+          taskId
         )
       }
       return createChatSession(
@@ -228,7 +231,8 @@ export function registerIpcHandlers(): void {
         undefined,
         undefined,
         dirStructureTag,
-        mode
+        mode,
+        taskId
       )
     }
   )
@@ -243,10 +247,20 @@ export function registerIpcHandlers(): void {
       fileStates?: string,
       expandedDirs?: string,
       dirStructureTag?: string,
-      mode?: string
+      mode?: string,
+      taskId?: string
     ) => {
       if (fileStates !== undefined && expandedDirs !== undefined) {
-        updateChatSession(id, title, messages, fileStates, expandedDirs, dirStructureTag, mode)
+        updateChatSession(
+          id,
+          title,
+          messages,
+          fileStates,
+          expandedDirs,
+          dirStructureTag,
+          mode,
+          taskId
+        )
       } else {
         const session = getChatSession(id)
         if (session?.workspace_path) {
@@ -258,10 +272,20 @@ export function registerIpcHandlers(): void {
             snapshot.fileStates,
             snapshot.expandedDirs,
             dirStructureTag,
-            mode
+            mode,
+            taskId
           )
         } else {
-          updateChatSession(id, title, messages, undefined, undefined, dirStructureTag, mode)
+          updateChatSession(
+            id,
+            title,
+            messages,
+            undefined,
+            undefined,
+            dirStructureTag,
+            mode,
+            taskId
+          )
         }
       }
     }

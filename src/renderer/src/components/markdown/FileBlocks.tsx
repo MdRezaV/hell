@@ -710,9 +710,9 @@ export const TaskBlock = memo(function TaskBlock({
 
   const handleRun = useCallback((): void => {
     window.dispatchEvent(
-      new CustomEvent('task-run', { detail: { files, description: buildMessage() } })
+      new CustomEvent('task-run', { detail: { files, description: buildMessage(), taskId } })
     )
-  }, [files, buildMessage])
+  }, [files, buildMessage, taskId])
 
   return (
     <div className="md-file-block md-task-block">

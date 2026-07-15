@@ -148,6 +148,7 @@ function App(): React.JSX.Element {
       const ed = serializeExpandedDirs(expandedDirsRef.current)
       const dst = dirStructureTagRef.current ?? ''
       const mode = chatRef.current.getMode()
+      const taskId = chatRef.current.getTaskId()
       if (activeChatIdRef.current) {
         await window.electron.ipcRenderer.invoke(
           'db:update-chat-session',
@@ -157,7 +158,8 @@ function App(): React.JSX.Element {
           fs,
           ed,
           dst,
-          mode
+          mode,
+          taskId
         )
       } else {
         const id = await window.electron.ipcRenderer.invoke(
@@ -168,7 +170,8 @@ function App(): React.JSX.Element {
           fs,
           ed,
           dst,
-          mode
+          mode,
+          taskId
         )
         setActiveChatId(id)
       }
@@ -472,6 +475,7 @@ function App(): React.JSX.Element {
         const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
         const ed = serializeExpandedDirs(expandedDirsRef.current)
         const savedMode = chatRef.current?.getMode() ?? ''
+        const savedTaskId = chatRef.current?.getTaskId() ?? ''
         if (prevActiveChatId) {
           await window.electron.ipcRenderer.invoke(
             'db:update-chat-session',
@@ -481,7 +485,8 @@ function App(): React.JSX.Element {
             fs,
             ed,
             savedDirStructureTag,
-            savedMode
+            savedMode,
+            savedTaskId
           )
         } else {
           await window.electron.ipcRenderer.invoke(
@@ -492,7 +497,8 @@ function App(): React.JSX.Element {
             fs,
             ed,
             savedDirStructureTag,
-            savedMode
+            savedMode,
+            savedTaskId
           )
         }
       }
@@ -545,7 +551,12 @@ function App(): React.JSX.Element {
               }))
             }))
             setActiveChatId(id)
-            chatRef.current?.loadChat(messages, session.mode || undefined, id)
+            chatRef.current?.loadChat(
+              messages,
+              session.mode || undefined,
+              id,
+              session.task_id || undefined
+            )
           }
         } catch (e) {
           log.error('Failed to select chat:', e)
@@ -556,7 +567,7 @@ function App(): React.JSX.Element {
   )
 
   const handleMessagesChange = useCallback(
-    async (messages: ChatMessage[], modeLabel: string) => {
+    async (messages: ChatMessage[], modeLabel: string, taskId: string) => {
       try {
         if (isNewChatRef.current) return
         if (messages.length === 0) return
@@ -574,7 +585,8 @@ function App(): React.JSX.Element {
             fs,
             ed,
             dst,
-            modeLabel
+            modeLabel,
+            taskId
           )
         } else {
           const id = await window.electron.ipcRenderer.invoke(
@@ -585,7 +597,8 @@ function App(): React.JSX.Element {
             fs,
             ed,
             dst,
-            modeLabel
+            modeLabel,
+            taskId
           )
           setActiveChatId(id)
           setChatHistoryKey((k) => k + 1)
@@ -658,7 +671,11 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const handleTaskRun = async (e: Event): Promise<void> => {
-      const detail = (e as CustomEvent).detail as { files: string[]; description: string }
+      const detail = (e as CustomEvent).detail as {
+        files: string[]
+        description: string
+        taskId: string
+      }
       if (!detail || !workspace) return
 
       const { files: taskFiles, description } = detail
@@ -774,7 +791,7 @@ function App(): React.JSX.Element {
           workspace
         )
 
-        await chatRef.current?.runTask(description, pendingFiles, dirStructure)
+        await chatRef.current?.runTask(description, pendingFiles, dirStructure, detail.taskId)
         copySnapshotRef.current = new Set(matchedPaths)
 
         // Transition to INQ
