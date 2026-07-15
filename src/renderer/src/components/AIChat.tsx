@@ -719,8 +719,12 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     return {
       getResolvedUserIndex(): number {
         const userMessages = messagesRef.current.filter((m) => m.role === 'user')
-        if (userMessages.length === 0) return 0
-        return userMessages.length - 1
+        let count = userMessages.length
+        if (inputValueRef.current.trim()) {
+          count++
+        }
+        if (count === 0) return 0
+        return count - 1
       },
       getMessages(): ChatMessage[] {
         return messagesRef.current
