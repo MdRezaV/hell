@@ -180,7 +180,12 @@ const WELCOME_LINES = [
   "HELL is other people's code",
   'HELLo darkness, my old compiler',
   'HELL now comes with extra 🔥... figuratively',
-  'the 10th circle of HELL is CSS'
+  'the 10th circle of HELL is CSS',
+  'HELL is where the Khamenei are',
+  'Codex? Claude? No thanks, Im living in HELL',
+  'Fuckoff, I haven’t been coding for years',
+  'Another day to fuck Qwen',
+  'Lets fuck Qwen tonight'
 ]
 
 function ModeSelector({
