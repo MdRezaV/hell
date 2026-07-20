@@ -124,7 +124,7 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
   const isHell = node.type === 'file' && !!node.isHell
   const selectablePaths = node.leafPaths
   const isDisabled = selectablePaths.length === 0
-  const showCheckbox = !isBinary
+  const showCheckbox = !isBinary && !isHell
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     e.stopPropagation()
@@ -202,7 +202,7 @@ function sortTree(nodes: FileNode[]): FileNode[] {
 function populateLeafPaths(nodes: FileNode[]): FileNode[] {
   return nodes.map((node) => {
     if (node.type === 'file') {
-      return { ...node, leafPaths: node.isBinary ? [] : [node.path] }
+      return { ...node, leafPaths: node.isBinary || node.isHell ? [] : [node.path] }
     }
     if (!node.children || node.children.length === 0) {
       return { ...node, leafPaths: [] }
@@ -230,6 +230,18 @@ function collectDirPaths(nodes: FileNode[]): Set<string> {
   const walk = (list: FileNode[]): void => {
     for (const n of list) {
       if (n.type === 'directory') paths.add(n.path)
+      if (n.children) walk(n.children)
+    }
+  }
+  walk(nodes)
+  return paths
+}
+
+function collectSelectablePaths(nodes: FileNode[]): Set<string> {
+  const paths = new Set<string>()
+  const walk = (list: FileNode[]): void => {
+    for (const n of list) {
+      if (n.type === 'file' && !n.isBinary && !n.isHell) paths.add(n.path)
       if (n.children) walk(n.children)
     }
   }
@@ -302,6 +314,7 @@ const FileExplorer = forwardRef(function FileExplorer(
   const onDirPathsChangeRef = useRef(onDirPathsChange)
   onDirPathsChangeRef.current = onDirPathsChange
   const filePathSetRef = useRef<Set<string>>(new Set())
+  const selectablePathsRef = useRef<Set<string>>(new Set())
   const onToggleFileRef = useRef(onToggleFile)
   onToggleFileRef.current = onToggleFile
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -340,6 +353,7 @@ const FileExplorer = forwardRef(function FileExplorer(
       setTree(sorted)
       const filePaths = collectFilePaths(sorted)
       const dirPaths = collectDirPaths(sorted)
+      selectablePathsRef.current = collectSelectablePaths(sorted)
       onFilePathsChangeRef.current(filePaths)
       onDirPathsChangeRef.current(dirPaths)
       window.electron.ipcRenderer
@@ -465,6 +479,7 @@ const FileExplorer = forwardRef(function FileExplorer(
       const target = normalize(targetRaw)
 
       const found = (matchedPath: string): void => {
+        if (!selectablePathsRef.current.has(matchedPath)) return
         currentOnToggle([matchedPath], true)
         detail.matched = true
       }
