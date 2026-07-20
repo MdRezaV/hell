@@ -354,26 +354,29 @@ function App(): React.JSX.Element {
   }, [])
 
   const handleCollapseAll = useCallback((): void => {
-    setExpandedDirs((prev) => {
-      if (workspace) {
-        prev.forEach((p) => {
-          window.electron.ipcRenderer
-            .invoke('db:set-dir-expanded', workspace, p, false)
-            .catch((e) => log.error('Failed to set dir expanded:', e))
-        })
-      }
-      return new Set()
-    })
+    const currentExpanded = expandedDirsRef.current
+    setExpandedDirs(new Set())
+    if (workspace && currentExpanded.size > 0) {
+      window.electron.ipcRenderer
+        .invoke(
+          'db:batch-set-dir-expanded',
+          workspace,
+          [...currentExpanded].map((p) => ({ absolutePath: p, expanded: false }))
+        )
+        .catch((e) => log.error('Failed to batch collapse dirs:', e))
+    }
   }, [workspace])
 
   const handleExpandAll = useCallback((): void => {
     setExpandedDirs(new Set(allDirPaths))
     if (workspace && allDirPaths.size > 0) {
-      allDirPaths.forEach((p) => {
-        window.electron.ipcRenderer
-          .invoke('db:set-dir-expanded', workspace, p, true)
-          .catch((e) => log.error('Failed to set dir expanded:', e))
-      })
+      window.electron.ipcRenderer
+        .invoke(
+          'db:batch-set-dir-expanded',
+          workspace,
+          [...allDirPaths].map((p) => ({ absolutePath: p, expanded: true }))
+        )
+        .catch((e) => log.error('Failed to batch expand dirs:', e))
     }
   }, [workspace, allDirPaths])
 

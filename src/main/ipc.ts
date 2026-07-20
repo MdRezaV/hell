@@ -6,11 +6,13 @@ import { getEncoding } from 'js-tiktoken'
 import { formatTreeText, readDirTree } from './fsUtils'
 import {
   batchRemoveFileStates,
+  batchSetDirExpanded,
   batchSetFileStates,
   clearAllData,
   clearFileStates,
   createChatSession,
   deleteChatSession,
+  extractPreview,
   getChatSession,
   getChatSessions,
   getLastWorkspace,
@@ -166,6 +168,17 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  safeHandle(
+    'db:batch-set-dir-expanded',
+    async (
+      _,
+      workspacePath: string,
+      entries: Array<{ absolutePath: string; expanded: boolean }>
+    ) => {
+      batchSetDirExpanded(workspacePath, entries)
+    }
+  )
+
   safeHandle('workspace:watch', async (event, workspacePath: string | null) => {
     if (!workspacePath) {
       stopWatching()
@@ -199,6 +212,7 @@ export function registerIpcHandlers(): void {
       mode?: string,
       taskId?: string
     ) => {
+      const preview = extractPreview(messages)
       if (fileStates !== undefined && expandedDirs !== undefined) {
         return createChatSession(
           workspacePath,
@@ -208,7 +222,8 @@ export function registerIpcHandlers(): void {
           expandedDirs,
           dirStructureTag,
           mode,
-          taskId
+          taskId,
+          preview
         )
       }
       if (workspacePath) {
@@ -221,7 +236,8 @@ export function registerIpcHandlers(): void {
           snapshot.expandedDirs,
           dirStructureTag,
           mode,
-          taskId
+          taskId,
+          preview
         )
       }
       return createChatSession(
@@ -232,7 +248,8 @@ export function registerIpcHandlers(): void {
         undefined,
         dirStructureTag,
         mode,
-        taskId
+        taskId,
+        preview
       )
     }
   )
@@ -250,6 +267,7 @@ export function registerIpcHandlers(): void {
       mode?: string,
       taskId?: string
     ) => {
+      const preview = extractPreview(messages)
       if (fileStates !== undefined && expandedDirs !== undefined) {
         updateChatSession(
           id,
@@ -259,7 +277,8 @@ export function registerIpcHandlers(): void {
           expandedDirs,
           dirStructureTag,
           mode,
-          taskId
+          taskId,
+          preview
         )
       } else {
         const session = getChatSession(id)
@@ -273,7 +292,8 @@ export function registerIpcHandlers(): void {
             snapshot.expandedDirs,
             dirStructureTag,
             mode,
-            taskId
+            taskId,
+            preview
           )
         } else {
           updateChatSession(
@@ -284,7 +304,8 @@ export function registerIpcHandlers(): void {
             undefined,
             dirStructureTag,
             mode,
-            taskId
+            taskId,
+            preview
           )
         }
       }

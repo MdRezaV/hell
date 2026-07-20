@@ -451,11 +451,13 @@ function _findLastSafeBoundary(content: string): number {
 }
 
 let _incRawPrefix = ''
+let _incRawPrefixLen = 0
 let _incProcessedPrefix = ''
 let _incLastFilePath = ''
 
 export function resetPreprocessCache(): void {
   _incRawPrefix = ''
+  _incRawPrefixLen = 0
   _incProcessedPrefix = ''
   _incLastFilePath = ''
 }
@@ -464,10 +466,18 @@ export function preprocess(content: string): string {
   const normalized = content.indexOf('\r') === -1 ? content : normalizeLineEndings(content)
 
   // Fast path: content extends the cached prefix — only preprocess the suffix.
-  // During streaming this is the hot path and drops preprocessing from O(N) to
-  // O(suffix_length) per token.
-  if (_incRawPrefix.length > 0 && normalized.startsWith(_incRawPrefix)) {
-    const suffix = normalized.slice(_incRawPrefix.length)
+  // Append-only invariant: streaming only ever appends tokens, so when
+  // normalized.length === _incRawPrefixLen the prefix trivially matches
+  // (no comparison needed). When content grew, a single O(prefix) slice
+  // comparison confirms the prefix is intact — this runs once per new-token
+  // batch, not per character, keeping the amortised cost O(1) per token.
+  if (
+    _incRawPrefixLen > 0 &&
+    normalized.length >= _incRawPrefixLen &&
+    (normalized.length === _incRawPrefixLen ||
+      normalized.slice(0, _incRawPrefixLen) === _incRawPrefix)
+  ) {
+    const suffix = normalized.slice(_incRawPrefixLen)
     if (!suffix) return _incProcessedPrefix
     return _incProcessedPrefix + preprocessImpl(suffix, _incLastFilePath).result
   }
@@ -479,11 +489,13 @@ export function preprocess(content: string): string {
   const safeEnd = _findLastSafeBoundary(normalized)
   if (safeEnd > 0 && safeEnd < normalized.length) {
     _incRawPrefix = normalized.slice(0, safeEnd)
+    _incRawPrefixLen = safeEnd
     const prefixResult = preprocessImpl(_incRawPrefix)
     _incProcessedPrefix = prefixResult.result
     _incLastFilePath = prefixResult.lastFilePath
   } else {
     _incRawPrefix = ''
+    _incRawPrefixLen = 0
     _incProcessedPrefix = ''
     _incLastFilePath = ''
   }

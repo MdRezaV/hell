@@ -16,6 +16,7 @@ import {
   removeFileState,
   setDirExpanded,
   setFileState,
+  toRelative,
   touchWorkspace,
   updateChatSession
 } from '../../../src/main/database'
@@ -105,6 +106,30 @@ describe('database', () => {
     setDirExpanded(ws, '/workspace/src', false)
     state = getWorkspaceState(ws)
     expect(state.expandedDirs).toEqual(['src/components'])
+  })
+
+  describe('toRelative', () => {
+    it('should return empty string for exact workspace path match', () => {
+      expect(toRelative('/workspace', '/workspace')).toBe('')
+    })
+
+    it('should strip workspace prefix for valid sub-path', () => {
+      expect(toRelative('/workspace', '/workspace/src/index.ts')).toBe('src/index.ts')
+    })
+
+    it('should not match prefix-collision paths', () => {
+      expect(toRelative('/workspace', '/workspace-other/file.ts')).toBe('/workspace-other/file.ts')
+    })
+
+    it('should handle Windows separators for valid sub-path', () => {
+      expect(toRelative('C:\\workspace', 'C:\\workspace\\src\\index.ts')).toBe('src\\index.ts')
+    })
+
+    it('should not match Windows prefix-collision paths', () => {
+      expect(toRelative('C:\\workspace', 'C:\\workspace-other\\file.ts')).toBe(
+        'C:\\workspace-other\\file.ts'
+      )
+    })
   })
 
   it('should manage chat sessions', () => {

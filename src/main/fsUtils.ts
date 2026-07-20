@@ -1,5 +1,5 @@
 import { join, relative } from 'path'
-import { promises as fsp } from 'fs'
+import { promises as fsp, type Dirent } from 'fs'
 import ignore, { type Ignore } from 'ignore'
 import pLimit from 'p-limit'
 import { log } from './logger'
@@ -174,51 +174,67 @@ export async function readDirTree(
   path: string,
   parentRules: IgnoreRule[],
   isRoot: boolean,
-  rootDir: string = path
+  rootDir: string = path,
+  parentMergedIg?: Ignore
 ): Promise<FileNode[]> {
-  const currentRules = await loadIgnoreRules(path, parentRules, isRoot)
-  const mergedIg = mergeIgnoreRules(currentRules)
+  let entries: Dirent[]
   try {
-    const entries = await fsp.readdir(path, { withFileTypes: true })
-    const filtered = entries.filter((entry) => {
-      const fullPath = join(path, entry.name)
-      const rel = relative(rootDir, fullPath).replace(/\\/g, '/')
-      if (!rel || rel.startsWith('..')) return true
-      const testPath = entry.isDirectory() ? `${rel}/` : rel
-      return !mergedIg.ignores(testPath)
-    })
-
-    const promises = filtered.map((entry) => {
-      const fullPath = join(path, entry.name)
-      if (entry.isDirectory()) {
-        return readDirTree(fullPath, currentRules, false, rootDir).then(
-          (children) =>
-            ({
-              name: entry.name,
-              path: fullPath,
-              type: 'directory' as const,
-              children
-            }) as FileNode
-        )
-      }
-      return limit(async () => {
-        const bin = await isBinaryFile(fullPath)
-        const isHell = entry.name === 'HELL.md'
-        return {
-          name: entry.name,
-          path: fullPath,
-          type: 'file' as const,
-          isBinary: bin || isHell,
-          isHell
-        } as FileNode
-      })
-    })
-
-    return await Promise.all(promises)
+    entries = await fsp.readdir(path, { withFileTypes: true })
   } catch (e) {
     log.error(`Failed to read directory tree at ${path}:`, e)
     return []
   }
+
+  const hasIgnoreFile = entries.some(
+    (e) => e.isFile() && (e.name === '.gitignore' || e.name === '.hellignore')
+  )
+
+  let currentRules: IgnoreRule[]
+  let mergedIg: Ignore
+
+  if (isRoot || hasIgnoreFile) {
+    currentRules = await loadIgnoreRules(path, parentRules, isRoot)
+    mergedIg = mergeIgnoreRules(currentRules)
+  } else {
+    currentRules = parentRules
+    mergedIg = parentMergedIg ?? mergeIgnoreRules(parentRules)
+  }
+
+  const filtered = entries.filter((entry) => {
+    const fullPath = join(path, entry.name)
+    const rel = relative(rootDir, fullPath).replace(/\\/g, '/')
+    if (!rel || rel.startsWith('..')) return true
+    const testPath = entry.isDirectory() ? `${rel}/` : rel
+    return !mergedIg.ignores(testPath)
+  })
+
+  const promises = filtered.map((entry) => {
+    const fullPath = join(path, entry.name)
+    if (entry.isDirectory()) {
+      return readDirTree(fullPath, currentRules, false, rootDir, mergedIg).then(
+        (children) =>
+          ({
+            name: entry.name,
+            path: fullPath,
+            type: 'directory' as const,
+            children
+          }) as FileNode
+      )
+    }
+    return limit(async () => {
+      const bin = await isBinaryFile(fullPath)
+      const isHell = entry.name === 'HELL.md'
+      return {
+        name: entry.name,
+        path: fullPath,
+        type: 'file' as const,
+        isBinary: bin || isHell,
+        isHell
+      } as FileNode
+    })
+  })
+
+  return await Promise.all(promises)
 }
 
 export function formatTreeText(nodes: FileNode[]): string {

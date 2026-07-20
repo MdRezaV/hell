@@ -56,6 +56,10 @@ export function useApplyRegistration(
   }, [unapplyFn])
 
   useEffect(() => {
+    ctxRef.current = ctx
+  }, [ctx])
+
+  useEffect(() => {
     const currentCtx = ctxRef.current
     if (!currentCtx) return
     const id = stableId

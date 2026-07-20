@@ -72,33 +72,44 @@ function getNodeTags(node: FileNode, fileStates: Map<string, FileTag>): FileTag[
   return TAG_ORDER.filter((t) => tagSet.has(t))
 }
 
-interface FlatNode {
+interface StructureNode {
   node: FileNode
   level: number
   isOpen: boolean
   hasChildren: boolean
+}
+
+interface FlatNode extends StructureNode {
   checkState: CheckState
   tags: FileTag[]
 }
 
-function flattenTree(
+function flattenStructure(
   nodes: FileNode[],
   expandedDirs: Set<string>,
-  fileStates: Map<string, FileTag>,
   level: number = 0
-): FlatNode[] {
-  const result: FlatNode[] = []
+): StructureNode[] {
+  const result: StructureNode[] = []
   for (const node of nodes) {
     const isOpen = node.type === 'directory' && expandedDirs.has(node.path)
     const hasChildren = node.type === 'directory' && !!node.children && node.children.length > 0
-    const checkState = getCheckState(node, fileStates)
-    const tags = getNodeTags(node, fileStates)
-    result.push({ node, level, isOpen, hasChildren, checkState, tags })
+    result.push({ node, level, isOpen, hasChildren })
     if (isOpen && node.children) {
-      result.push(...flattenTree(node.children, expandedDirs, fileStates, level + 1))
+      result.push(...flattenStructure(node.children, expandedDirs, level + 1))
     }
   }
   return result
+}
+
+function annotateStructure(
+  structure: StructureNode[],
+  fileStates: Map<string, FileTag>
+): FlatNode[] {
+  return structure.map((s) => ({
+    ...s,
+    checkState: getCheckState(s.node, fileStates),
+    tags: getNodeTags(s.node, fileStates)
+  }))
 }
 
 const VirtualTreeNode = memo(function VirtualTreeNode({
@@ -213,40 +224,27 @@ function populateLeafPaths(nodes: FileNode[]): FileNode[] {
   })
 }
 
-function collectFilePaths(nodes: FileNode[]): Set<string> {
-  const paths = new Set<string>()
+function collectAllPaths(nodes: FileNode[]): {
+  filePaths: Set<string>
+  dirPaths: Set<string>
+  selectablePaths: Set<string>
+} {
+  const filePaths = new Set<string>()
+  const dirPaths = new Set<string>()
+  const selectablePaths = new Set<string>()
   const walk = (list: FileNode[]): void => {
     for (const n of list) {
-      if (n.type === 'file') paths.add(n.path)
+      if (n.type === 'file') {
+        filePaths.add(n.path)
+        if (!n.isBinary && !n.isHell) selectablePaths.add(n.path)
+      } else {
+        dirPaths.add(n.path)
+      }
       if (n.children) walk(n.children)
     }
   }
   walk(nodes)
-  return paths
-}
-
-function collectDirPaths(nodes: FileNode[]): Set<string> {
-  const paths = new Set<string>()
-  const walk = (list: FileNode[]): void => {
-    for (const n of list) {
-      if (n.type === 'directory') paths.add(n.path)
-      if (n.children) walk(n.children)
-    }
-  }
-  walk(nodes)
-  return paths
-}
-
-function collectSelectablePaths(nodes: FileNode[]): Set<string> {
-  const paths = new Set<string>()
-  const walk = (list: FileNode[]): void => {
-    for (const n of list) {
-      if (n.type === 'file' && !n.isBinary && !n.isHell) paths.add(n.path)
-      if (n.children) walk(n.children)
-    }
-  }
-  walk(nodes)
-  return paths
+  return { filePaths, dirPaths, selectablePaths }
 }
 
 export interface FileExplorerHandle {
@@ -351,9 +349,8 @@ const FileExplorer = forwardRef(function FileExplorer(
       if (cancelled) return
       const sorted = sortTree(files)
       setTree(sorted)
-      const filePaths = collectFilePaths(sorted)
-      const dirPaths = collectDirPaths(sorted)
-      selectablePathsRef.current = collectSelectablePaths(sorted)
+      const { filePaths, dirPaths, selectablePaths } = collectAllPaths(sorted)
+      selectablePathsRef.current = selectablePaths
       onFilePathsChangeRef.current(filePaths)
       onDirPathsChangeRef.current(dirPaths)
       window.electron.ipcRenderer
@@ -410,7 +407,7 @@ const FileExplorer = forwardRef(function FileExplorer(
     onWorkspaceChange(null)
   }
 
-  const filePathSet = useMemo(() => collectFilePaths(tree), [tree])
+  const filePathSet = useMemo(() => collectAllPaths(tree).filePaths, [tree])
   filePathSetRef.current = filePathSet
   const fileCount = filePathSet.size
 
@@ -564,10 +561,12 @@ const FileExplorer = forwardRef(function FileExplorer(
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const flatNodes = useMemo(
-    () => flattenTree(filteredTree, expandedDirs, fileStates),
-    [filteredTree, expandedDirs, fileStates]
+  const structure = useMemo(
+    () => flattenStructure(filteredTree, expandedDirs),
+    [filteredTree, expandedDirs]
   )
+
+  const flatNodes = useMemo(() => annotateStructure(structure, fileStates), [structure, fileStates])
 
   const rowVirtualizer = useVirtualizer({
     count: flatNodes.length,

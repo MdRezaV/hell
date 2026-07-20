@@ -9,6 +9,7 @@ const WRITE_POLL_MS = 100
 
 let currentWatcher: FSWatcher | null = null
 let debounceTimer: NodeJS.Timeout | null = null
+let closed = false
 
 function clearDebounce(): void {
   if (debounceTimer) {
@@ -17,19 +18,22 @@ function clearDebounce(): void {
   }
 }
 
-export function stopWatching(): void {
+export async function stopWatching(): Promise<void> {
+  closed = true
   clearDebounce()
   if (currentWatcher) {
     log.debug('Stopping file watcher')
-    currentWatcher.close().catch((e) => {
+    const watcher = currentWatcher
+    currentWatcher = null
+    await watcher.close().catch((e) => {
       log.warn('Error closing watcher', e)
     })
-    currentWatcher = null
   }
 }
 
 export async function startWatching(workspacePath: string, onChange: () => void): Promise<void> {
-  stopWatching()
+  await stopWatching()
+  closed = false
   log.info('Starting file watcher for', workspacePath)
 
   let rules: IgnoreRule[] = []
@@ -56,9 +60,11 @@ export async function startWatching(workspacePath: string, onChange: () => void)
   currentWatcher = watch(workspacePath, opts)
 
   const trigger = (): void => {
+    if (closed) return
     clearDebounce()
     debounceTimer = setTimeout(() => {
       debounceTimer = null
+      if (closed) return
       onChange()
     }, DEBOUNCE_MS)
   }

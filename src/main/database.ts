@@ -9,7 +9,7 @@ const MAX_WORKSPACES = 5
 // backwards-incompatible way. On startup, if the stored
 // `PRAGMA user_version` does not match, the database is wiped
 // and recreated from scratch.
-const SCHEMA_VERSION = 6
+const SCHEMA_VERSION = 7
 
 let db: Database.Database | null = null
 
@@ -131,6 +131,12 @@ function createTables(d: Database.Database): void {
       NOT
       NULL
       DEFAULT
+      '',
+      messages_preview
+      TEXT
+      NOT
+      NULL
+      DEFAULT
       ''
     );
 
@@ -188,13 +194,19 @@ function getDb(): Database.Database {
   return db
 }
 
-function toRelative(workspacePath: string, absolutePath: string): string {
-  if (absolutePath.startsWith(workspacePath)) {
-    let rel = absolutePath.substring(workspacePath.length)
-    if (rel.startsWith('/') || rel.startsWith('\\')) rel = rel.substring(1)
-    return rel
+export function toRelative(workspacePath: string, absolutePath: string): string {
+  if (!absolutePath.startsWith(workspacePath)) {
+    return absolutePath
   }
-  return absolutePath
+  if (absolutePath.length !== workspacePath.length) {
+    const nextChar = absolutePath[workspacePath.length]
+    if (nextChar !== '/' && nextChar !== '\\') {
+      return absolutePath
+    }
+  }
+  let rel = absolutePath.substring(workspacePath.length)
+  if (rel.startsWith('/') || rel.startsWith('\\')) rel = rel.substring(1)
+  return rel
 }
 
 export function touchWorkspace(workspacePath: string): void {
@@ -317,6 +329,30 @@ export function setDirExpanded(
   }
 }
 
+export function batchSetDirExpanded(
+  workspacePath: string,
+  entries: Array<{ absolutePath: string; expanded: boolean }>
+): void {
+  const d = getDb()
+  const insertStmt = d.prepare(
+    `INSERT OR IGNORE INTO expanded_dirs (workspace_path, relative_path) VALUES (?, ?)`
+  )
+  const deleteStmt = d.prepare(
+    'DELETE FROM expanded_dirs WHERE workspace_path = ? AND relative_path = ?'
+  )
+  const tx = d.transaction(() => {
+    for (const { absolutePath, expanded } of entries) {
+      const rel = toRelative(workspacePath, absolutePath)
+      if (expanded) {
+        insertStmt.run(workspacePath, rel)
+      } else {
+        deleteStmt.run(workspacePath, rel)
+      }
+    }
+  })
+  tx()
+}
+
 export interface ChatSession {
   id: string
   workspace_path: string | null
@@ -329,6 +365,26 @@ export interface ChatSession {
   dir_structure_tag: string
   mode: string
   task_id: string
+  messages_preview: string
+}
+
+export function extractPreview(messagesJson: string): string {
+  try {
+    const messages = JSON.parse(messagesJson) as Array<{
+      role: string
+      variants: Array<{ content: string }>
+    }>
+    const parts: string[] = []
+    for (const msg of messages) {
+      if (msg.role === 'user' && msg.variants && msg.variants.length > 0) {
+        parts.push(msg.variants[0].content)
+      }
+    }
+    const joined = parts.join('\n')
+    return joined.length > 500 ? joined.slice(0, 500) : joined
+  } catch {
+    return ''
+  }
 }
 
 export function createChatSession(
@@ -339,13 +395,14 @@ export function createChatSession(
   expandedDirs: string = '[]',
   dirStructureTag: string = '',
   mode: string = '',
-  taskId: string = ''
+  taskId: string = '',
+  messagesPreview: string = ''
 ): string {
   const d = getDb()
   const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   d.prepare(
-    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag, mode, task_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO chat_sessions (id, workspace_path, title, messages, created_at, updated_at, file_states, expanded_dirs, dir_structure_tag, mode, task_id, messages_preview)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     workspacePath ?? null,
@@ -357,7 +414,8 @@ export function createChatSession(
     expandedDirs,
     dirStructureTag,
     mode,
-    taskId
+    taskId,
+    messagesPreview
   )
   return id
 }
@@ -370,12 +428,24 @@ export function updateChatSession(
   expandedDirs: string = '[]',
   dirStructureTag: string = '',
   mode: string = '',
-  taskId: string = ''
+  taskId: string = '',
+  messagesPreview: string = ''
 ): void {
   const d = getDb()
   d.prepare(
-    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ?, mode = ?, task_id = ? WHERE id = ?`
-  ).run(title, messages, Date.now(), fileStates, expandedDirs, dirStructureTag, mode, taskId, id)
+    `UPDATE chat_sessions SET title = ?, messages = ?, updated_at = ?, file_states = ?, expanded_dirs = ?, dir_structure_tag = ?, mode = ?, task_id = ?, messages_preview = ? WHERE id = ?`
+  ).run(
+    title,
+    messages,
+    Date.now(),
+    fileStates,
+    expandedDirs,
+    dirStructureTag,
+    mode,
+    taskId,
+    messagesPreview,
+    id
+  )
 }
 
 export function snapshotWorkspaceStateToSession(workspacePath: string): {
@@ -424,13 +494,13 @@ export function searchChatSessions(workspacePath: string | null, query: string):
   if (workspacePath) {
     return d
       .prepare(
-        `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE workspace_path = ? AND (title LIKE ? OR messages LIKE ?) ORDER BY updated_at DESC`
+        `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE workspace_path = ? AND (title LIKE ? OR messages_preview LIKE ?) ORDER BY updated_at DESC`
       )
       .all(workspacePath, q, q) as ChatSession[]
   }
   return d
     .prepare(
-      `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE title LIKE ? OR messages LIKE ? ORDER BY updated_at DESC`
+      `SELECT id, workspace_path, title, created_at, updated_at, mode, task_id FROM chat_sessions WHERE title LIKE ? OR messages_preview LIKE ? ORDER BY updated_at DESC`
     )
     .all(q, q) as ChatSession[]
 }
