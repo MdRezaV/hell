@@ -403,6 +403,10 @@
   @apply flex justify-end mt-3 pt-2 border-t border-border-subtle gap-2;
 }
 
+.md-apply-all-bar + .md-apply-all-bar {
+  @apply mt-0 pt-0 border-t-0;
+}
+
 .md-unapply-all {
   @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
     bg-[rgba(243,139,168,0.1)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)]

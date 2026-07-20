@@ -1,11 +1,91 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { Check, Undo2 } from 'lucide-react'
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { Check, Plus, Undo2 } from 'lucide-react'
 import {
   ApplyAllContext,
   type ApplyBlockInfo,
   type ApplyBlockStatus,
   useApplyAllContext
 } from '@renderer/hooks/useApplyAll'
+
+interface FileIncludeContextValue {
+  register: (path: string) => void
+  unregister: (path: string) => void
+  markAdded: (path: string) => void
+  paths: Set<string>
+  addedPaths: Set<string>
+}
+
+const FileIncludeContext = createContext<FileIncludeContextValue | null>(null)
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useFileIncludeContext(): FileIncludeContextValue | null {
+  return useContext(FileIncludeContext)
+}
+
+export function FileIncludeProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  const [paths, setPaths] = useState<Set<string>>(new Set())
+  const [addedPaths, setAddedPaths] = useState<Set<string>>(new Set())
+
+  const register = useCallback((path: string) => {
+    setPaths((prev) => {
+      if (prev.has(path)) return prev
+      const next = new Set(prev)
+      next.add(path)
+      return next
+    })
+  }, [])
+
+  const unregister = useCallback((path: string) => {
+    setPaths((prev) => {
+      if (!prev.has(path)) return prev
+      const next = new Set(prev)
+      next.delete(path)
+      return next
+    })
+  }, [])
+
+  const markAdded = useCallback((path: string) => {
+    setAddedPaths((prev) => {
+      if (prev.has(path)) return prev
+      const next = new Set(prev)
+      next.add(path)
+      return next
+    })
+  }, [])
+
+  const value = useMemo(
+    () => ({ paths, addedPaths, register, unregister, markAdded }),
+    [paths, addedPaths, register, unregister, markAdded]
+  )
+
+  return <FileIncludeContext.Provider value={value}>{children}</FileIncludeContext.Provider>
+}
+
+export function FileIncludeBar(): React.JSX.Element | null {
+  const ctx = useFileIncludeContext()
+  if (!ctx) return null
+  const { paths } = ctx
+  if (paths.size === 0) return null
+
+  const handleAddAll = (): void => {
+    for (const path of paths) {
+      const detail: { path: string; matched?: boolean } = { path }
+      window.dispatchEvent(new CustomEvent('file-include-add', { detail }))
+      if (detail.matched) {
+        ctx.markAdded(path)
+      }
+    }
+  }
+
+  return (
+    <div className="md-apply-all-bar">
+      <button type="button" className="md-apply-all" onClick={handleAddAll}>
+        <Plus size={12} />
+        <span>Add All ({paths.size})</span>
+      </button>
+    </div>
+  )
+}
 
 export function ApplyAllProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [blocks, setBlocks] = useState<Map<string, ApplyBlockInfo>>(new Map())

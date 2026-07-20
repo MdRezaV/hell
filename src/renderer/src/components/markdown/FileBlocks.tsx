@@ -32,9 +32,18 @@ import {
 } from '../../utils/fileApply'
 import { LinesDisplay } from './CodeBlocks'
 import { ApplyBlockStatus, useApplyRegistration } from '@renderer/hooks/useApplyAll'
+import { useFileIncludeContext } from './ApplyAll'
 
 export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Element {
   const [status, setStatus] = useState<'idle' | 'added' | 'notFound'>('idle')
+  const includeCtx = useFileIncludeContext()
+
+  useEffect(() => {
+    includeCtx?.register(path)
+    return () => {
+      includeCtx?.unregister(path)
+    }
+  }, [path, includeCtx])
 
   const handleClick = useCallback((): void => {
     const detail: { path: string; matched?: boolean } = { path }
@@ -43,12 +52,14 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
     setStatus(detail.matched ? 'added' : 'notFound')
   }, [path])
 
+  const effectiveStatus = status === 'idle' && includeCtx?.addedPaths.has(path) ? 'added' : status
+
   let label = 'Add'
   let className = 'md-file-include-add'
-  if (status === 'added') {
+  if (effectiveStatus === 'added') {
     label = 'Added'
     className += ' added'
-  } else if (status === 'notFound') {
+  } else if (effectiveStatus === 'notFound') {
     label = 'Not Found'
     className += ' not-found'
   }
@@ -57,13 +68,13 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
     <button
       type="button"
       className={className}
-      title={status === 'notFound' ? 'File not found in workspace' : 'Add file'}
+      title={effectiveStatus === 'notFound' ? 'File not found in workspace' : 'Add file'}
       onClick={handleClick}
-      disabled={status === 'added'}
+      disabled={effectiveStatus === 'added'}
     >
-      {status === 'added' ? (
+      {effectiveStatus === 'added' ? (
         <Check size={10} />
-      ) : status === 'notFound' ? (
+      ) : effectiveStatus === 'notFound' ? (
         <X size={10} />
       ) : (
         <Plus size={10} />
