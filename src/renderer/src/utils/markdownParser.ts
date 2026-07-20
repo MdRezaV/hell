@@ -466,16 +466,13 @@ export function preprocess(content: string): string {
   const normalized = content.indexOf('\r') === -1 ? content : normalizeLineEndings(content)
 
   // Fast path: content extends the cached prefix — only preprocess the suffix.
-  // Append-only invariant: streaming only ever appends tokens, so when
-  // normalized.length === _incRawPrefixLen the prefix trivially matches
-  // (no comparison needed). When content grew, a single O(prefix) slice
-  // comparison confirms the prefix is intact — this runs once per new-token
-  // batch, not per character, keeping the amortised cost O(1) per token.
+  // A single O(prefix) slice comparison confirms the prefix is intact.
+  // This runs once per new-token batch, not per character, keeping the
+  // amortised cost O(1) per token.
   if (
     _incRawPrefixLen > 0 &&
     normalized.length >= _incRawPrefixLen &&
-    (normalized.length === _incRawPrefixLen ||
-      normalized.slice(0, _incRawPrefixLen) === _incRawPrefix)
+    normalized.slice(0, _incRawPrefixLen) === _incRawPrefix
   ) {
     const suffix = normalized.slice(_incRawPrefixLen)
     if (!suffix) return _incProcessedPrefix
