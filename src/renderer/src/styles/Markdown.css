@@ -190,6 +190,10 @@
   @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
 }
 
+.md-file-apply:disabled {
+  @apply opacity-60 cursor-default;
+}
+
 .md-file-apply.error {
   @apply bg-[rgba(243,139,168,0.15)] text-[#f38ba8] border-[rgba(243,139,168,0.4)] cursor-default;
 }

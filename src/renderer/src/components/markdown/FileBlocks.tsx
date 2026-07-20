@@ -594,17 +594,12 @@ export const FileBlock = memo(function FileBlock({
     <div className="md-file-block">
       <div className="md-file-header">
         <div className="md-file-header-left">
-          {effectiveStatus === 'applied' ? (
-            <span className="md-file-status-label applied">
-              <Check size={12} />
-              APPLIED
-            </span>
-          ) : isCreated ? (
+          {isCreated && (
             <span className="md-file-status-label created">
               <FilePlus size={12} />
               CREATED
             </span>
-          ) : null}
+          )}
           <FilePathDisplay path={path} />
         </div>
         <div className="md-file-header-actions">
