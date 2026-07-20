@@ -386,11 +386,15 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
   const { workspace } = useWorkspace()
   const [applyState, setApplyState] = useState<'idle' | 'applied' | 'error'>('idle')
   const language = useMemo(() => getLanguageFromPath(path), [path])
+  const isBinary = useMemo(
+    () => !!fileState?.content && fileState.content.includes('\0'),
+    [fileState]
+  )
 
   const handleCopy = useCallback(async (): Promise<void> => {
-    if (!fileState?.content) return
+    if (!fileState?.content || isBinary) return
     await copy(fileState.content)
-  }, [copy, fileState])
+  }, [copy, fileState, isBinary])
 
   const handleApply = useCallback(async (): Promise<void> => {
     if (!workspace || !fileState?.exists) return
@@ -485,15 +489,17 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
           <FilePathDisplay path={path} />
         </div>
         <div className="md-file-header-actions">
-          <button
-            type="button"
-            className={`md-file-copy${copied ? ' copied' : ''}`}
-            onClick={handleCopy}
-            title={copied ? 'Copied' : 'Copy content'}
-            aria-label={copied ? 'Copied' : 'Copy content'}
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-          </button>
+          {!isBinary && (
+            <button
+              type="button"
+              className={`md-file-copy${copied ? ' copied' : ''}`}
+              onClick={handleCopy}
+              title={copied ? 'Copied' : 'Copy content'}
+              aria-label={copied ? 'Copied' : 'Copy content'}
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+            </button>
+          )}
           <button
             type="button"
             className={`md-file-apply${effectiveStatus === 'applied' ? ' applied' : ''}${effectiveStatus === 'error' ? ' error' : ''}`}
@@ -525,13 +531,17 @@ export const FileDeleteBlock = memo(function FileDeleteBlock({
           </button>
         </div>
       </div>
-      <div className="md-file-code">
-        <LinesDisplay
-          code={fileState.content || ''}
-          language={language}
-          isStreaming={isStreaming}
-        />
-      </div>
+      {isBinary ? (
+        <div className="md-file-binary-notice">Binary file — content not displayed</div>
+      ) : (
+        <div className="md-file-code">
+          <LinesDisplay
+            code={fileState.content || ''}
+            language={language}
+            isStreaming={isStreaming}
+          />
+        </div>
+      )}
     </div>
   )
 })

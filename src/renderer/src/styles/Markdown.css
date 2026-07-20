@@ -332,6 +332,10 @@
   @apply px-4 py-3 text-[12px] text-ctp-peach bg-[rgba(250,179,135,0.05)];
 }
 
+.md-file-binary-notice {
+  @apply px-4 py-3 text-[12px] text-text-muted italic bg-background-mute;
+}
+
 .md-file-diff-code {
   @apply bg-transparent flex-1 min-h-0 max-h-none;
 }
