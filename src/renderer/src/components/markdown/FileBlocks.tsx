@@ -37,13 +37,15 @@ import { useFileIncludeContext } from './ApplyAll'
 export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Element {
   const [status, setStatus] = useState<'idle' | 'added' | 'notFound'>('idle')
   const includeCtx = useFileIncludeContext()
+  const register = includeCtx?.register
+  const unregister = includeCtx?.unregister
 
   useEffect(() => {
-    includeCtx?.register(path)
+    register?.(path)
     return () => {
-      includeCtx?.unregister(path)
+      unregister?.(path)
     }
-  }, [path, includeCtx])
+  }, [path, register, unregister])
 
   const handleClick = useCallback((): void => {
     const detail: { path: string; matched?: boolean } = { path }
