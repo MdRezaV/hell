@@ -47,6 +47,46 @@ const LATTE: CatppuccinPalette = {
   base: '#eff1f5', mantle: '#e6e9ef', crust: '#dce0e8'
 }
 
+const ONEDARK: CatppuccinPalette = {
+  rosewater: '#d19a66', flamingo: '#e06c75', pink: '#c678dd', mauve: '#c678dd',
+  red: '#e06c75', maroon: '#be5046', peach: '#d19a66', yellow: '#e5c07b',
+  green: '#98c379', teal: '#56b6c2', sky: '#56b6c2', sapphire: '#61afef',
+  blue: '#61afef', lavender: '#528bff', text: '#abb2bf', subtext1: '#828997',
+  subtext0: '#666d7a', overlay2: '#5c6370', overlay1: '#4b5263', overlay0: '#3e4451',
+  surface2: '#3e4451', surface1: '#2f343d', surface0: '#2c313a',
+  base: '#282c34', mantle: '#21252b', crust: '#1e2127'
+}
+
+const DRACULA: CatppuccinPalette = {
+  rosewater: '#ffb86c', flamingo: '#ff79c6', pink: '#ff79c6', mauve: '#bd93f9',
+  red: '#ff5555', maroon: '#d03a3a', peach: '#ffb86c', yellow: '#f1fa8c',
+  green: '#50fa7b', teal: '#8be9fd', sky: '#8be9fd', sapphire: '#6272a4',
+  blue: '#bd93f9', lavender: '#d6acff', text: '#f8f8f2', subtext1: '#e2e2dc',
+  subtext0: '#bfbfb9', overlay2: '#6272a4', overlay1: '#56597a', overlay0: '#44475a',
+  surface2: '#44475a', surface1: '#3a3d4c', surface0: '#343746',
+  base: '#282a36', mantle: '#21222c', crust: '#191a21'
+}
+
+const NORD_DARK: CatppuccinPalette = {
+  rosewater: '#d08770', flamingo: '#bf616a', pink: '#b48ead', mauve: '#b48ead',
+  red: '#bf616a', maroon: '#a34e56', peach: '#d08770', yellow: '#ebcb8b',
+  green: '#a3be8c', teal: '#8fbcbb', sky: '#88c0d0', sapphire: '#81a1c1',
+  blue: '#5e81ac', lavender: '#81a1c1', text: '#eceff4', subtext1: '#e5e9f0',
+  subtext0: '#d8dee9', overlay2: '#4c566a', overlay1: '#434c5e', overlay0: '#3b4252',
+  surface2: '#434c5e', surface1: '#3b4252', surface0: '#353b49',
+  base: '#2e3440', mantle: '#2a2f3a', crust: '#242933'
+}
+
+const NORD_LIGHT: CatppuccinPalette = {
+  rosewater: '#d08770', flamingo: '#bf616a', pink: '#b48ead', mauve: '#b48ead',
+  red: '#bf616a', maroon: '#a34e56', peach: '#d08770', yellow: '#ebcb8b',
+  green: '#a3be8c', teal: '#8fbcbb', sky: '#88c0d0', sapphire: '#81a1c1',
+  blue: '#5e81ac', lavender: '#81a1c1', text: '#2e3440', subtext1: '#3b4252',
+  subtext0: '#434c5e', overlay2: '#4c566a', overlay1: '#616e88', overlay0: '#7b88a1',
+  surface2: '#c8d0e0', surface1: '#d8dee9', surface0: '#e0e5ee',
+  base: '#eceff4', mantle: '#e5e9f0', crust: '#d8dee9'
+}
+
 interface ThemePreset {
   label: string
   accent: string
@@ -60,10 +100,11 @@ const COLOR_PRESETS: ThemePreset[] = [
   { label: 'Macchiato', accent: '#8aadf4', bg: '#24273a', text: '#cad3f5', palette: MACCHIATO },
   { label: 'Frappe', accent: '#8caaee', bg: '#303446', text: '#c6d0f5', palette: FRAPPE },
   { label: 'Latte', accent: '#1e66f5', bg: '#eff1f5', text: '#4c4f69', palette: LATTE },
-  { label: 'Ember', accent: '#f38ba8', bg: '#1e1e2e', text: '#f5e0dc' },
-  { label: 'Forest', accent: '#a6e3a1', bg: '#1e1e2e', text: '#a6e3a1' },
-  { label: 'Sunset', accent: '#fab387', bg: '#1e1e2e', text: '#fab387' },
-  { label: 'Ocean', accent: '#74c7ec', bg: '#11111b', text: '#89dceb' }
+  { label: 'One Dark', accent: '#61afef', bg: '#282c34', text: '#abb2bf', palette: ONEDARK },
+  { label: 'Dracula', accent: '#bd93f9', bg: '#282a36', text: '#f8f8f2', palette: DRACULA },
+  { label: 'Nord Dark', accent: '#88c0d0', bg: '#2e3440', text: '#eceff4', palette: NORD_DARK },
+  { label: 'Nord Light', accent: '#5e81ac', bg: '#eceff4', text: '#2e3440', palette: NORD_LIGHT },
+  { label: 'Ember', accent: '#f38ba8', bg: '#1e1e2e', text: '#f5e0dc' }
 ]
 
 const SCALE_PRESETS = [80, 90, 100, 110, 120, 140]
