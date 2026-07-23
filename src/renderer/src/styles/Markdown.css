@@ -447,6 +447,7 @@
   @apply bg-transparent text-inherit p-0 font-[inherit];
   font-size: inherit;
 }
+
 .md-command-syntax code,
 .md-syntax-block code {
   @apply !font-[inherit] !text-inherit !leading-[inherit];

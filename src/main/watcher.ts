@@ -1,7 +1,7 @@
 import { type FSWatcher, watch, type WatchOptions } from 'chokidar'
 import type { Stats } from 'fs'
 import { log } from './logger'
-import { loadIgnoreRules, isEntryIgnored, mergeIgnoreRules, type IgnoreRule } from './fsUtils'
+import { type IgnoreRule, isEntryIgnored, loadIgnoreRules, mergeIgnoreRules } from './fsUtils'
 
 const DEBOUNCE_MS = 200
 const WRITE_STABILITY_MS = 200

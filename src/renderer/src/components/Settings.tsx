@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { RotateCcw, X } from 'lucide-react'
-import { useSettings, type CatppuccinPalette } from '../SettingsContext'
+import { type CatppuccinPalette, useSettings } from '../SettingsContext'
 import '../styles/Settings.css'
 
 interface SettingsProps {

@@ -1,6 +1,6 @@
 import log from 'electron-log/main'
 import { readdir, stat, unlink } from 'fs/promises'
-import { join, dirname } from 'path'
+import { dirname, join } from 'path'
 
 const RETENTION_MS = 24 * 60 * 60 * 1000
 const MAX_LOG_SIZE = 5 * 1024 * 1024

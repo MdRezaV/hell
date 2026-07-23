@@ -42,13 +42,21 @@
 }
 
 @keyframes typing-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes typing-glitch-flash {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .ai-chat-welcome-icon {

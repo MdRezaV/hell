@@ -1,5 +1,5 @@
 import { join, relative } from 'path'
-import { promises as fsp, type Dirent } from 'fs'
+import { type Dirent, promises as fsp } from 'fs'
 import ignore, { type Ignore } from 'ignore'
 import pLimit from 'p-limit'
 import { log } from './logger'
