@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { RotateCcw, X } from 'lucide-react'
 import { useSettings, type CatppuccinPalette } from '../SettingsContext'
 import '../styles/Settings.css'
@@ -160,12 +160,24 @@ const ColorField = memo(function ColorField({
   )
 })
 
+const SECTIONS = ['Appearance'] as const
+type Section = (typeof SECTIONS)[number]
+
 function Settings({ onClose }: SettingsProps): React.JSX.Element {
   const { settings, updateSettings, resetSettings } = useSettings()
   const [accentHex, setAccentHex] = useState(settings.accentColor)
   const [bgHex, setBgHex] = useState(settings.bgColor)
   const [textHex, setTextHex] = useState(settings.textColor)
+  const [activeSection, setActiveSection] = useState<Section>('Appearance')
   const backdropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
@@ -252,89 +264,113 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
           </button>
         </div>
 
-        <div className="settings-body">
-          <section className="settings-section">
-            <h3>Theme Presets</h3>
-            <div className="settings-presets">
-              {COLOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.label}
-                  className="settings-preset-btn"
-                  onClick={() => applyPreset(preset)}
-                  style={
-                    {
-                      '--preset-accent': preset.accent,
-                      '--preset-bg': preset.bg
-                    } as React.CSSProperties
-                  }
-                >
-                  <span className="settings-preset-swatch" style={{ background: preset.accent }} />
-                  <span className="settings-preset-label">{preset.label}</span>
-                </button>
-              ))}
-            </div>
-          </section>
+        <div className="settings-layout">
+          <nav className="settings-nav">
+            {SECTIONS.map((section) => (
+              <button
+                key={section}
+                className={`settings-nav-item ${activeSection === section ? 'active' : ''}`}
+                onClick={() => setActiveSection(section)}
+              >
+                {section}
+              </button>
+            ))}
+          </nav>
 
-          <section className="settings-section">
-            <h3>Colors</h3>
-            <ColorField
-              label="Accent"
-              colorValue={accentHex}
-              hexValue={accentHex}
-              onPickerChange={handlePickerChange('accentColor', setAccentHex)}
-              onHexChange={handleHexInput('accentColor', setAccentHex)}
-              onHexBlur={() => handleHexBlur('accentColor', setAccentHex, accentHex)}
-            />
-            <ColorField
-              label="Background"
-              colorValue={bgHex}
-              hexValue={bgHex}
-              onPickerChange={handlePickerChange('bgColor', setBgHex)}
-              onHexChange={handleHexInput('bgColor', setBgHex)}
-              onHexBlur={() => handleHexBlur('bgColor', setBgHex, bgHex)}
-            />
-            <ColorField
-              label="Text"
-              colorValue={textHex}
-              hexValue={textHex}
-              onPickerChange={handlePickerChange('textColor', setTextHex)}
-              onHexChange={handleHexInput('textColor', setTextHex)}
-              onHexBlur={() => handleHexBlur('textColor', setTextHex, textHex)}
-            />
-          </section>
+          <div className="settings-content">
+            {activeSection === 'Appearance' && (
+              <>
+                <section className="settings-section">
+                  <h3>Theme Presets</h3>
+                  <div className="settings-presets">
+                    {COLOR_PRESETS.map((preset) => (
+                      <button
+                        key={preset.label}
+                        className="settings-preset-btn"
+                        onClick={() => applyPreset(preset)}
+                        style={
+                          {
+                            '--preset-accent': preset.accent,
+                            '--preset-bg': preset.bg
+                          } as React.CSSProperties
+                        }
+                      >
+                        <span
+                          className="settings-preset-swatch"
+                          style={{ background: preset.accent }}
+                        />
+                        <span className="settings-preset-label">{preset.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
 
-          <section className="settings-section">
-            <h3>Scale</h3>
-            <div className="settings-scale">
-              <input
-                type="range"
-                min={60}
-                max={200}
-                step={5}
-                value={settings.scale}
-                onChange={handleScaleChange}
-              />
-              <span className="settings-scale-value">{settings.scale}%</span>
-            </div>
-            <div className="settings-scale-presets">
-              {SCALE_PRESETS.map((s) => (
-                <button
-                  key={s}
-                  className={`settings-scale-btn ${settings.scale === s ? 'active' : ''}`}
-                  onClick={() => updateSettings({ scale: s })}
-                >
-                  {s}%
-                </button>
-              ))}
-            </div>
-          </section>
+                <section className="settings-section">
+                  <h3>Colors</h3>
+                  <ColorField
+                    label="Accent"
+                    colorValue={accentHex}
+                    hexValue={accentHex}
+                    onPickerChange={handlePickerChange('accentColor', setAccentHex)}
+                    onHexChange={handleHexInput('accentColor', setAccentHex)}
+                    onHexBlur={() => handleHexBlur('accentColor', setAccentHex, accentHex)}
+                  />
+                  <ColorField
+                    label="Background"
+                    colorValue={bgHex}
+                    hexValue={bgHex}
+                    onPickerChange={handlePickerChange('bgColor', setBgHex)}
+                    onHexChange={handleHexInput('bgColor', setBgHex)}
+                    onHexBlur={() => handleHexBlur('bgColor', setBgHex, bgHex)}
+                  />
+                  <ColorField
+                    label="Text"
+                    colorValue={textHex}
+                    hexValue={textHex}
+                    onPickerChange={handlePickerChange('textColor', setTextHex)}
+                    onHexChange={handleHexInput('textColor', setTextHex)}
+                    onHexBlur={() => handleHexBlur('textColor', setTextHex, textHex)}
+                  />
+                </section>
 
-          <div className="settings-footer">
-            <button className="settings-reset-btn" onClick={handleReset}>
-              <RotateCcw size={14} />
-              Reset to Default
-            </button>
+                <section className="settings-section">
+                  <h3>Scale</h3>
+                  <div className="settings-scale">
+                    <input
+                      type="range"
+                      min={60}
+                      max={200}
+                      step={5}
+                      value={settings.scale}
+                      onChange={handleScaleChange}
+                    />
+                    <span className="settings-scale-value">{settings.scale}%</span>
+                  </div>
+                  <div className="settings-scale-presets">
+                    {SCALE_PRESETS.map((s) => (
+                      <button
+                        key={s}
+                        className={`settings-scale-btn ${settings.scale === s ? 'active' : ''}`}
+                        onClick={() => updateSettings({ scale: s })}
+                      >
+                        {s}%
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
           </div>
+        </div>
+
+        <div className="settings-footer">
+          <button className="settings-reset-btn" onClick={handleReset}>
+            <RotateCcw size={14} />
+            Reset to Default
+          </button>
+          <button className="settings-ok-btn" onClick={onClose}>
+            OK
+          </button>
         </div>
       </div>
     </div>
