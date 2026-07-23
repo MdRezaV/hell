@@ -1,0 +1,140 @@
+.settings-backdrop {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.settings-panel {
+  @apply bg-background-soft border border-border rounded-lg shadow-lg w-[420px] max-h-[80vh] overflow-hidden;
+  animation: settingsSlideIn 0.15s ease;
+}
+
+@keyframes settingsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.settings-header {
+  @apply flex items-center justify-between px-5 py-3.5 border-b border-border;
+}
+
+.settings-header h2 {
+  @apply text-[15px] font-semibold text-text m-0;
+}
+
+.settings-close {
+  @apply p-1.5 rounded-md bg-transparent border-none cursor-pointer text-text-secondary hover:bg-surface-0 hover:text-text;
+}
+
+.settings-body {
+  @apply px-5 py-4 overflow-y-auto max-h-[calc(80vh-56px)];
+}
+
+.settings-section {
+  @apply mb-5;
+}
+
+.settings-section:last-child {
+  @apply mb-0;
+}
+
+.settings-section h3 {
+  @apply text-[12px] font-semibold text-text-muted uppercase tracking-wider mb-3 m-0;
+}
+
+.settings-presets {
+  @apply grid grid-cols-4 gap-2;
+}
+
+.settings-preset-btn {
+  @apply flex items-center gap-2 px-2.5 py-2 bg-surface-0 border border-border rounded-md cursor-pointer transition-all duration-fast hover:border-ctp-overlay0 hover:bg-surface-1;
+}
+
+.settings-preset-btn:hover {
+  border-color: var(--preset-accent, var(--color-border));
+}
+
+.settings-preset-swatch {
+  @apply w-3 h-3 rounded-full flex-shrink-0;
+}
+
+.settings-preset-label {
+  @apply text-[11px] text-text-secondary font-medium;
+}
+
+.settings-color-row {
+  @apply flex items-center justify-between py-2;
+}
+
+.settings-color-row label {
+  @apply text-[13px] text-text-secondary;
+}
+
+.settings-color-input {
+  @apply flex items-center gap-2;
+}
+
+.settings-color-input input[type='color'] {
+  @apply w-7 h-7 p-0 border border-border rounded cursor-pointer;
+  -webkit-appearance: none;
+  background: none;
+}
+
+.settings-color-input input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.settings-color-input input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+
+.settings-color-hex {
+  @apply text-[11px] font-mono text-text-muted w-[60px];
+}
+
+.settings-hex-input {
+  @apply w-[72px] px-1.5 py-0.5 text-[11px] font-mono text-text-secondary bg-surface-0 border border-border rounded cursor-text;
+}
+
+.settings-hex-input:focus {
+  @apply outline-none border-accent;
+}
+
+.settings-scale {
+  @apply flex items-center gap-3 mb-3;
+}
+
+.settings-scale input[type='range'] {
+  @apply flex-1;
+}
+
+.settings-scale-value {
+  @apply text-[13px] font-mono text-text-secondary w-[40px] text-right;
+}
+
+.settings-scale-presets {
+  @apply flex gap-1.5;
+}
+
+.settings-scale-btn {
+  @apply px-2.5 py-1 text-[11px] font-medium bg-surface-0 border border-border rounded cursor-pointer transition-colors duration-fast hover:bg-surface-1 hover:border-ctp-overlay0 text-text-secondary;
+}
+
+.settings-scale-btn.active {
+  @apply bg-accent text-accent-text border-accent;
+}
+
+.settings-footer {
+  @apply pt-4 mt-4 border-t border-border;
+}
+
+.settings-reset-btn {
+  @apply flex items-center gap-2 px-3 py-1.5 text-[12px] bg-transparent border border-border rounded-md cursor-pointer text-text-secondary hover:bg-surface-0 hover:text-text hover:border-ctp-overlay0;
+}

@@ -13,13 +13,16 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { LoadingProvider } from './LoadingContext'
+import { SettingsProvider } from './SettingsContext'
 import ProgressBar from './components/ProgressBar'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <LoadingProvider>
-      <ProgressBar />
-      <App />
-    </LoadingProvider>
+    <SettingsProvider>
+      <LoadingProvider>
+        <ProgressBar />
+        <App />
+      </LoadingProvider>
+    </SettingsProvider>
   </StrictMode>
 )
