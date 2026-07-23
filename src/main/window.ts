@@ -23,6 +23,12 @@ export function createWindow(): void {
     mainWindow.show()
   })
 
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Alt') {
+      event.preventDefault()
+    }
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }

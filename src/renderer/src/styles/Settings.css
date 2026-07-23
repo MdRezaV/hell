@@ -69,6 +69,8 @@
 }
 
 .settings-preset-btn {
+  --preset-accent: var(--color-border);
+  --preset-bg: var(--color-background);
   @apply flex items-center gap-2 px-2.5 py-2 bg-surface-0 border border-border rounded-md cursor-pointer transition-all duration-fast hover:border-ctp-overlay0 hover:bg-surface-1;
 }
 
