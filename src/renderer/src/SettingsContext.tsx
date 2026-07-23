@@ -60,6 +60,11 @@ function isLight(hex: string): boolean {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
 }
 
+function darkenForLight(hex: string, light: boolean): string {
+  if (!light) return hex
+  return mix(hex, '#000000', 0.35)
+}
+
 function applySettings(s: SettingsState): void {
   const root = document.documentElement
   const light = isLight(s.bgColor)
@@ -69,6 +74,33 @@ function applySettings(s: SettingsState): void {
   const surface1 = mix(s.bgColor, surfaceTarget, 0.1)
   const surface2 = mix(s.bgColor, surfaceTarget, 0.16)
   const mute = mix(s.bgColor, '#000000', light ? 0.06 : 0.25)
+
+  root.style.setProperty('--ctp-red', darkenForLight('#f38ba8', light))
+  root.style.setProperty('--ctp-green', darkenForLight('#a6e3a1', light))
+  root.style.setProperty('--ctp-yellow', darkenForLight('#f9e2af', light))
+  root.style.setProperty('--ctp-mauve', darkenForLight('#cba6f7', light))
+  root.style.setProperty('--ctp-peach', darkenForLight('#fab387', light))
+  root.style.setProperty('--ctp-teal', darkenForLight('#94e2d5', light))
+  root.style.setProperty('--ctp-sky', darkenForLight('#89dceb', light))
+  root.style.setProperty('--ctp-sapphire', darkenForLight('#74c7ec', light))
+  root.style.setProperty('--ctp-blue', s.accentColor)
+  root.style.setProperty('--ctp-lavender', mix(s.accentColor, '#ffffff', light ? 0.1 : 0.3))
+  root.style.setProperty('--ctp-rosewater', darkenForLight('#f5e0dc', light))
+  root.style.setProperty('--ctp-flamingo', darkenForLight('#f2cdcd', light))
+  root.style.setProperty('--ctp-pink', darkenForLight('#f5c2e7', light))
+  root.style.setProperty('--ctp-maroon', darkenForLight('#eba0ac', light))
+  root.style.setProperty('--ctp-text', s.textColor)
+  root.style.setProperty('--ctp-subtext1', mix(s.textColor, s.bgColor, 0.15))
+  root.style.setProperty('--ctp-subtext0', mix(s.textColor, s.bgColor, 0.3))
+  root.style.setProperty('--ctp-overlay2', mix(s.textColor, s.bgColor, 0.45))
+  root.style.setProperty('--ctp-overlay1', mix(s.textColor, s.bgColor, 0.55))
+  root.style.setProperty('--ctp-overlay0', mix(s.textColor, s.bgColor, 0.65))
+  root.style.setProperty('--ctp-surface2', surface2)
+  root.style.setProperty('--ctp-surface1', surface1)
+  root.style.setProperty('--ctp-surface0', surface0)
+  root.style.setProperty('--ctp-base', s.bgColor)
+  root.style.setProperty('--ctp-mantle', mix(s.bgColor, surfaceTarget, 0.03))
+  root.style.setProperty('--ctp-crust', mute)
 
   root.style.setProperty('--color-accent', s.accentColor)
   root.style.setProperty('--color-accent-hover', s.accentColor + 'cc')
