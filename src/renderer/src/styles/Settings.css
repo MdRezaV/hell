@@ -1,6 +1,6 @@
 .settings-backdrop {
   @apply fixed inset-0 z-50 flex items-center justify-center;
-  background: rgba(0, 0, 0, 0.5);
+  background: color-mix(in srgb, var(--ctp-crust) 50%, transparent);
   backdrop-filter: blur(4px);
 }
 

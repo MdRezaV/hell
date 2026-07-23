@@ -90,6 +90,10 @@
   }
 }
 
+.chat-history-delete:hover {
+  @apply bg-[color-mix(in_srgb,var(--ctp-red)_10%,transparent)];
+}
+
 .chat-history-item-content {
   @apply flex flex-col min-w-0 flex-1;
 }
@@ -103,19 +107,19 @@
 }
 
 .chat-history-item-mode {
-  @apply inline-block py-px px-[5px] rounded-[3px] bg-[rgba(128,128,128,0.15)] text-[#888] font-mono text-[10px] uppercase tracking-[0.3px] whitespace-nowrap leading-[1.3];
+  @apply inline-block py-px px-[5px] rounded-[3px] bg-[color-mix(in_srgb,var(--ctp-overlay1)_15%,transparent)] text-text-subtle font-mono text-[10px] uppercase tracking-[0.3px] whitespace-nowrap leading-[1.3];
 }
 
 .chat-history-item-mode--coding {
-  @apply bg-[rgba(137,180,250,0.15)] text-ctp-blue;
+  @apply bg-[color-mix(in_srgb,var(--ctp-blue)_15%,transparent)] text-ctp-blue;
 }
 
 .chat-history-item-mode--planning {
-  @apply bg-[rgba(203,166,247,0.15)] text-ctp-mauve;
+  @apply bg-[color-mix(in_srgb,var(--ctp-mauve)_15%,transparent)] text-ctp-mauve;
 }
 
 .chat-history-item-mode--initialize {
-  @apply bg-[rgba(166,227,161,0.15)] text-ctp-green;
+  @apply bg-[color-mix(in_srgb,var(--ctp-green)_15%,transparent)] text-ctp-green;
 }
 
 .chat-history-item-date {

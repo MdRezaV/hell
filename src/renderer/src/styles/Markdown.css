@@ -162,7 +162,7 @@
 }
 
 .chat-bubble-user .md-content code {
-  @apply bg-black/20;
+  background-color: color-mix(in srgb, var(--ctp-crust) 20%, transparent);
 }
 
 .md-command-label,
