@@ -119,8 +119,10 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
   hasChildren,
   checkState,
   tags,
+  isFocused,
   onToggle,
-  onToggleExpand
+  onToggleExpand,
+  onFocusNode
 }: {
   node: FileNode
   level: number
@@ -128,8 +130,10 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
   hasChildren: boolean
   checkState: CheckState
   tags: FileTag[]
+  isFocused: boolean
   onToggle: (paths: string[], checked: boolean) => void
   onToggleExpand: (path: string, expanded: boolean) => void
+  onFocusNode: (path: string) => void
 }): React.JSX.Element {
   const isBinary = node.type === 'file' && !!node.isBinary
   const isHell = node.type === 'file' && !!node.isHell
@@ -149,6 +153,7 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
   }
 
   const handleRowClick = (): void => {
+    onFocusNode(node.path)
     if (hasChildren && node.type === 'directory') {
       onToggleExpand(node.path, !isOpen)
     } else if (node.type === 'file' && !isDisabled) {
@@ -159,7 +164,11 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
   }
 
   return (
-    <div className="tree-node" style={{ paddingLeft: `${level * 16}px` }} onClick={handleRowClick}>
+    <div
+      className={`tree-node${isFocused ? ' tree-node--focused' : ''}`}
+      style={{ paddingLeft: `${level * 16}px` }}
+      onClick={handleRowClick}
+    >
       <span className="tree-chevron">
         {hasChildren ? isOpen ? <ChevronDown /> : <ChevronRight /> : null}
       </span>
@@ -305,6 +314,7 @@ const FileExplorer = forwardRef(function FileExplorer(
   const [search, setSearch] = useState('')
   const [contentMatches, setContentMatches] = useState<Set<string>>(new Set())
   const [searchLoading, setSearchLoading] = useState(false)
+  const [focusedPath, setFocusedPath] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancelRef = useRef(false)
   const onFilePathsChangeRef = useRef(onFilePathsChange)
@@ -327,6 +337,7 @@ const FileExplorer = forwardRef(function FileExplorer(
 
   if (workspace !== prevWorkspace) {
     setPrevWorkspace(workspace)
+    setFocusedPath(null)
     if (workspace === null) {
       setTree([])
       setLoading(false)
@@ -568,12 +579,98 @@ const FileExplorer = forwardRef(function FileExplorer(
 
   const flatNodes = useMemo(() => annotateStructure(structure, fileStates), [structure, fileStates])
 
+  const focusedIndex = useMemo(
+    () => (focusedPath ? flatNodes.findIndex((n) => n.node.path === focusedPath) : -1),
+    [flatNodes, focusedPath]
+  )
+
   const rowVirtualizer = useVirtualizer({
     count: flatNodes.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 20,
     overscan: 10
   })
+
+  const handleTreeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (flatNodes.length === 0) return
+
+      const currentIndex = focusedIndex >= 0 ? focusedIndex : 0
+
+      const scrollTo = (index: number): void => {
+        rowVirtualizer.scrollToIndex(index, { align: 'auto' })
+      }
+
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault()
+          const next = Math.min(currentIndex + 1, flatNodes.length - 1)
+          setFocusedPath(flatNodes[next].node.path)
+          scrollTo(next)
+          break
+        }
+        case 'ArrowUp': {
+          e.preventDefault()
+          const prev = Math.max(currentIndex - 1, 0)
+          setFocusedPath(flatNodes[prev].node.path)
+          scrollTo(prev)
+          break
+        }
+        case 'ArrowRight': {
+          e.preventDefault()
+          const node = flatNodes[currentIndex]
+          if (node.hasChildren && !node.isOpen) {
+            onToggleExpand(node.node.path, true)
+          } else if (node.hasChildren && node.isOpen && currentIndex + 1 < flatNodes.length) {
+            const next = currentIndex + 1
+            setFocusedPath(flatNodes[next].node.path)
+            scrollTo(next)
+          }
+          break
+        }
+        case 'ArrowLeft': {
+          e.preventDefault()
+          const node = flatNodes[currentIndex]
+          if (node.hasChildren && node.isOpen) {
+            onToggleExpand(node.node.path, false)
+          } else {
+            const currentLevel = node.level
+            for (let i = currentIndex - 1; i >= 0; i--) {
+              if (flatNodes[i].level < currentLevel) {
+                setFocusedPath(flatNodes[i].node.path)
+                scrollTo(i)
+                break
+              }
+            }
+          }
+          break
+        }
+        case ' ':
+        case 'Enter': {
+          e.preventDefault()
+          const node = flatNodes[currentIndex]
+          if (node.node.leafPaths.length > 0) {
+            onToggleFile(node.node.leafPaths, node.checkState !== 'checked')
+          }
+          break
+        }
+        case 'Home': {
+          e.preventDefault()
+          setFocusedPath(flatNodes[0].node.path)
+          scrollTo(0)
+          break
+        }
+        case 'End': {
+          e.preventDefault()
+          const last = flatNodes.length - 1
+          setFocusedPath(flatNodes[last].node.path)
+          scrollTo(last)
+          break
+        }
+      }
+    },
+    [flatNodes, focusedIndex, onToggleExpand, onToggleFile, rowVirtualizer]
+  )
 
   if (!workspace) {
     return (
@@ -645,7 +742,7 @@ const FileExplorer = forwardRef(function FileExplorer(
           ))}
         </div>
       ) : (
-        <div ref={scrollRef} className="explorer-tree">
+        <div ref={scrollRef} className="explorer-tree" tabIndex={0} onKeyDown={handleTreeKeyDown}>
           {flatNodes.length > 0 && (
             <div
               style={{
@@ -675,8 +772,10 @@ const FileExplorer = forwardRef(function FileExplorer(
                       hasChildren={flatNode.hasChildren}
                       checkState={flatNode.checkState}
                       tags={flatNode.tags}
+                      isFocused={flatNode.node.path === focusedPath}
                       onToggle={onToggleFile}
                       onToggleExpand={onToggleExpand}
+                      onFocusNode={setFocusedPath}
                     />
                   </div>
                 )

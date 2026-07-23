@@ -72,11 +72,25 @@
 }
 
 .explorer-tree {
-  @apply flex-1 overflow-y-auto py-1 text-[13px];
+  @apply flex-1 overflow-y-auto py-1 text-[13px] outline-none;
 }
 
 .tree-node {
-  @apply flex items-center h-full py-0 pr-2 pl-0 cursor-pointer whitespace-nowrap overflow-hidden text-[12px] leading-5 transition-colors duration-fast rounded-none hover:bg-surface-0 active:bg-surface-1;
+  @apply flex items-center h-full py-0 pr-2 pl-0 cursor-pointer whitespace-nowrap overflow-hidden text-[12px] leading-5 transition-colors duration-fast rounded-none;
+}
+
+.tree-node:hover {
+  background-color: color-mix(in srgb, var(--ctp-surface0) 40%, transparent);
+}
+
+.tree-node:active {
+  background-color: color-mix(in srgb, var(--ctp-surface1) 30%, transparent);
+}
+
+.tree-node--focused {
+  background-color: color-mix(in srgb, var(--ctp-surface1) 18%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--ctp-blue) 12%, transparent);
+  outline-offset: -1px;
 }
 
 .tree-chevron,
