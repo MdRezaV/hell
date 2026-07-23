@@ -156,38 +156,58 @@
 .md-command-label,
 .md-file-replace-label.new,
 .md-file-status-label.created {
-  @apply bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)];
+  background-color: color-mix(in srgb, var(--ctp-green) 12%, transparent);
+  color: var(--ctp-green);
+  border: 1px solid color-mix(in srgb, var(--ctp-green) 30%, transparent);
 }
 
 .md-file-replace-label.old,
 .md-file-status-label.deleted {
-  @apply bg-[rgba(243,139,168,0.12)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)];
+  background-color: color-mix(in srgb, var(--ctp-red) 12%, transparent);
+  color: var(--ctp-red);
+  border: 1px solid color-mix(in srgb, var(--ctp-red) 30%, transparent);
 }
 
 .md-file-status-label.error {
-  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border border-[rgba(250,179,135,0.3)];
+  background-color: color-mix(in srgb, var(--ctp-peach) 12%, transparent);
+  color: var(--ctp-peach);
+  border: 1px solid color-mix(in srgb, var(--ctp-peach) 30%, transparent);
 }
 
 .md-file-status-label.moved {
-  @apply bg-[rgba(137,180,250,0.12)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)];
+  background-color: color-mix(in srgb, var(--ctp-blue) 12%, transparent);
+  color: var(--ctp-blue);
+  border: 1px solid color-mix(in srgb, var(--ctp-blue) 30%, transparent);
 }
 
 .md-file-status-label.task {
-  @apply bg-[rgba(168,85,247,0.12)] text-[#a855f7] border border-[rgba(168,85,247,0.3)];
+  background-color: color-mix(in srgb, var(--ctp-mauve) 12%, transparent);
+  color: var(--ctp-mauve);
+  border: 1px solid color-mix(in srgb, var(--ctp-mauve) 30%, transparent);
 }
 
 .md-command-run,
 .md-file-apply,
 .md-apply-all {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
-    bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
-    hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug;
+  background-color: color-mix(in srgb, var(--ctp-green) 10%, transparent);
+  color: var(--ctp-green);
+  border: 1px solid color-mix(in srgb, var(--ctp-green) 30%, transparent);
+}
+
+.md-command-run:hover,
+.md-file-apply:hover,
+.md-apply-all:hover {
+  background-color: color-mix(in srgb, var(--ctp-green) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-green) 50%, transparent);
 }
 
 .md-file-apply.applied,
 .md-apply-all.applied,
 .md-file-include-add.added {
-  @apply bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.5)] cursor-default;
+  background-color: color-mix(in srgb, var(--ctp-green) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-green) 50%, transparent);
+  @apply cursor-default;
 }
 
 .md-file-apply:disabled {
@@ -195,12 +215,21 @@
 }
 
 .md-file-apply.error {
-  @apply bg-[rgba(243,139,168,0.15)] text-[#f38ba8] border-[rgba(243,139,168,0.4)] cursor-default;
+  background-color: color-mix(in srgb, var(--ctp-red) 15%, transparent);
+  color: var(--ctp-red);
+  border-color: color-mix(in srgb, var(--ctp-red) 40%, transparent);
+  @apply cursor-default;
 }
 
 .md-apply-all.warning {
-  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border-[rgba(250,179,135,0.3)]
-    hover:bg-[rgba(250,179,135,0.2)] hover:border-[rgba(250,179,135,0.5)];
+  background-color: color-mix(in srgb, var(--ctp-peach) 12%, transparent);
+  color: var(--ctp-peach);
+  border-color: color-mix(in srgb, var(--ctp-peach) 30%, transparent);
+}
+
+.md-apply-all.warning:hover {
+  background-color: color-mix(in srgb, var(--ctp-peach) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-peach) 50%, transparent);
 }
 
 .md-apply-all:disabled {
@@ -208,25 +237,42 @@
 }
 
 .md-file-apply.unapply {
-  @apply bg-[rgba(243,139,168,0.1)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)]
-  hover:bg-[rgba(243,139,168,0.2)] hover:border-[rgba(243,139,168,0.5)];
+  background-color: color-mix(in srgb, var(--ctp-red) 10%, transparent);
+  color: var(--ctp-red);
+  border: 1px solid color-mix(in srgb, var(--ctp-red) 30%, transparent);
+}
+
+.md-file-apply.unapply:hover {
+  background-color: color-mix(in srgb, var(--ctp-red) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-red) 50%, transparent);
 }
 
 .md-file-apply.unapply.disabled,
 .md-file-apply.unapply:disabled {
-  @apply opacity-50 cursor-default hover:bg-[rgba(243,139,168,0.1)] hover:border-[rgba(243,139,168,0.3)];
+  @apply opacity-50 cursor-default;
+  background-color: color-mix(in srgb, var(--ctp-red) 10%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-red) 30%, transparent);
 }
 
 .md-file-copy,
 .md-commit-copy {
-  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast
-    bg-[rgba(137,180,250,0.1)] text-[#89b4fa] border border-[rgba(137,180,250,0.3)]
-    hover:bg-[rgba(137,180,250,0.2)] hover:border-[rgba(137,180,250,0.5)];
+  @apply inline-flex items-center justify-center gap-1 p-1 text-[11px] font-semibold rounded-sm cursor-pointer flex-shrink-0 leading-snug transition-colors duration-fast;
+  background-color: color-mix(in srgb, var(--ctp-blue) 10%, transparent);
+  color: var(--ctp-blue);
+  border: 1px solid color-mix(in srgb, var(--ctp-blue) 30%, transparent);
+}
+
+.md-file-copy:hover,
+.md-commit-copy:hover {
+  background-color: color-mix(in srgb, var(--ctp-blue) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-blue) 50%, transparent);
 }
 
 .md-file-copy.copied,
 .md-commit-copy.copied {
-  @apply bg-[rgba(34,197,94,0.15)] text-[#22c55e] border-[rgba(34,197,94,0.4)];
+  background-color: color-mix(in srgb, var(--ctp-green) 15%, transparent);
+  color: var(--ctp-green);
+  border-color: color-mix(in srgb, var(--ctp-green) 40%, transparent);
 }
 
 .md-file-block {
@@ -289,7 +335,11 @@
 }
 
 .md-file-line-content {
-  @apply px-4 py-0 pr-3 whitespace-pre leading-snug hover:bg-[rgba(137,180,250,0.05)];
+  @apply px-4 py-0 pr-3 whitespace-pre leading-snug;
+}
+
+.md-file-line-content:hover {
+  background-color: color-mix(in srgb, var(--ctp-blue) 5%, transparent);
 }
 
 .md-file-line-content code {
@@ -329,7 +379,8 @@
 }
 
 .md-file-error {
-  @apply px-4 py-3 text-[12px] text-ctp-peach bg-[rgba(250,179,135,0.05)];
+  @apply px-4 py-3 text-[12px] text-ctp-peach;
+  background-color: color-mix(in srgb, var(--ctp-peach) 5%, transparent);
 }
 
 .md-file-binary-notice {
@@ -351,20 +402,22 @@
 
 .md-file-diff-side.old,
 .md-file-diff-side.old .md-file-diff-code {
-  @apply bg-[rgba(243,139,168,0.05)];
+  background-color: color-mix(in srgb, var(--ctp-red) 5%, transparent);
 }
 
 .md-file-diff-side.old .md-file-diff-code .md-file-gutter {
-  @apply bg-[rgba(243,139,168,0.05)] border-r-[rgba(243,139,168,0.2)];
+  background-color: color-mix(in srgb, var(--ctp-red) 5%, transparent);
+  border-right-color: color-mix(in srgb, var(--ctp-red) 20%, transparent);
 }
 
 .md-file-diff-side.new,
 .md-file-diff-side.new .md-file-diff-code {
-  @apply bg-[rgba(166,227,161,0.05)];
+  background-color: color-mix(in srgb, var(--ctp-green) 5%, transparent);
 }
 
 .md-file-diff-side.new .md-file-diff-code .md-file-gutter {
-  @apply bg-[rgba(166,227,161,0.05)] border-r-[rgba(166,227,161,0.2)];
+  background-color: color-mix(in srgb, var(--ctp-green) 5%, transparent);
+  border-right-color: color-mix(in srgb, var(--ctp-green) 20%, transparent);
 }
 
 .md-file-syntax {
@@ -386,8 +439,8 @@
 
 .md-plain-pre {
   @apply py-3 px-3.5 overflow-auto whitespace-pre font-mono;
-  background: #282c34;
-  color: #abb2bf;
+  background: var(--color-background-mute);
+  color: var(--ctp-subtext0);
 }
 
 .md-plain-pre code {
@@ -408,13 +461,21 @@
 }
 
 .md-unapply-all {
-  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug
-    bg-[rgba(243,139,168,0.1)] text-[#f38ba8] border border-[rgba(243,139,168,0.3)]
-    hover:bg-[rgba(243,139,168,0.2)] hover:border-[rgba(243,139,168,0.5)];
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors duration-fast flex-shrink-0 leading-snug;
+  background-color: color-mix(in srgb, var(--ctp-red) 10%, transparent);
+  color: var(--ctp-red);
+  border: 1px solid color-mix(in srgb, var(--ctp-red) 30%, transparent);
+}
+
+.md-unapply-all:hover {
+  background-color: color-mix(in srgb, var(--ctp-red) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-red) 50%, transparent);
 }
 
 .md-unapply-all:disabled {
-  @apply opacity-50 cursor-default hover:bg-[rgba(243,139,168,0.1)] hover:border-[rgba(243,139,168,0.3)];
+  @apply opacity-50 cursor-default;
+  background-color: color-mix(in srgb, var(--ctp-red) 10%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-red) 30%, transparent);
 }
 
 .md-file-include {
@@ -426,13 +487,22 @@
 }
 
 .md-file-include-add {
-  @apply inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-semibold leading-snug rounded-sm cursor-pointer transition-colors duration-fast
-    bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]
-    hover:bg-[rgba(34,197,94,0.2)] hover:border-[rgba(34,197,94,0.5)];
+  @apply inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-semibold leading-snug rounded-sm cursor-pointer transition-colors duration-fast;
+  background-color: color-mix(in srgb, var(--ctp-green) 10%, transparent);
+  color: var(--ctp-green);
+  border: 1px solid color-mix(in srgb, var(--ctp-green) 30%, transparent);
+}
+
+.md-file-include-add:hover {
+  background-color: color-mix(in srgb, var(--ctp-green) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-green) 50%, transparent);
 }
 
 .md-file-include-add.not-found {
-  @apply bg-[rgba(250,179,135,0.12)] text-[#fab387] border-[rgba(250,179,135,0.3)] cursor-default;
+  background-color: color-mix(in srgb, var(--ctp-peach) 12%, transparent);
+  color: var(--ctp-peach);
+  border-color: color-mix(in srgb, var(--ctp-peach) 30%, transparent);
+  @apply cursor-default;
 }
 
 .md-file-include-add:disabled {
