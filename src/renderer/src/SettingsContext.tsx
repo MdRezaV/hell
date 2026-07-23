@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 
 export interface CatppuccinPalette {
   rosewater: string
@@ -248,10 +256,28 @@ function applySettings(s: SettingsState): void {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [settings, setSettings] = useState<SettingsState>(loadSettings)
+  const loadedFromIpcRef = useRef(false)
+
+  useEffect(() => {
+    let cancelled = false
+    window.electron.ipcRenderer
+      .invoke('settings:load')
+      .then((saved: SettingsState | null) => {
+        if (cancelled || !saved) return
+        loadedFromIpcRef.current = true
+        setSettings((prev) => ({ ...prev, ...saved }))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     applySettings(settings)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+    const json = JSON.stringify(settings)
+    localStorage.setItem(STORAGE_KEY, json)
+    window.electron.ipcRenderer.invoke('settings:save', json).catch(() => {})
   }, [settings])
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'path'
 import { createReadStream } from 'fs'
 import { access, mkdir, readFile, unlink, writeFile } from 'fs/promises'
@@ -435,5 +435,20 @@ export function registerIpcHandlers(): void {
     const effectiveRoot = rootDir ?? dirPath
     const nodes = await readDirTree(dirPath, [], true, effectiveRoot)
     return formatTreeText(nodes)
+  })
+
+  safeHandle('settings:load', async () => {
+    const settingsPath = join(app.getPath('userData'), 'settings.json')
+    try {
+      const content = await readFile(settingsPath, 'utf-8')
+      return JSON.parse(content)
+    } catch {
+      return null
+    }
+  })
+
+  safeHandle('settings:save', async (_, json: string) => {
+    const settingsPath = join(app.getPath('userData'), 'settings.json')
+    await writeFile(settingsPath, json, 'utf-8')
   })
 }
