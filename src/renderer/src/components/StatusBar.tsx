@@ -1,4 +1,5 @@
 import React, { memo } from 'react'
+import { Settings } from 'lucide-react'
 import '../styles/StatusBar.css'
 
 interface StatusBarProps {
@@ -6,6 +7,7 @@ interface StatusBarProps {
   tokenCount: number | null
   onCopy: () => void
   onPaste: () => void
+  onSettings: () => void
 }
 
 function formatLineCount(n: number | null): string {
@@ -31,7 +33,8 @@ const StatusBar = memo(function StatusBar({
   lineCount,
   tokenCount,
   onCopy,
-  onPaste
+  onPaste,
+  onSettings
 }: StatusBarProps): React.JSX.Element {
   return (
     <div className="statusbar">
@@ -43,6 +46,9 @@ const StatusBar = memo(function StatusBar({
         </button>
         <button onClick={onCopy} className="statusbar-btn">
           COPY
+        </button>
+        <button onClick={onSettings} className="statusbar-btn" title="Settings">
+          <Settings size={12} />
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@ import log from 'electron-log/renderer'
 import FileExplorer, { type FileExplorerHandle, type FileTag } from './components/FileExplorer'
 import AIChat, { type AIChatHandle, type ChatMessage } from './components/AIChat'
 import StatusBar from './components/StatusBar'
+import Settings from './components/Settings'
 import { WorkspaceContext } from './WorkspaceContext'
 import { useLoading } from './LoadingContext'
 import { useResizableLayout } from './hooks/useResizableLayout'
@@ -27,6 +28,7 @@ function App(): React.JSX.Element {
   const [dirStructureTag, setDirStructureTag] = useState<FileTag | null>('PND')
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
   const copySnapshotRef = useRef<Set<string>>(new Set())
   const lastPasteAddedRef = useRef<Set<string>>(new Set())
   const lastCopiedUserIndexRef = useRef<number>(-1)
@@ -1018,8 +1020,10 @@ function App(): React.JSX.Element {
           tokenCount={workspace ? (tokenCount ?? 0) : null}
           onCopy={handleCopy}
           onPaste={handlePaste}
+          onSettings={() => setShowSettings(true)}
         />
       </div>
+      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </WorkspaceContext.Provider>
   )
 }
