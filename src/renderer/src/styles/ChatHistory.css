@@ -3,7 +3,7 @@
 }
 
 .chat-history-header {
-  @apply flex items-center justify-between px-3 h-7 border-b border-border bg-background-mute flex-shrink-0;
+  @apply flex items-center justify-between px-3 h-7 leading-none border-b border-border bg-background-mute flex-shrink-0;
 }
 
 .chat-history-header-btn {
