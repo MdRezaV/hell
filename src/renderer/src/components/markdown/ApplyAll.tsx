@@ -61,32 +61,6 @@ export function FileIncludeProvider({ children }: { children: ReactNode }): Reac
   return <FileIncludeContext.Provider value={value}>{children}</FileIncludeContext.Provider>
 }
 
-export function FileIncludeBar(): React.JSX.Element | null {
-  const ctx = useFileIncludeContext()
-  if (!ctx) return null
-  const { paths } = ctx
-  if (paths.size === 0) return null
-
-  const handleAddAll = (): void => {
-    for (const path of paths) {
-      const detail: { path: string; matched?: boolean } = { path }
-      window.dispatchEvent(new CustomEvent('file-include-add', { detail }))
-      if (detail.matched) {
-        ctx.markAdded(path)
-      }
-    }
-  }
-
-  return (
-    <div className="md-apply-all-bar">
-      <button type="button" className="md-apply-all" onClick={handleAddAll}>
-        <Plus size={12} />
-        <span>Add All ({paths.size})</span>
-      </button>
-    </div>
-  )
-}
-
 export function ApplyAllProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [blocks, setBlocks] = useState<Map<string, ApplyBlockInfo>>(new Map())
 
@@ -135,18 +109,27 @@ export function ApplyAllProvider({ children }: { children: ReactNode }): React.J
 
 export function ApplyAllBar(): React.JSX.Element | null {
   const ctx = useApplyAllContext()
+  const includeCtx = useFileIncludeContext()
   const [busy, setBusy] = useState<'idle' | 'applying' | 'unapplying'>('idle')
-  if (!ctx) return null
-  const { blocks } = ctx
-  const blockArr = [...blocks.values()]
-  if (blockArr.length === 0) return null
 
+  const hasApplyBlocks = !!ctx && ctx.blocks.size > 0
+  const hasIncludePaths = !!includeCtx && includeCtx.paths.size > 0
+
+  if (!hasApplyBlocks && !hasIncludePaths) return null
+
+  const blockArr = ctx ? [...ctx.blocks.values()] : []
   const idleBlocks = blockArr.filter((b) => b.status === 'idle')
   const idleCount = idleBlocks.length
   const appliedBlocks = blockArr.filter((b) => b.status === 'applied' && b.unapply)
   const appliedCount = appliedBlocks.length
   const hasWarning = blockArr.some((b) => b.status === 'notFound')
-  const allApplied = blockArr.every((b) => b.status === 'applied')
+  const allApplied = blockArr.length > 0 && blockArr.every((b) => b.status === 'applied')
+
+  const unaddedPaths = includeCtx
+    ? [...includeCtx.paths].filter((p) => !includeCtx.addedPaths.has(p))
+    : []
+  const unaddedCount = unaddedPaths.length
+  const allAdded = hasIncludePaths && unaddedCount === 0
 
   const handleApplyAll = async (): Promise<void> => {
     if (busy !== 'idle' || idleCount === 0) return
@@ -169,6 +152,17 @@ export function ApplyAllBar(): React.JSX.Element | null {
       }
     } finally {
       setBusy('idle')
+    }
+  }
+
+  const handleAddAll = (): void => {
+    if (!includeCtx || unaddedCount === 0) return
+    for (const path of unaddedPaths) {
+      const detail: { path: string; matched?: boolean } = { path }
+      window.dispatchEvent(new CustomEvent('file-include-add', { detail }))
+      if (detail.matched) {
+        includeCtx.markAdded(path)
+      }
     }
   }
 
@@ -206,26 +200,52 @@ export function ApplyAllBar(): React.JSX.Element | null {
     unapplyDisabled = true
   }
 
+  let addLabel = `Add All (${unaddedCount})`
+  let addVariantClass = ''
+  let addDisabled = false
+  if (allAdded) {
+    addLabel = 'All Added'
+    addVariantClass = ' applied'
+    addDisabled = true
+  } else if (unaddedCount === 0) {
+    addDisabled = true
+  }
+
   return (
     <div className="md-apply-all-bar">
-      <button
-        type="button"
-        className="md-unapply-all"
-        onClick={handleUnapplyAll}
-        disabled={unapplyDisabled}
-      >
-        <Undo2 size={12} />
-        <span>{unapplyLabel}</span>
-      </button>
-      <button
-        type="button"
-        className={`md-apply-all${variantClass}`}
-        onClick={handleApplyAll}
-        disabled={applyDisabled}
-      >
-        <Check size={12} />
-        <span>{label}</span>
-      </button>
+      {hasApplyBlocks && (
+        <button
+          type="button"
+          className="md-unapply-all"
+          onClick={handleUnapplyAll}
+          disabled={unapplyDisabled}
+        >
+          <Undo2 size={12} />
+          <span>{unapplyLabel}</span>
+        </button>
+      )}
+      {hasIncludePaths && (
+        <button
+          type="button"
+          className={`md-apply-all${addVariantClass}`}
+          onClick={handleAddAll}
+          disabled={addDisabled}
+        >
+          <Plus size={12} />
+          <span>{addLabel}</span>
+        </button>
+      )}
+      {hasApplyBlocks && (
+        <button
+          type="button"
+          className={`md-apply-all${variantClass}`}
+          onClick={handleApplyAll}
+          disabled={applyDisabled}
+        >
+          <Check size={12} />
+          <span>{label}</span>
+        </button>
+      )}
     </div>
   )
 }

@@ -17,12 +17,7 @@ import {
 
 import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
 import { DeferredHighlightingContext } from './markdown/DeferredHighlighting'
-import {
-  ApplyAllBar,
-  ApplyAllProvider,
-  FileIncludeBar,
-  FileIncludeProvider
-} from './markdown/ApplyAll'
+import { ApplyAllBar, ApplyAllProvider, FileIncludeProvider } from './markdown/ApplyAll'
 import { useWorkspace } from '@renderer/WorkspaceContext'
 
 import { StreamingContext, useIsStreaming } from './markdown/StreamingContext'
@@ -252,7 +247,6 @@ const Markdown = memo(function Markdown({
               />
             ))}
             <ApplyAllBar />
-            <FileIncludeBar />
           </div>
         </ApplyAllProvider>
       </FileIncludeProvider>
