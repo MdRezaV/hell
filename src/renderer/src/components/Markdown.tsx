@@ -17,7 +17,7 @@ import {
 
 import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
 import { DeferredHighlightingContext } from './markdown/DeferredHighlighting'
-import { ApplyAllBar, ApplyAllProvider } from './markdown/ApplyAll'
+import { ApplyAllBar, ApplyAllProvider, FileIncludeProvider } from './markdown/ApplyAll'
 import { useWorkspace } from '@renderer/WorkspaceContext'
 
 import { StreamingContext, useIsStreaming } from './markdown/StreamingContext'
@@ -237,16 +237,18 @@ const Markdown = memo(function Markdown({
   return (
     <DeferredHighlightingContext.Provider value={deferHeavyRendering}>
       <ApplyAllProvider key={workspace ?? 'no-workspace'}>
-        <div className="md-content">
-          {segments.map((segment, i) => (
-            <MarkdownSegment
-              key={segment.startIndex}
-              content={segment.content}
-              isStreaming={isStreaming && i === lastIndex}
-            />
-          ))}
-          <ApplyAllBar />
-        </div>
+        <FileIncludeProvider key={workspace ?? 'no-workspace'}>
+          <div className="md-content">
+            {segments.map((segment, i) => (
+              <MarkdownSegment
+                key={segment.startIndex}
+                content={segment.content}
+                isStreaming={isStreaming && i === lastIndex}
+              />
+            ))}
+            <ApplyAllBar />
+          </div>
+        </FileIncludeProvider>
       </ApplyAllProvider>
     </DeferredHighlightingContext.Provider>
   )

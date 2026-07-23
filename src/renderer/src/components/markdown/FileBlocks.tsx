@@ -40,6 +40,7 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
   const register = includeCtx?.register
   const unregister = includeCtx?.unregister
   const markAdded = includeCtx?.markAdded
+  const markNotFound = includeCtx?.markNotFound
 
   useEffect(() => {
     register?.(path)
@@ -57,8 +58,9 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
       markAdded?.(path)
     } else {
       setStatus('notFound')
+      markNotFound?.(path)
     }
-  }, [path, markAdded])
+  }, [path, markAdded, markNotFound])
 
   const effectiveStatus = status === 'idle' && includeCtx?.addedPaths.has(path) ? 'added' : status
 

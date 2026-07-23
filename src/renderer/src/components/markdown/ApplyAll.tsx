@@ -11,8 +11,10 @@ interface FileIncludeContextValue {
   register: (path: string) => void
   unregister: (path: string) => void
   markAdded: (path: string) => void
+  markNotFound: (path: string) => void
   paths: Set<string>
   addedPaths: Set<string>
+  notFoundPaths: Set<string>
 }
 
 const FileIncludeContext = createContext<FileIncludeContextValue | null>(null)
@@ -25,6 +27,7 @@ export function useFileIncludeContext(): FileIncludeContextValue | null {
 export function FileIncludeProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [paths, setPaths] = useState<Set<string>>(new Set())
   const [addedPaths, setAddedPaths] = useState<Set<string>>(new Set())
+  const [notFoundPaths, setNotFoundPaths] = useState<Set<string>>(new Set())
 
   const register = useCallback((path: string) => {
     setPaths((prev) => {
@@ -53,9 +56,18 @@ export function FileIncludeProvider({ children }: { children: ReactNode }): Reac
     })
   }, [])
 
+  const markNotFound = useCallback((path: string) => {
+    setNotFoundPaths((prev) => {
+      if (prev.has(path)) return prev
+      const next = new Set(prev)
+      next.add(path)
+      return next
+    })
+  }, [])
+
   const value = useMemo(
-    () => ({ paths, addedPaths, register, unregister, markAdded }),
-    [paths, addedPaths, register, unregister, markAdded]
+    () => ({ paths, addedPaths, notFoundPaths, register, unregister, markAdded, markNotFound }),
+    [paths, addedPaths, notFoundPaths, register, unregister, markAdded, markNotFound]
   )
 
   return <FileIncludeContext.Provider value={value}>{children}</FileIncludeContext.Provider>
@@ -130,6 +142,11 @@ export function ApplyAllBar(): React.JSX.Element | null {
     : []
   const unaddedCount = unaddedPaths.length
   const allAdded = hasIncludePaths && unaddedCount === 0
+  const hasAddWarning = includeCtx ? includeCtx.notFoundPaths.size > 0 : false
+  const addablePaths = includeCtx
+    ? unaddedPaths.filter((p) => !includeCtx.notFoundPaths.has(p))
+    : []
+  const addableCount = addablePaths.length
 
   const handleApplyAll = async (): Promise<void> => {
     if (busy !== 'idle' || idleCount === 0) return
@@ -156,8 +173,8 @@ export function ApplyAllBar(): React.JSX.Element | null {
   }
 
   const handleAddAll = (): void => {
-    if (!includeCtx || unaddedCount === 0) return
-    for (const path of unaddedPaths) {
+    if (!includeCtx || addableCount === 0) return
+    for (const path of addablePaths) {
       const detail: { path: string; matched?: boolean } = { path }
       window.dispatchEvent(new CustomEvent('file-include-add', { detail }))
       if (detail.matched) {
@@ -200,13 +217,19 @@ export function ApplyAllBar(): React.JSX.Element | null {
     unapplyDisabled = true
   }
 
-  let addLabel = `Add All (${unaddedCount})`
+  let addLabel = `Add All (${addableCount})`
   let addVariantClass = ''
   let addDisabled = false
   if (allAdded) {
     addLabel = 'All Added'
     addVariantClass = ' applied'
     addDisabled = true
+  } else if (hasAddWarning) {
+    addVariantClass = ' warning'
+    if (addableCount === 0) {
+      addLabel = 'Not Found'
+      addDisabled = true
+    }
   } else if (unaddedCount === 0) {
     addDisabled = true
   }
