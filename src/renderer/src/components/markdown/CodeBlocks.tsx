@@ -1,7 +1,61 @@
-import React, { memo, useCallback, useMemo, useRef } from 'react'
+import React, { memo, useCallback, useMemo, useRef, type CSSProperties } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Check, Copy, Play, Terminal } from 'lucide-react'
+
+const catppuccinPrism: Record<string, CSSProperties> = {
+  'code[class*="language-"]': {
+    color: 'var(--ctp-text)',
+    background: 'none',
+    whiteSpace: 'pre',
+    wordSpacing: 'normal',
+    wordBreak: 'normal',
+    tabSize: 2,
+    hyphens: 'none'
+  },
+  'pre[class*="language-"]': {
+    color: 'var(--ctp-text)',
+    background: 'transparent',
+    whiteSpace: 'pre',
+    wordSpacing: 'normal',
+    wordBreak: 'normal',
+    tabSize: 2,
+    hyphens: 'none',
+    overflow: 'auto'
+  },
+  comment: { color: 'var(--ctp-overlay0)', fontStyle: 'italic' },
+  prolog: { color: 'var(--ctp-overlay0)' },
+  doctype: { color: 'var(--ctp-overlay0)' },
+  cdata: { color: 'var(--ctp-overlay0)' },
+  punctuation: { color: 'var(--ctp-subtext0)' },
+  namespace: { opacity: 0.7 },
+  property: { color: 'var(--ctp-lavender)' },
+  tag: { color: 'var(--ctp-mauve)' },
+  boolean: { color: 'var(--ctp-peach)' },
+  number: { color: 'var(--ctp-peach)' },
+  constant: { color: 'var(--ctp-peach)' },
+  symbol: { color: 'var(--ctp-peach)' },
+  deleted: { color: 'var(--ctp-red)' },
+  selector: { color: 'var(--ctp-green)' },
+  'attr-name': { color: 'var(--ctp-peach)' },
+  string: { color: 'var(--ctp-green)' },
+  char: { color: 'var(--ctp-green)' },
+  builtin: { color: 'var(--ctp-blue)' },
+  inserted: { color: 'var(--ctp-green)' },
+  operator: { color: 'var(--ctp-sky, var(--ctp-blue))' },
+  entity: { color: 'var(--ctp-blue)', cursor: 'help' },
+  url: { color: 'var(--ctp-blue)' },
+  variable: { color: 'var(--ctp-text)' },
+  atrule: { color: 'var(--ctp-mauve)' },
+  'attr-value': { color: 'var(--ctp-green)' },
+  function: { color: 'var(--ctp-blue)' },
+  'function-variable': { color: 'var(--ctp-blue)' },
+  'class-name': { color: 'var(--ctp-yellow, var(--ctp-peach))' },
+  keyword: { color: 'var(--ctp-mauve)' },
+  regex: { color: 'var(--ctp-pink, var(--ctp-red))' },
+  important: { color: 'var(--ctp-red)', fontWeight: 'bold' },
+  bold: { fontWeight: 'bold' },
+  italic: { fontStyle: 'italic' }
+}
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { normalizeLineEndings } from '../../utils/markdownParser'
 import { useDeferHeavyRendering, useDeferredHighlighting } from './DeferredHighlighting'
@@ -65,7 +119,7 @@ export const LinesDisplay = memo(function LinesDisplay({
       </div>
       <div className="md-file-code-scroll" onScroll={handleCodeScroll} ref={codeRef}>
         {hasSyntax && !showPlain ? (
-          <SyntaxHighlighter language={language} style={oneDark} className="md-file-syntax">
+          <SyntaxHighlighter language={language} style={catppuccinPrism} className="md-file-syntax">
             {normalizedCode}
           </SyntaxHighlighter>
         ) : (
@@ -120,7 +174,7 @@ export const CommandBlock = memo(function CommandBlock({
           )}
         </button>
       </div>
-      <SyntaxHighlighter language="bash" style={oneDark} className="md-command-syntax">
+      <SyntaxHighlighter language="bash" style={catppuccinPrism} className="md-command-syntax">
         {memoizedCode}
       </SyntaxHighlighter>
     </div>
@@ -166,21 +220,37 @@ export const GenericCodeBlock = memo(function GenericCodeBlock({
   showLangLabel: boolean
   isStreaming?: boolean
 }): React.JSX.Element {
+  const { copied, copy } = useCopyToClipboard()
   const deferHeavy = useDeferHeavyRendering()
   const containerRef = useRef<HTMLDivElement>(null)
   const highlightReady = useDeferredHighlighting(deferHeavy, containerRef)
   const showPlain = isStreaming || (deferHeavy && !highlightReady)
   const memoizedCode = useMemo(() => code, [code])
 
+  const handleCopy = useCallback(async (): Promise<void> => {
+    await copy(code)
+  }, [copy, code])
+
   return (
     <div className="md-code-block-wrapper" ref={containerRef}>
-      {showLangLabel && <div className="md-code-lang">{language}</div>}
+      <div className="md-code-block-top">
+        {showLangLabel && <span className="md-code-lang">{language}</span>}
+        <button
+          type="button"
+          className={`md-code-copy${copied ? ' copied' : ''}`}
+          onClick={handleCopy}
+          title={copied ? 'Copied' : 'Copy code'}
+          aria-label={copied ? 'Copied' : 'Copy code'}
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
+      </div>
       {showPlain ? (
         <pre className="md-syntax-block md-plain-pre">
           <code>{memoizedCode}</code>
         </pre>
       ) : (
-        <SyntaxHighlighter language={language} style={oneDark} className="md-syntax-block">
+        <SyntaxHighlighter language={language} style={catppuccinPrism} className="md-syntax-block">
           {memoizedCode}
         </SyntaxHighlighter>
       )}

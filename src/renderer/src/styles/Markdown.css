@@ -78,18 +78,40 @@
 }
 
 .md-content pre code {
-  @apply p-0 bg-none rounded-none text-text;
+  @apply p-0 bg-transparent rounded-none text-text;
 }
 
 .md-code-block-wrapper {
-  @apply relative min-w-0 overflow-hidden;
+  @apply relative my-2.5 min-w-0 overflow-hidden bg-background-mute border border-border-subtle rounded-md transition-colors duration-normal hover:border-ctp-overlay0;
   content-visibility: auto;
   contain-intrinsic-size: auto 200px;
   contain: layout style paint;
 }
 
+.md-code-block-top {
+  @apply absolute top-0 right-0 z-10 flex items-center gap-1.5 p-1.5;
+}
+
 .md-code-lang {
-  @apply absolute top-0 right-0 p-1.5 text-[10px] font-bold uppercase tracking-wider text-text-faint border-t-0 border-r-0 pointer-events-none;
+  @apply text-[10px] font-bold uppercase tracking-wider text-text-faint;
+}
+
+.md-code-copy {
+  @apply inline-flex items-center justify-center p-1 rounded-sm cursor-pointer transition-colors duration-fast;
+  background-color: color-mix(in srgb, var(--ctp-blue) 10%, transparent);
+  color: var(--ctp-blue);
+  border: 1px solid color-mix(in srgb, var(--ctp-blue) 30%, transparent);
+}
+
+.md-code-copy:hover {
+  background-color: color-mix(in srgb, var(--ctp-blue) 20%, transparent);
+  border-color: color-mix(in srgb, var(--ctp-blue) 50%, transparent);
+}
+
+.md-code-copy.copied {
+  background-color: color-mix(in srgb, var(--ctp-green) 15%, transparent);
+  color: var(--ctp-green);
+  border-color: color-mix(in srgb, var(--ctp-green) 40%, transparent);
 }
 
 .md-code-block-wrapper pre {
@@ -433,7 +455,7 @@
 }
 
 .md-syntax-block {
-  @apply !m-0 !text-[12.5px] !leading-[1.5];
+  @apply !m-0 !text-[12.5px] !leading-[1.5] !bg-transparent;
   border-radius: 0 0 6px 6px !important;
 }
 
@@ -450,7 +472,7 @@
 
 .md-command-syntax code,
 .md-syntax-block code {
-  @apply !font-[inherit] !text-inherit !leading-[inherit];
+  @apply !font-[inherit] !text-inherit !leading-[inherit] !bg-transparent;
 }
 
 .md-apply-all-bar {
