@@ -20,11 +20,62 @@ const COLOR_PRESETS: Array<{ label: string; accent: string; bg: string; text: st
 
 const SCALE_PRESETS = [80, 90, 100, 110, 120, 140]
 
+const HEX_REGEX = /^#[0-9a-fA-F]{6}$/
+
+function isValidHex(hex: string): boolean {
+  return HEX_REGEX.test(hex)
+}
+
+function normalizeHex(raw: string): string {
+  let v = raw.trim()
+  if (v.length > 0 && v[0] !== '#') v = '#' + v
+  if (v.length === 4) {
+    v = '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]
+  }
+  return v.toLowerCase()
+}
+
+interface ColorFieldProps {
+  label: string
+  colorValue: string
+  hexValue: string
+  onPickerChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onHexChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onHexBlur: () => void
+}
+
+const ColorField = memo(function ColorField({
+  label,
+  colorValue,
+  hexValue,
+  onPickerChange,
+  onHexChange,
+  onHexBlur
+}: ColorFieldProps): React.JSX.Element {
+  return (
+    <div className="settings-color-row">
+      <label>{label}</label>
+      <div className="settings-color-input">
+        <input type="color" value={colorValue} onChange={onPickerChange} />
+        <input
+          type="text"
+          className="settings-hex-input"
+          value={hexValue}
+          onChange={onHexChange}
+          onBlur={onHexBlur}
+          maxLength={7}
+          spellCheck={false}
+        />
+      </div>
+    </div>
+  )
+})
+
 function Settings({ onClose }: SettingsProps): React.JSX.Element {
   const { settings, updateSettings, resetSettings } = useSettings()
-  const [localAccent, setLocalAccent] = useState(settings.accentColor)
-  const [localBg, setLocalBg] = useState(settings.bgColor)
-  const [localText, setLocalText] = useState(settings.textColor)
+  const [accentHex, setAccentHex] = useState(settings.accentColor)
+  const [bgHex, setBgHex] = useState(settings.bgColor)
+  const [textHex, setTextHex] = useState(settings.textColor)
   const backdropRef = useRef<HTMLDivElement>(null)
 
   const handleBackdropClick = useCallback(
@@ -34,28 +85,43 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
     [onClose]
   )
 
-  const handleAccentChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setLocalAccent(e.target.value)
-      updateSettings({ accentColor: e.target.value })
-    },
+  const handlePickerChange = useCallback(
+    (prop: 'accentColor' | 'bgColor' | 'textColor', hexSetter: (v: string) => void) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        hexSetter(e.target.value)
+        updateSettings({ [prop]: e.target.value })
+      },
     [updateSettings]
   )
 
-  const handleBgChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setLocalBg(e.target.value)
-      updateSettings({ bgColor: e.target.value })
-    },
+  const handleHexInput = useCallback(
+    (prop: 'accentColor' | 'bgColor' | 'textColor', hexSetter: (v: string) => void) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value
+        hexSetter(raw)
+        const normalized = normalizeHex(raw)
+        if (isValidHex(normalized)) {
+          updateSettings({ [prop]: normalized })
+        }
+      },
     [updateSettings]
   )
 
-  const handleTextChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setLocalText(e.target.value)
-      updateSettings({ textColor: e.target.value })
+  const handleHexBlur = useCallback(
+    (
+      prop: 'accentColor' | 'bgColor' | 'textColor',
+      hexSetter: (v: string) => void,
+      raw: string
+    ) => {
+      const normalized = normalizeHex(raw)
+      if (isValidHex(normalized)) {
+        hexSetter(normalized)
+        updateSettings({ [prop]: normalized })
+      } else {
+        hexSetter(settings[prop])
+      }
     },
-    [updateSettings]
+    [settings, updateSettings]
   )
 
   const handleScaleChange = useCallback(
@@ -67,9 +133,9 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
 
   const applyPreset = useCallback(
     (preset: (typeof COLOR_PRESETS)[number]) => {
-      setLocalAccent(preset.accent)
-      setLocalBg(preset.bg)
-      setLocalText(preset.text)
+      setAccentHex(preset.accent)
+      setBgHex(preset.bg)
+      setTextHex(preset.text)
       updateSettings({ accentColor: preset.accent, bgColor: preset.bg, textColor: preset.text })
     },
     [updateSettings]
@@ -83,9 +149,9 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
       textColor: '#cdd6f4',
       scale: 100
     }
-    setLocalAccent(defaults.accentColor)
-    setLocalBg(defaults.bgColor)
-    setLocalText(defaults.textColor)
+    setAccentHex(defaults.accentColor)
+    setBgHex(defaults.bgColor)
+    setTextHex(defaults.textColor)
   }, [resetSettings])
 
   return (
@@ -123,27 +189,30 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
 
           <section className="settings-section">
             <h3>Colors</h3>
-            <div className="settings-color-row">
-              <label>Accent</label>
-              <div className="settings-color-input">
-                <input type="color" value={localAccent} onChange={handleAccentChange} />
-                <span className="settings-color-hex">{localAccent}</span>
-              </div>
-            </div>
-            <div className="settings-color-row">
-              <label>Background</label>
-              <div className="settings-color-input">
-                <input type="color" value={localBg} onChange={handleBgChange} />
-                <span className="settings-color-hex">{localBg}</span>
-              </div>
-            </div>
-            <div className="settings-color-row">
-              <label>Text</label>
-              <div className="settings-color-input">
-                <input type="color" value={localText} onChange={handleTextChange} />
-                <span className="settings-color-hex">{localText}</span>
-              </div>
-            </div>
+            <ColorField
+              label="Accent"
+              colorValue={accentHex}
+              hexValue={accentHex}
+              onPickerChange={handlePickerChange('accentColor', setAccentHex)}
+              onHexChange={handleHexInput('accentColor', setAccentHex)}
+              onHexBlur={() => handleHexBlur('accentColor', setAccentHex, accentHex)}
+            />
+            <ColorField
+              label="Background"
+              colorValue={bgHex}
+              hexValue={bgHex}
+              onPickerChange={handlePickerChange('bgColor', setBgHex)}
+              onHexChange={handleHexInput('bgColor', setBgHex)}
+              onHexBlur={() => handleHexBlur('bgColor', setBgHex, bgHex)}
+            />
+            <ColorField
+              label="Text"
+              colorValue={textHex}
+              hexValue={textHex}
+              onPickerChange={handlePickerChange('textColor', setTextHex)}
+              onHexChange={handleHexInput('textColor', setTextHex)}
+              onHexBlur={() => handleHexBlur('textColor', setTextHex, textHex)}
+            />
           </section>
 
           <section className="settings-section">

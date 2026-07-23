@@ -99,6 +99,14 @@
   @apply text-[11px] font-mono text-text-muted w-[60px];
 }
 
+.settings-hex-input {
+  @apply w-[72px] px-1.5 py-0.5 text-[11px] font-mono text-text-secondary bg-surface-0 border border-border rounded cursor-text;
+}
+
+.settings-hex-input:focus {
+  @apply outline-none border-accent;
+}
+
 .settings-scale {
   @apply flex items-center gap-3 mb-3;
 }

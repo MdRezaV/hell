@@ -55,6 +55,33 @@ export function SettingsProvider({ children }: { children: React.ReactNode }): R
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
   }, [settings])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (!e.ctrlKey && !e.metaKey) return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        setSettings((prev) => ({
+          ...prev,
+          scale: Math.min(200, prev.scale + 5)
+        }))
+      } else if (e.key === '-') {
+        e.preventDefault()
+        setSettings((prev) => ({
+          ...prev,
+          scale: Math.max(60, prev.scale - 5)
+        }))
+      } else if (e.key === '0') {
+        e.preventDefault()
+        setSettings((prev) => ({ ...prev, scale: 100 }))
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const updateSettings = useCallback((patch: Partial<SettingsState>) => {
     setSettings((prev) => ({ ...prev, ...patch }))
   }, [])
