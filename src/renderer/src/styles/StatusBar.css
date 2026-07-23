@@ -1,5 +1,5 @@
 .statusbar {
-  @apply flex items-center h-6 px-2.5 bg-[#4a3268] flex-shrink-0 gap-3 leading-none text-[#e8def8];
+  @apply flex items-center h-6 px-2.5 bg-background-mute flex-shrink-0 gap-3 leading-none text-text;
 }
 
 .statusbar-item {
@@ -15,5 +15,5 @@
 }
 
 .statusbar-btn {
-  @apply inline-flex items-center justify-center px-2.5 h-5 text-[10px] font-bold tracking-wider bg-[#563d78] border-0 outline-none rounded-none cursor-pointer leading-none hover:bg-[#644a8a] active:bg-[#72579c];
+  @apply inline-flex items-center justify-center px-2.5 h-5 text-[10px] font-bold tracking-wider bg-background-mute border-0 outline-none rounded-none cursor-pointer leading-none hover:bg-surface-2 active:bg-accent active:text-accent-text;
 }

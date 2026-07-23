@@ -122,28 +122,28 @@
 }
 
 .tree-tag--PND {
-  background-color: rgba(249, 226, 175, 0.45);
-  color: #f9e2af;
+  background-color: color-mix(in srgb, var(--ctp-yellow) 45%, transparent);
+  color: var(--ctp-yellow);
 }
 
 .tree-tag--INQ {
-  background-color: rgba(203, 166, 247, 0.45);
-  color: #cba6f7;
+  background-color: color-mix(in srgb, var(--ctp-mauve) 45%, transparent);
+  color: var(--ctp-mauve);
 }
 
 .tree-tag--ADD {
-  background-color: rgba(166, 227, 161, 0.45);
-  color: #a6e3a1;
+  background-color: color-mix(in srgb, var(--ctp-green) 45%, transparent);
+  color: var(--ctp-green);
 }
 
 .tree-tag--BIN {
-  background-color: rgba(150, 150, 150, 0.3);
-  color: #888;
+  background-color: color-mix(in srgb, var(--ctp-overlay1) 30%, transparent);
+  color: var(--ctp-overlay1);
 }
 
 .tree-tag--HELL {
-  background-color: rgba(243, 139, 168, 0.35);
-  color: #f38ba8;
+  background-color: color-mix(in srgb, var(--ctp-red) 35%, transparent);
+  color: var(--ctp-red);
 }
 
 .tree-label--binary {
