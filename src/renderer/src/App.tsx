@@ -13,6 +13,7 @@ import { resetPreprocessCache } from './utils/markdownParser'
 import { CHAT_MODES } from './utils/PromptEngine'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import ChatHistory, { type ChatHistoryHandle } from './components/ChatHistory'
+import { FileIncludeProvider } from './components/markdown/ApplyAll'
 
 type FileStates = Map<string, FileTag>
 
@@ -955,75 +956,77 @@ function App(): React.JSX.Element {
 
   return (
     <WorkspaceContext.Provider value={{ workspace }}>
-      <div className="flex flex-col w-full h-full">
-        <div className="flex flex-1 overflow-hidden" ref={layoutRef}>
-          <div
-            className="min-w-[160px] max-w-[520px] border-r border-border bg-background-soft flex flex-col"
-            style={{
-              width: `${leftWidth}px`,
-              flexBasis: `${leftWidth}px`,
-              flexGrow: 0,
-              flexShrink: 0
-            }}
-          >
-            <FileExplorer
-              ref={fileExplorerRef}
-              workspace={workspace}
-              onWorkspaceChange={handleWorkspaceChange}
-              fileStates={fileStates}
-              expandedDirs={expandedDirs}
-              onToggleFile={handleToggleFile}
-              onToggleExpand={handleToggleExpand}
-              onClearSelections={handleClearSelections}
-              onFilePathsChange={handleFilePathsChange}
-              onDirPathsChange={handleDirPathsChange}
-              dirStructureTag={dirStructureTag}
-              onDirStructureTagChange={handleDirStructureTagChange}
+      <FileIncludeProvider>
+        <div className="flex flex-col w-full h-full">
+          <div className="flex flex-1 overflow-hidden" ref={layoutRef}>
+            <div
+              className="min-w-[160px] max-w-[520px] border-r border-border bg-background-soft flex flex-col"
+              style={{
+                width: `${leftWidth}px`,
+                flexBasis: `${leftWidth}px`,
+                flexGrow: 0,
+                flexShrink: 0
+              }}
+            >
+              <FileExplorer
+                ref={fileExplorerRef}
+                workspace={workspace}
+                onWorkspaceChange={handleWorkspaceChange}
+                fileStates={fileStates}
+                expandedDirs={expandedDirs}
+                onToggleFile={handleToggleFile}
+                onToggleExpand={handleToggleExpand}
+                onClearSelections={handleClearSelections}
+                onFilePathsChange={handleFilePathsChange}
+                onDirPathsChange={handleDirPathsChange}
+                dirStructureTag={dirStructureTag}
+                onDirStructureTagChange={handleDirStructureTagChange}
+              />
+            </div>
+            <div
+              className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
+              onMouseDown={startResizeLeft}
             />
+            <div className="flex-1 bg-background flex overflow-hidden min-w-0">
+              <AIChat
+                ref={chatRef}
+                onNewChat={handleNewChat}
+                onMessagesChange={handleMessagesChange}
+              />
+            </div>
+            <div
+              className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
+              onMouseDown={startResizeRight}
+            />
+            <div
+              className="min-w-[160px] max-w-[520px] border-l border-border bg-background-soft flex flex-col"
+              style={{
+                width: `${rightWidth}px`,
+                flexBasis: `${rightWidth}px`,
+                flexGrow: 0,
+                flexShrink: 0
+              }}
+            >
+              <ChatHistory
+                ref={chatHistoryRef}
+                workspace={workspace}
+                activeChatId={activeChatId}
+                onSelectChat={handleSelectChat}
+                onNewChat={handleNewChat}
+                refreshKey={chatHistoryKey}
+              />
+            </div>
           </div>
-          <div
-            className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
-            onMouseDown={startResizeLeft}
+          <StatusBar
+            lineCount={workspace ? (lineCount ?? 0) : null}
+            tokenCount={workspace ? (tokenCount ?? 0) : null}
+            onCopy={handleCopy}
+            onPaste={handlePaste}
+            onSettings={() => setShowSettings(true)}
           />
-          <div className="flex-1 bg-background flex overflow-hidden min-w-0">
-            <AIChat
-              ref={chatRef}
-              onNewChat={handleNewChat}
-              onMessagesChange={handleMessagesChange}
-            />
-          </div>
-          <div
-            className="w-[3px] cursor-col-resize bg-transparent relative flex-shrink-0 z-10 transition-[background] duration-normal hover:bg-accent active:bg-accent before:absolute before:top-0 before:bottom-0 before:-left-[3px] before:-right-[3px]"
-            onMouseDown={startResizeRight}
-          />
-          <div
-            className="min-w-[160px] max-w-[520px] border-l border-border bg-background-soft flex flex-col"
-            style={{
-              width: `${rightWidth}px`,
-              flexBasis: `${rightWidth}px`,
-              flexGrow: 0,
-              flexShrink: 0
-            }}
-          >
-            <ChatHistory
-              ref={chatHistoryRef}
-              workspace={workspace}
-              activeChatId={activeChatId}
-              onSelectChat={handleSelectChat}
-              onNewChat={handleNewChat}
-              refreshKey={chatHistoryKey}
-            />
-          </div>
         </div>
-        <StatusBar
-          lineCount={workspace ? (lineCount ?? 0) : null}
-          tokenCount={workspace ? (tokenCount ?? 0) : null}
-          onCopy={handleCopy}
-          onPaste={handlePaste}
-          onSettings={() => setShowSettings(true)}
-        />
-      </div>
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+        {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      </FileIncludeProvider>
     </WorkspaceContext.Provider>
   )
 }

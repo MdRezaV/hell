@@ -39,6 +39,7 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
   const includeCtx = useFileIncludeContext()
   const register = includeCtx?.register
   const unregister = includeCtx?.unregister
+  const markAdded = includeCtx?.markAdded
 
   useEffect(() => {
     register?.(path)
@@ -51,8 +52,13 @@ export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Elem
     const detail: { path: string; matched?: boolean } = { path }
     const event = new CustomEvent('file-include-add', { detail })
     window.dispatchEvent(event)
-    setStatus(detail.matched ? 'added' : 'notFound')
-  }, [path])
+    if (detail.matched) {
+      setStatus('added')
+      markAdded?.(path)
+    } else {
+      setStatus('notFound')
+    }
+  }, [path, markAdded])
 
   const effectiveStatus = status === 'idle' && includeCtx?.addedPaths.has(path) ? 'added' : status
 
