@@ -60,16 +60,20 @@ import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { normalizeLineEndings } from '../../utils/markdownParser'
 import { useDeferHeavyRendering, useDeferredHighlighting } from './DeferredHighlighting'
 
+export type LineHighlight = 'added' | 'removed' | 'unchanged'
+
 export const LinesDisplay = memo(function LinesDisplay({
   code,
   language,
   onScroll,
-  isStreaming = false
+  isStreaming = false,
+  lineHighlights
 }: {
   code: string
   language?: string
   onScroll?: () => void
   isStreaming?: boolean
+  lineHighlights?: LineHighlight[]
 }): React.JSX.Element {
   const normalizedCode = useMemo(() => normalizeLineEndings(code), [code])
   const lines = useMemo(() => normalizedCode.split('\n'), [normalizedCode])
@@ -108,27 +112,54 @@ export const LinesDisplay = memo(function LinesDisplay({
     }
   }, [])
 
+  const lineProps = useMemo(() => {
+    if (!lineHighlights) return undefined
+    return (lineNumber: number): Record<string, string> => {
+      const status = lineHighlights[lineNumber - 1]
+      if (!status || status === 'unchanged') return {}
+      return { className: `md-file-line-${status}` }
+    }
+  }, [lineHighlights])
+
   return (
     <>
       <div className="md-file-gutter" ref={gutterRef} onScroll={handleGutterScroll}>
-        {lines.map((_, i) => (
-          <div key={i} className="md-file-line-number">
-            {i + 1}
-          </div>
-        ))}
+        {lines.map((_, i) => {
+          const hl = lineHighlights?.[i]
+          return (
+            <div
+              key={i}
+              className={`md-file-line-number${hl && hl !== 'unchanged' ? ` ${hl}` : ''}`}
+            >
+              {i + 1}
+            </div>
+          )
+        })}
       </div>
       <div className="md-file-code-scroll" onScroll={handleCodeScroll} ref={codeRef}>
         {hasSyntax && !showPlain ? (
-          <SyntaxHighlighter language={language} style={catppuccinPrism} className="md-file-syntax">
+          <SyntaxHighlighter
+            language={language}
+            style={catppuccinPrism}
+            className="md-file-syntax"
+            wrapLines={!!lineHighlights}
+            lineProps={lineProps}
+          >
             {normalizedCode}
           </SyntaxHighlighter>
         ) : (
           <div className="md-file-code-lines">
-            {lines.map((line, i) => (
-              <div key={i} className="md-file-line-content">
-                <code>{line}</code>
-              </div>
-            ))}
+            {lines.map((line, i) => {
+              const hl = lineHighlights?.[i]
+              return (
+                <div
+                  key={i}
+                  className={`md-file-line-content${hl && hl !== 'unchanged' ? ` md-file-line-${hl}` : ''}`}
+                >
+                  <code>{line}</code>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

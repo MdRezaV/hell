@@ -368,6 +368,34 @@
   background-color: color-mix(in srgb, var(--ctp-blue) 5%, transparent);
 }
 
+.md-file-line-content.md-file-line-removed,
+.md-file-line-number.removed {
+  background-color: color-mix(in srgb, var(--ctp-red) 15%, transparent);
+}
+
+.md-file-line-content.md-file-line-added,
+.md-file-line-number.added {
+  background-color: color-mix(in srgb, var(--ctp-green) 15%, transparent);
+}
+
+.md-file-line-number.removed {
+  color: var(--ctp-red);
+}
+
+.md-file-line-number.added {
+  color: var(--ctp-green);
+}
+
+.md-file-syntax span.md-file-line-removed {
+  display: block;
+  background-color: color-mix(in srgb, var(--ctp-red) 15%, transparent);
+}
+
+.md-file-syntax span.md-file-line-added {
+  display: block;
+  background-color: color-mix(in srgb, var(--ctp-green) 15%, transparent);
+}
+
 .md-file-line-content code {
   @apply block min-h-[1.55em] p-0 bg-none rounded-none text-inherit font-[inherit] leading-[inherit];
 }

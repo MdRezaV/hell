@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { diffLines } from 'diff'
 import {
   ArrowRight,
   Check,
@@ -31,9 +32,37 @@ import {
   invalidateFileContentCache,
   unapplyFileReplace
 } from '../../utils/fileApply'
-import { LinesDisplay } from './CodeBlocks'
+import { LinesDisplay, type LineHighlight } from './CodeBlocks'
 import { ApplyBlockStatus, useApplyRegistration } from '@renderer/hooks/useApplyAll'
 import { useFileIncludeContext } from './ApplyAll'
+
+function computeLineDiff(
+  oldCode: string,
+  newCode: string
+): { oldHighlights: LineHighlight[]; newHighlights: LineHighlight[] } {
+  const changes = diffLines(oldCode, newCode)
+  const oldHighlights: LineHighlight[] = []
+  const newHighlights: LineHighlight[] = []
+
+  for (const part of changes) {
+    const lines = part.value.split('\n')
+    if (lines.length > 0 && lines[lines.length - 1] === '') {
+      lines.pop()
+    }
+    for (let k = 0; k < lines.length; k++) {
+      if (part.added) {
+        newHighlights.push('added')
+      } else if (part.removed) {
+        oldHighlights.push('removed')
+      } else {
+        oldHighlights.push('unchanged')
+        newHighlights.push('unchanged')
+      }
+    }
+  }
+
+  return { oldHighlights, newHighlights }
+}
 
 export function FileIncludeAddButton({ path }: { path: string }): React.JSX.Element {
   const [status, setStatus] = useState<'idle' | 'added' | 'notFound'>('idle')
@@ -133,6 +162,11 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
   const normalizedOldCode = useMemo(() => normalizeLineEndings(oldCode), [oldCode])
   const normalizedNewCode = useMemo(() => normalizeLineEndings(newCode), [newCode])
   const language = useMemo(() => getLanguageFromPath(path), [path])
+
+  const { oldHighlights, newHighlights } = useMemo(
+    () => computeLineDiff(normalizedOldCode, normalizedNewCode),
+    [normalizedOldCode, normalizedNewCode]
+  )
 
   const detectedState = useMemo(() => {
     const content = fileState?.content ?? null
@@ -272,6 +306,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
               language={language}
               onScroll={handleLeftScroll}
               isStreaming={isStreaming}
+              lineHighlights={oldHighlights}
             />
           </div>
         </div>
@@ -298,6 +333,7 @@ export const FileReplaceBlock = memo(function FileReplaceBlock({
               language={language}
               onScroll={handleRightScroll}
               isStreaming={isStreaming}
+              lineHighlights={newHighlights}
             />
           </div>
         </div>
