@@ -16,6 +16,7 @@ import {
   getChatSession,
   getChatSessions,
   getLastWorkspace,
+  getWorkspaces,
   getWorkspaceState,
   pruneWorkspaceState,
   removeFileState,
@@ -118,6 +119,10 @@ export function registerIpcHandlers(): void {
       }
     }
     return null
+  })
+
+  safeHandle('db:get-workspaces', async () => {
+    return getWorkspaces()
   })
 
   safeHandle('db:touch-workspace', async (_, workspacePath: string) => {

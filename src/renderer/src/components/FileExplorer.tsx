@@ -17,6 +17,7 @@ import {
   Folder,
   Folder as FolderBig,
   FolderOpen,
+  History,
   Loader2,
   Search,
   X
@@ -315,6 +316,11 @@ const FileExplorer = forwardRef(function FileExplorer(
   const [contentMatches, setContentMatches] = useState<Set<string>>(new Set())
   const [searchLoading, setSearchLoading] = useState(false)
   const [focusedPath, setFocusedPath] = useState<string | null>(null)
+  const [showWorkspaceList, setShowWorkspaceList] = useState(false)
+  const [workspaceList, setWorkspaceList] = useState<Array<{ path: string; last_opened: number }>>(
+    []
+  )
+  const workspaceListRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancelRef = useRef(false)
   const onFilePathsChangeRef = useRef(onFilePathsChange)
@@ -413,6 +419,41 @@ const FileExplorer = forwardRef(function FileExplorer(
       log.error('Failed to open workspace:', e)
     }
   }
+
+  const toggleWorkspaceList = useCallback(() => {
+    setShowWorkspaceList((prev) => {
+      if (!prev) {
+        window.electron.ipcRenderer
+          .invoke('db:get-workspaces')
+          .then((list: Array<{ path: string; last_opened: number }>) => {
+            setWorkspaceList(list)
+          })
+          .catch((e) => log.error('Failed to get workspaces:', e))
+      }
+      return !prev
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!showWorkspaceList) return
+    const handleClickOutside = (e: MouseEvent): void => {
+      if (workspaceListRef.current && !workspaceListRef.current.contains(e.target as Node)) {
+        setShowWorkspaceList(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showWorkspaceList])
+
+  const handleSelectWorkspace = useCallback(
+    (path: string) => {
+      setShowWorkspaceList(false)
+      if (path !== workspace) {
+        onWorkspaceChange(path)
+      }
+    },
+    [workspace, onWorkspaceChange]
+  )
 
   const handleCancelLoad = (): void => {
     onWorkspaceChange(null)
@@ -684,30 +725,65 @@ const FileExplorer = forwardRef(function FileExplorer(
 
   return (
     <div className="file-explorer">
-      <div className="explorer-header">
+      <div className="explorer-header" onClick={toggleWorkspaceList}>
         <div className="explorer-header-left">
           <span className="explorer-header-title">{workspace.split(/[/\\]/).pop()}</span>
           <span className="explorer-count">
             {checkedCount}/{fileCount}
           </span>
+          <History size={12} className="explorer-header-history" />
         </div>
         <div className="explorer-header-actions">
           {!loading && (
-            <button onClick={onClearSelections} title="Clear selections">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onClearSelections()
+              }}
+              title="Clear selections"
+            >
               <Eraser size={14} strokeWidth={2} />
             </button>
           )}
           {loading ? (
-            <button onClick={handleCancelLoad} title="Cancel loading">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCancelLoad()
+              }}
+              title="Cancel loading"
+            >
               <X size={14} strokeWidth={2} />
             </button>
           ) : (
-            <button onClick={handleOpenWorkspace} title="Open Folder">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenWorkspace()
+              }}
+              title="Open Folder"
+            >
               <FolderOpen size={14} strokeWidth={2} />
             </button>
           )}
         </div>
       </div>
+      {showWorkspaceList && (
+        <div className="explorer-workspace-list" ref={workspaceListRef}>
+          {workspaceList.map((ws) => (
+            <div
+              key={ws.path}
+              className={`explorer-workspace-item${ws.path === workspace ? ' explorer-workspace-item--active' : ''}`}
+              onClick={() => handleSelectWorkspace(ws.path)}
+              title={ws.path}
+            >
+              <Folder size={13} className="explorer-workspace-item-icon" />
+              <span className="explorer-workspace-item-name">{ws.path.split(/[/\\]/).pop()}</span>
+              <span className="explorer-workspace-item-path">{ws.path}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="explorer-search">
         <Search size={13} className="explorer-search-icon" />
         <input

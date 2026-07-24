@@ -51,6 +51,54 @@
   @apply text-[11px] text-text-faint font-medium px-1;
 }
 
+.explorer-header-history {
+  @apply text-text-faint flex-shrink-0 opacity-60;
+}
+
+.explorer-workspace-list {
+  @apply border-b border-border bg-background-mute overflow-y-auto flex-shrink-0;
+  max-height: 140px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ctp-surface1) transparent;
+}
+
+.explorer-workspace-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.explorer-workspace-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.explorer-workspace-list::-webkit-scrollbar-thumb {
+  background-color: var(--ctp-surface1);
+  border-radius: 2px;
+}
+
+.explorer-workspace-item {
+  @apply flex items-center gap-1.5 h-7 px-2 cursor-pointer whitespace-nowrap overflow-hidden transition-colors duration-fast;
+}
+
+.explorer-workspace-item:hover {
+  background-color: color-mix(in srgb, var(--ctp-surface0) 50%, transparent);
+}
+
+.explorer-workspace-item--active {
+  background-color: color-mix(in srgb, var(--ctp-blue) 12%, transparent);
+}
+
+.explorer-workspace-item-icon {
+  @apply flex-shrink-0 text-ctp-blue;
+}
+
+.explorer-workspace-item-name {
+  @apply text-[12px] font-medium text-text flex-shrink-0;
+}
+
+.explorer-workspace-item-path {
+  @apply text-[10px] text-text-faint overflow-hidden text-ellipsis min-w-0 ml-auto pl-2;
+}
+
 .explorer-search {
   @apply flex items-center gap-1.5 p-[5px] border-b border-border-subtle flex-shrink-0;
 }

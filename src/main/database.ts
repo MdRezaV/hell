@@ -256,6 +256,13 @@ export function getWorkspaceState(workspacePath: string): WorkspaceState {
   }
 }
 
+export function getWorkspaces(): Array<{ path: string; last_opened: number }> {
+  const d = getDb()
+  return d
+    .prepare('SELECT path, last_opened FROM workspaces ORDER BY last_opened DESC')
+    .all() as Array<{ path: string; last_opened: number }>
+}
+
 export function getLastWorkspace(): string | null {
   const d = getDb()
   const row = d.prepare('SELECT path FROM workspaces ORDER BY last_opened DESC LIMIT 1').get() as
