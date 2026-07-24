@@ -301,7 +301,12 @@ const ChatHistory = forwardRef<ChatHistoryHandle, ChatHistoryProps>(function Cha
   return (
     <div className="chat-history">
       <div className="chat-history-header">
-        <span className="chat-history-title">History</span>
+        <div className="chat-history-header-left">
+          <span className="chat-history-title">History</span>
+          <span className="chat-history-count">
+            {search ? `${filtered.length}/${sessions.length}` : sessions.length}
+          </span>
+        </div>
         <button className="chat-history-header-btn" onClick={onNewChat} title="New Chat">
           <Plus size={14} className="chat-history-header-btn-icon" />
         </button>

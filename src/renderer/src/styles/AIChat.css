@@ -107,7 +107,7 @@
 }
 
 .ai-chat-input-mode-label {
-  @apply text-[10px] font-bold text-text-faint uppercase tracking-wider;
+  @apply text-[10px] font-bold text-text-muted uppercase tracking-wider;
 }
 
 .ai-chat-input-mode-trigger {
@@ -157,7 +157,7 @@
 }
 
 .ai-chat-input::placeholder {
-  @apply text-text-faint;
+  @apply text-text-muted;
 }
 
 .ai-chat-input:disabled {
@@ -217,7 +217,7 @@
 }
 
 .ai-chat-header-actions button {
-  @apply gap-1 p-1 rounded-sm text-text-subtle text-[11px] leading-none;
+  @apply gap-1 p-1 rounded-sm text-text-muted text-[11px] leading-none;
 }
 
 .ai-chat-header-actions button svg,
@@ -304,7 +304,7 @@
 }
 
 .chat-variant-nav button {
-  @apply p-0.5 rounded-xs text-text-faint disabled:opacity-30 disabled:cursor-not-allowed;
+  @apply p-0.5 rounded-xs text-text-muted disabled:opacity-30 disabled:cursor-not-allowed;
 }
 
 .chat-variant-nav button svg {

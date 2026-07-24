@@ -6,8 +6,16 @@
   @apply flex items-center justify-between px-3 h-7 leading-none border-b border-border bg-background-mute flex-shrink-0;
 }
 
+.chat-history-header-left {
+  @apply flex items-center gap-2 min-w-0;
+}
+
+.chat-history-count {
+  @apply text-[11px] text-text-muted font-medium px-1;
+}
+
 .chat-history-header-btn {
-  @apply p-1 bg-transparent border-none rounded-sm text-text-subtle cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply p-1 bg-transparent border-none rounded-sm text-text-muted cursor-pointer leading-none transition-colors duration-fast hover:bg-surface-1 hover:text-text;
 }
 
 .chat-history-header-btn-icon {

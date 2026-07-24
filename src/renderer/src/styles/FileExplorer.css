@@ -40,7 +40,7 @@
 }
 
 .explorer-header-actions button {
-  @apply p-1 text-text-subtle;
+  @apply p-1 text-text-muted;
 }
 
 .explorer-header-actions button svg {
@@ -48,11 +48,11 @@
 }
 
 .explorer-count {
-  @apply text-[11px] text-text-faint font-medium px-1;
+  @apply text-[11px] text-text-muted font-medium px-1;
 }
 
 .explorer-header-history {
-  @apply text-text-faint flex-shrink-0 opacity-60;
+  @apply text-text-muted flex-shrink-0;
 }
 
 .explorer-workspace-list {
