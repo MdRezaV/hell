@@ -60,7 +60,13 @@
 }
 
 .ai-chat-welcome-icon {
-  @apply inline-flex items-center justify-center w-[72px] h-[72px] rounded-xl mb-5 text-ctp-mauve bg-[linear-gradient(135deg,color-mix(in_srgb,var(--ctp-mauve)_12%,transparent),color-mix(in_srgb,var(--ctp-blue)_12%,transparent))] border border-[color-mix(in_srgb,var(--ctp-mauve)_15%,transparent)];
+  @apply inline-flex items-center justify-center w-[72px] h-[72px] rounded-xl mb-5 text-ctp-mauve border;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ctp-mauve) 12%, transparent),
+    color-mix(in srgb, var(--ctp-blue) 12%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--ctp-mauve) 15%, transparent);
 }
 
 .ai-chat-input-bar {
@@ -80,7 +86,8 @@
 }
 
 .ai-chat-input-wrapper:focus-within {
-  @apply border-accent shadow-[0_0_0_var(--focus-ring-width)_color-mix(in_srgb,var(--ctp-blue)_15%,transparent)];
+  @apply border-accent;
+  box-shadow: 0 0 0 var(--focus-ring-width) color-mix(in srgb, var(--ctp-blue) 15%, transparent);
 }
 
 .ai-chat-input-footer {
@@ -120,7 +127,8 @@
 }
 
 .ai-chat-mode-option.active {
-  @apply bg-[color-mix(in_srgb,var(--ctp-blue)_12%,transparent)] text-ctp-blue;
+  @apply text-ctp-blue;
+  background-color: color-mix(in srgb, var(--ctp-blue) 12%, transparent);
 }
 
 .ai-chat-mode-option .mode-check {
@@ -181,7 +189,8 @@
 }
 
 .ai-chat-mode-badge {
-  @apply inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-full bg-[color-mix(in_srgb,var(--ctp-lavender)_15%,transparent)] text-ctp-lavender leading-snug;
+  @apply inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-full text-ctp-lavender leading-snug;
+  background-color: color-mix(in srgb, var(--ctp-lavender) 15%, transparent);
 }
 
 .ai-chat-header-actions {
@@ -191,7 +200,20 @@
 .ai-chat-header-actions button,
 .chat-action-btn,
 .chat-variant-nav button {
-  @apply inline-flex items-center justify-center bg-transparent border-none cursor-pointer transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  @apply inline-flex items-center justify-center cursor-pointer transition-colors duration-fast hover:bg-surface-1 hover:text-text;
+  background: transparent;
+  border: none;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.ai-chat-header-actions button svg,
+.chat-action-btn svg,
+.chat-variant-nav button svg {
+  stroke: currentColor;
+  fill: none;
 }
 
 .ai-chat-header-actions button {
@@ -266,7 +288,7 @@
 }
 
 .chat-message-actions {
-  @apply flex items-center gap-1.5 mt-1 opacity-0 transition-opacity duration-fast text-[11px];
+  @apply flex items-center gap-1.5 mt-1 opacity-0 transition-opacity duration-fast text-[11px] text-text-muted;
 }
 
 .chat-message:hover .chat-message-actions {
@@ -274,23 +296,32 @@
 }
 
 .chat-timestamp {
-  @apply text-[10px] text-text-faint;
+  @apply text-[10px] text-text-muted;
 }
 
 .chat-variant-nav {
-  @apply flex items-center gap-0.5 text-[10px] text-text-faint;
+  @apply flex items-center gap-0.5 text-[10px] text-text-muted;
 }
 
 .chat-variant-nav button {
   @apply p-0.5 rounded-xs text-text-faint disabled:opacity-30 disabled:cursor-not-allowed;
 }
 
+.chat-variant-nav button svg {
+  @apply text-current;
+}
+
 .chat-action-btn {
-  @apply p-0.5 rounded-xs text-text-faint;
+  @apply p-0.5 rounded-xs text-text-muted;
+}
+
+.chat-action-btn svg {
+  @apply text-current;
 }
 
 .chat-edit-area {
-  @apply w-full py-2.5 px-3.5 text-[13px] text-text bg-surface-0 border border-accent rounded-lg resize-none leading-relaxed outline-none shadow-[0_0_0_var(--focus-ring-width)_color-mix(in_srgb,var(--ctp-blue)_15%,transparent)];
+  @apply w-full py-2.5 px-3.5 text-[13px] text-text bg-surface-0 border border-accent rounded-lg resize-none leading-relaxed outline-none;
+  box-shadow: 0 0 0 var(--focus-ring-width) color-mix(in srgb, var(--ctp-blue) 15%, transparent);
 }
 
 .chat-edit-actions {

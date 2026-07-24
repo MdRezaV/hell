@@ -51,7 +51,7 @@
     --color-warning: var(--ctp-yellow);
     --color-error: var(--ctp-red);
     --color-info: var(--ctp-sky);
-    --color-selection: rgba(147, 153, 178, 0.25);
+    --color-selection: color-mix(in srgb, var(--ctp-overlay2) 25%, transparent);
     --color-selection-text: var(--ctp-text);
     --focus-ring: var(--ctp-blue);
     --focus-ring-width: 2px;
@@ -139,7 +139,11 @@
   }
 
   button.btn-danger {
-    @apply bg-transparent text-error border-error hover:bg-[rgba(243,139,168,0.1)];
+    @apply bg-transparent text-error border-error;
+  }
+
+  button.btn-danger:hover {
+    background-color: color-mix(in srgb, var(--ctp-red) 10%, transparent);
   }
 
   input[type='checkbox'],
@@ -197,7 +201,8 @@
 
   input[type='checkbox']:focus-visible,
   input[type='radio']:focus-visible {
-    @apply outline-none shadow-[0_0_0_var(--focus-ring-width)_rgba(137,180,250,0.3)];
+    @apply outline-none;
+    box-shadow: 0 0 0 var(--focus-ring-width) color-mix(in srgb, var(--ctp-blue) 30%, transparent);
   }
 
   input[type='text'],
@@ -205,7 +210,15 @@
   input[type='email'],
   input[type='password'],
   textarea {
-    @apply px-3 py-2 text-[13px] font-[inherit] text-text bg-surface-0 border border-border rounded-md transition-colors duration-normal hover:border-ctp-overlay0 focus:outline-none focus:border-accent focus:shadow-[0_0_0_var(--focus-ring-width)_rgba(137,180,250,0.2)] placeholder:text-text-faint;
+    @apply px-3 py-2 text-[13px] font-[inherit] text-text bg-surface-0 border border-border rounded-md transition-colors duration-normal hover:border-ctp-overlay0 focus:outline-none focus:border-accent placeholder:text-text-faint;
+  }
+
+  input[type='text']:focus,
+  input[type='search']:focus,
+  input[type='email']:focus,
+  input[type='password']:focus,
+  textarea:focus {
+    box-shadow: 0 0 0 var(--focus-ring-width) color-mix(in srgb, var(--ctp-blue) 20%, transparent);
   }
 
   textarea {
@@ -213,7 +226,14 @@
   }
 
   select {
-    @apply px-3 py-2 pr-8 text-[13px] font-[inherit] text-text bg-surface-0 border border-border rounded-md cursor-pointer appearance-none bg-[url("data:image/svg+xml,%3Csvg%20width%3D'10'%20height%3D'6'%20viewBox%3D'0%200%2010%206'%20fill%3D'none'%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%3E%3Cpath%20d%3D'M1%201L5%205L9%201'%20stroke%3D'%236c7086'%20stroke-width%3D'1.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E")] bg-no-repeat bg-[right_10px_center] transition-colors duration-normal hover:border-ctp-overlay0 focus:outline-none focus:border-accent focus:shadow-[0_0_0_var(--focus-ring-width)_rgba(137,180,250,0.2)];
+    @apply px-3 py-2 pr-8 text-[13px] font-[inherit] text-text bg-surface-0 border border-border rounded-md cursor-pointer appearance-none bg-no-repeat bg-[right_10px_center] transition-colors duration-normal hover:border-ctp-overlay0 focus:outline-none focus:border-accent;
+    /* Arrow uses currentColor via mask to stay theme-aware */
+    background-image: url("data:image/svg+xml,%3Csvg%20width%3D'10'%20height%3D'6'%20viewBox%3D'0%200%2010%206'%20fill%3D'none'%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%3E%3Cpath%20d%3D'M1%201L5%205L9%201'%20stroke%3D'currentColor'%20stroke-width%3D'1.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E");
+    color: var(--ctp-overlay0);
+  }
+
+  select:focus {
+    box-shadow: 0 0 0 var(--focus-ring-width) color-mix(in srgb, var(--ctp-blue) 20%, transparent);
   }
 
   input[type='range'] {
@@ -246,23 +266,28 @@
   }
 
   .badge.badge-blue {
-    @apply bg-[rgba(137,180,250,0.15)] text-ctp-blue;
+    @apply text-ctp-blue;
+    background-color: color-mix(in srgb, var(--ctp-blue) 15%, transparent);
   }
 
   .badge.badge-green {
-    @apply bg-[rgba(166,227,161,0.15)] text-ctp-green;
+    @apply text-ctp-green;
+    background-color: color-mix(in srgb, var(--ctp-green) 15%, transparent);
   }
 
   .badge.badge-yellow {
-    @apply bg-[rgba(249,226,175,0.15)] text-ctp-yellow;
+    @apply text-ctp-yellow;
+    background-color: color-mix(in srgb, var(--ctp-yellow) 15%, transparent);
   }
 
   .badge.badge-red {
-    @apply bg-[rgba(243,139,168,0.15)] text-ctp-red;
+    @apply text-ctp-red;
+    background-color: color-mix(in srgb, var(--ctp-red) 15%, transparent);
   }
 
   .badge.badge-mauve {
-    @apply bg-[rgba(203,166,247,0.15)] text-ctp-mauve;
+    @apply text-ctp-mauve;
+    background-color: color-mix(in srgb, var(--ctp-mauve) 15%, transparent);
   }
 
   .tooltip {

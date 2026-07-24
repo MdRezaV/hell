@@ -202,6 +202,7 @@ function applySettings(s: SettingsState): void {
     root.style.setProperty('--color-info', p.sky)
     root.style.setProperty('--color-selection', hexToRgba(p.overlay2, 0.25))
     root.style.setProperty('--color-selection-text', p.text)
+    root.style.setProperty('--focus-ring', p.blue)
   } else {
     const light = isLight(s.bgColor)
     const surfaceTarget = light ? '#000000' : '#ffffff'
@@ -261,6 +262,7 @@ function applySettings(s: SettingsState): void {
     root.style.setProperty('--color-info', darkenForLight('#89dceb', light))
     root.style.setProperty('--color-selection', hexToRgba(mix(s.textColor, s.bgColor, 0.45), 0.25))
     root.style.setProperty('--color-selection-text', s.textColor)
+    root.style.setProperty('--focus-ring', s.accentColor)
   }
 
   root.style.setProperty('font-size', `${(13 * s.scale) / 100}px`)

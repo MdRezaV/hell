@@ -67,7 +67,7 @@
 }
 
 .chat-history-group-count {
-  @apply text-[10px] text-text-faint font-medium min-w-[16px] h-4 inline-flex items-center justify-center bg-surface-1 rounded-full leading-none px-1;
+  @apply text-[10px] text-text-muted font-medium min-w-[16px] h-4 inline-flex items-center justify-center bg-surface-1 rounded-full leading-none px-1;
 }
 
 .chat-history-group-items {
@@ -127,7 +127,7 @@
 }
 
 .chat-history-delete {
-  @apply inline-flex items-center justify-center p-1 bg-transparent border-none rounded-sm text-text-faint cursor-pointer opacity-0 transition-all duration-fast hover:text-error hover:bg-[rgba(243,139,168,0.1)] flex-shrink-0;
+  @apply inline-flex items-center justify-center p-1 bg-transparent border-none rounded-sm text-text-faint cursor-pointer opacity-0 transition-all duration-fast hover:text-error hover:bg-[color-mix(in_srgb,var(--ctp-red)_10%,transparent)] flex-shrink-0;
 }
 
 @keyframes chat-history-expand {
