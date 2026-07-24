@@ -298,7 +298,7 @@
 }
 
 .md-file-block {
-  @apply bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 transition-colors duration-normal hover:border-ctp-overlay0;
+  @apply bg-background-mute border border-border-subtle rounded-md overflow-hidden min-w-0 mb-2 transition-colors duration-normal hover:border-ctp-overlay0;
   content-visibility: auto;
   contain-intrinsic-size: auto 300px;
   contain: layout style paint;
@@ -377,7 +377,7 @@
 }
 
 .md-file-replace-block {
-  @apply w-full min-w-0 mb-2;
+  @apply w-full min-w-0;
 }
 
 .md-file-diff {
