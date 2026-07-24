@@ -145,6 +145,39 @@
   @apply bg-accent text-accent-text border-accent;
 }
 
+.settings-toggle-row {
+  @apply flex items-center justify-between py-2.5;
+}
+
+.settings-toggle-info {
+  @apply flex flex-col gap-0.5;
+}
+
+.settings-toggle-info label {
+  @apply text-[13px] text-text-secondary font-medium;
+}
+
+.settings-toggle-desc {
+  @apply text-[11px] text-text-muted;
+}
+
+.settings-toggle {
+  @apply relative w-[36px] h-[20px] rounded-full border border-border bg-surface-1 cursor-pointer transition-colors duration-fast flex-shrink-0;
+  padding: 0;
+}
+
+.settings-toggle.active {
+  @apply bg-accent border-accent;
+}
+
+.settings-toggle-knob {
+  @apply absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-text-muted transition-transform duration-fast;
+}
+
+.settings-toggle.active .settings-toggle-knob {
+  @apply translate-x-[16px] bg-accent-text;
+}
+
 .settings-footer {
   @apply flex items-center justify-between px-5 py-3.5 border-t border-border flex-shrink-0;
 }

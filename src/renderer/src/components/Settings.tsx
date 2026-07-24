@@ -342,7 +342,7 @@ const ColorField = memo(function ColorField({
   )
 })
 
-const SECTIONS = ['Appearance'] as const
+const SECTIONS = ['Appearance', 'Behavior'] as const
 type Section = (typeof SECTIONS)[number]
 
 function Settings({ onClose }: SettingsProps): React.JSX.Element {
@@ -429,6 +429,10 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
     [updateSettings]
   )
 
+  const handleAutoCopyToggle = useCallback(() => {
+    updateSettings({ autoCopy: !settings.autoCopy })
+  }, [settings.autoCopy, updateSettings])
+
   const handleReset = useCallback(() => {
     resetSettings()
     setAccentHex(MOCHA.blue)
@@ -460,6 +464,29 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
           </nav>
 
           <div className="settings-content">
+            {activeSection === 'Behavior' && (
+              <section className="settings-section">
+                <h3>Clipboard</h3>
+                <div className="settings-toggle-row">
+                  <div className="settings-toggle-info">
+                    <label>Auto Copy</label>
+                    <span className="settings-toggle-desc">
+                      Automatically copy the prompt to clipboard when sending a message
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`settings-toggle ${settings.autoCopy ? 'active' : ''}`}
+                    onClick={handleAutoCopyToggle}
+                    role="switch"
+                    aria-checked={settings.autoCopy}
+                  >
+                    <span className="settings-toggle-knob" />
+                  </button>
+                </div>
+              </section>
+            )}
+
             {activeSection === 'Appearance' && (
               <>
                 <section className="settings-section">

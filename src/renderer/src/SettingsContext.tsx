@@ -44,6 +44,7 @@ export interface SettingsState {
   textColor: string
   scale: number
   palette: CatppuccinPalette | null
+  autoCopy: boolean
 }
 
 const MOCHA_PALETTE: CatppuccinPalette = {
@@ -80,7 +81,8 @@ const DEFAULT_SETTINGS: SettingsState = {
   bgColor: '#1e1e2e',
   textColor: '#cdd6f4',
   scale: 100,
-  palette: MOCHA_PALETTE
+  palette: MOCHA_PALETTE,
+  autoCopy: false
 }
 
 const STORAGE_KEY = 'hell-settings'

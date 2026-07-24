@@ -577,10 +577,11 @@ export interface AIChatHandle {
 interface AIChatProps {
   onNewChat?: () => void
   onMessagesChange?: (messages: ChatMessage[], mode: string, taskId: string) => void
+  onUserSend?: () => void
 }
 
 const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
-  { onNewChat, onMessagesChange },
+  { onNewChat, onMessagesChange, onUserSend },
   ref
 ): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -598,6 +599,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const messagesRef = useRef<ChatMessage[]>([])
   const inputValueRef = useRef('')
   const onMessagesChangeRef = useRef(onMessagesChange)
+  const onUserSendRef = useRef(onUserSend)
   const modeRef = useRef(mode)
   const taskIdRef = useRef('')
   const pendingSaveRef = useRef<{ messages: ChatMessage[]; mode: string; taskId: string } | null>(
@@ -668,6 +670,10 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   useEffect(() => {
     onMessagesChangeRef.current = onMessagesChange
   }, [onMessagesChange])
+
+  useEffect(() => {
+    onUserSendRef.current = onUserSend
+  }, [onUserSend])
 
   useEffect(() => {
     modeRef.current = mode
@@ -973,7 +979,10 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     }
     setIsAwaitingResponse(true)
     inputValueRef.current = ''
-    setMessages((prev) => [...prev, userMessage])
+    const newMessages = [...messagesRef.current, userMessage]
+    messagesRef.current = newMessages
+    setMessages(newMessages)
+    setTimeout(() => onUserSendRef.current?.(), 0)
   }
 
   const handleEditSave = useCallback((messageId: string, newContent: string): void => {
@@ -990,8 +999,10 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       msg.variants = [...msg.variants, { content: trimmed, timestamp: new Date() }]
       msg.activeVariant = msg.variants.length - 1
       updated[idx] = msg
+      messagesRef.current = updated
       return updated
     })
+    setTimeout(() => onUserSendRef.current?.(), 0)
   }, [])
 
   const handleVariantChange = useCallback((messageId: string, direction: 'prev' | 'next'): void => {
@@ -1071,7 +1082,10 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       activeVariant: 0
     }
     setIsAwaitingResponse(true)
-    setMessages((prev) => [...prev, userMessage])
+    const newMessages = [...messagesRef.current, userMessage]
+    messagesRef.current = newMessages
+    setMessages(newMessages)
+    setTimeout(() => onUserSendRef.current?.(), 0)
   }, [])
 
   const isChatMode = messages.length > 0

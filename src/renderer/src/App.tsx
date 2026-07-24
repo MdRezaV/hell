@@ -12,6 +12,7 @@ import { invalidateWorkspaceFileCache } from './utils/fileApply'
 import { resetPreprocessCache } from './utils/markdownParser'
 import { CHAT_MODES } from './utils/PromptEngine'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
+import { useSettings } from './SettingsContext'
 import ChatHistory, { type ChatHistoryHandle } from './components/ChatHistory'
 import { FileIncludeProvider } from './components/markdown/ApplyAll'
 
@@ -21,6 +22,7 @@ function App(): React.JSX.Element {
   const { leftWidth, rightWidth, layoutRef, startResizeLeft, startResizeRight } =
     useResizableLayout()
   const { withLoading } = useLoading()
+  const { settings } = useSettings()
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
@@ -502,6 +504,17 @@ function App(): React.JSX.Element {
 
   const handleCopy = useCallback(() => {
     latestCopyFnRef.current?.()
+  }, [])
+
+  const autoCopyRef = useRef(settings.autoCopy)
+  useEffect(() => {
+    autoCopyRef.current = settings.autoCopy
+  }, [settings.autoCopy])
+
+  const handleUserSend = useCallback(() => {
+    if (autoCopyRef.current) {
+      latestCopyFnRef.current?.()
+    }
   }, [])
 
   const handleNewChat = useCallback(async (): Promise<void> => {
@@ -992,6 +1005,7 @@ function App(): React.JSX.Element {
                 ref={chatRef}
                 onNewChat={handleNewChat}
                 onMessagesChange={handleMessagesChange}
+                onUserSend={handleUserSend}
               />
             </div>
             <div
