@@ -156,7 +156,15 @@
 }
 
 .tree-checkbox {
-  @apply w-[18px] h-5 mr-1;
+  @apply h-5 mr-1;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+}
+
+.tree-checkbox input {
+  margin: 0;
+  padding: 0;
 }
 
 .tree-icon {

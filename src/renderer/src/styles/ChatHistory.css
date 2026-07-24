@@ -131,7 +131,7 @@
 }
 
 .chat-history-item-date {
-  @apply text-[10px] text-text-faint leading-snug;
+  @apply text-[10px] text-text-muted leading-snug;
 }
 
 .chat-history-delete {
