@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState
 } from 'react'
@@ -46,6 +47,8 @@ function generateId(): string {
 }
 
 const NEAR_BOTTOM_THRESHOLD = 100
+
+const HAS_INCLUDE_RE = /\[INCLUDE\s+[^\]]+]/
 
 type ChatMode = string
 
@@ -1046,6 +1049,31 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
     resizeTextarea(e.target)
   }
 
+  const showContinue = useMemo(() => {
+    if (input.trim()) return false
+    if (messages.length === 0) return false
+    const last = messages[messages.length - 1]
+    if (last.role !== 'assistant') return false
+    const content = last.variants[last.activeVariant]?.content ?? ''
+    return HAS_INCLUDE_RE.test(content)
+  }, [messages, input])
+
+  const handleContinue = useCallback((): void => {
+    const last = messagesRef.current[messagesRef.current.length - 1]
+    if (!last || last.role !== 'assistant') return
+
+    window.dispatchEvent(new CustomEvent('trigger-include-add-all'))
+
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: 'user',
+      variants: [{ content: 'Continue', timestamp: new Date() }],
+      activeVariant: 0
+    }
+    setIsAwaitingResponse(true)
+    setMessages((prev) => [...prev, userMessage])
+  }, [])
+
   const isChatMode = messages.length > 0
   const typedWelcome = useTypingAnimation(WELCOME_LINES, !isChatMode)
 
@@ -1163,6 +1191,13 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
             onKeyDown={handleKeyDown}
             rows={1}
           />
+          {showContinue && (
+            <div className="ai-chat-input-footer">
+              <button type="button" className="ai-chat-continue-btn" onClick={handleContinue}>
+                Continue
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

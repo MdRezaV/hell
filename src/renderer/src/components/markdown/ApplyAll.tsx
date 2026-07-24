@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Check, Plus, Undo2 } from 'lucide-react'
 import {
   ApplyAllContext,
@@ -124,6 +124,23 @@ export function ApplyAllBar(): React.JSX.Element | null {
   const includeCtx = useFileIncludeContext()
   const [busy, setBusy] = useState<'idle' | 'applying' | 'unapplying'>('idle')
 
+  useEffect(() => {
+    if (!includeCtx) return
+    const listener = (): void => {
+      const unadded = [...includeCtx.paths].filter((p) => !includeCtx.addedPaths.has(p))
+      const addable = unadded.filter((p) => !includeCtx.notFoundPaths.has(p))
+      for (const path of addable) {
+        const detail: { path: string; matched?: boolean } = { path }
+        window.dispatchEvent(new CustomEvent('file-include-add', { detail }))
+        if (detail.matched) {
+          includeCtx.markAdded(path)
+        }
+      }
+    }
+    window.addEventListener('trigger-include-add-all', listener)
+    return () => window.removeEventListener('trigger-include-add-all', listener)
+  }, [includeCtx])
+
   const hasApplyBlocks = !!ctx && ctx.blocks.size > 0
   const hasIncludePaths = !!includeCtx && includeCtx.paths.size > 0
 
@@ -182,6 +199,8 @@ export function ApplyAllBar(): React.JSX.Element | null {
       }
     }
   }
+
+
 
   let variantClass = ''
   let label = `Apply All (${idleCount})`

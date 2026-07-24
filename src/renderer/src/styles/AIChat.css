@@ -167,11 +167,24 @@
 }
 
 .ai-chat-input-bar-floating .ai-chat-input-wrapper {
-  @apply border-border-subtle shadow-sm gap-0;
+  @apply border-border-subtle shadow-sm gap-0 flex-row items-end;
 }
 
 .ai-chat-input-bar-floating .ai-chat-input {
-  @apply min-h-[22px] max-h-[90px] py-0.5;
+  @apply min-h-[22px] max-h-[90px] py-0.5 flex-1;
+}
+
+.ai-chat-input-bar-floating .ai-chat-input-footer {
+  @apply pt-0 pl-2 flex-shrink-0;
+}
+
+.ai-chat-continue-btn {
+  @apply inline-flex items-center gap-1.5 py-1 px-3 text-[11px] font-semibold text-ctp-green bg-transparent border border-border rounded-sm cursor-pointer transition-colors duration-fast hover:border-ctp-green hover:bg-surface-1;
+  background-color: color-mix(in srgb, var(--ctp-green) 8%, transparent);
+}
+
+.ai-chat-continue-btn:hover {
+  background-color: color-mix(in srgb, var(--ctp-green) 14%, transparent);
 }
 
 .ai-chat-header {
