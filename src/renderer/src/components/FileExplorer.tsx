@@ -321,6 +321,7 @@ const FileExplorer = forwardRef(function FileExplorer(
     []
   )
   const workspaceListRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancelRef = useRef(false)
   const onFilePathsChangeRef = useRef(onFilePathsChange)
@@ -437,7 +438,13 @@ const FileExplorer = forwardRef(function FileExplorer(
   useEffect(() => {
     if (!showWorkspaceList) return
     const handleClickOutside = (e: MouseEvent): void => {
-      if (workspaceListRef.current && !workspaceListRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        workspaceListRef.current &&
+        !workspaceListRef.current.contains(target) &&
+        headerRef.current &&
+        !headerRef.current.contains(target)
+      ) {
         setShowWorkspaceList(false)
       }
     }
@@ -727,7 +734,7 @@ const FileExplorer = forwardRef(function FileExplorer(
 
   return (
     <div className="file-explorer">
-      <div className="explorer-header" onClick={toggleWorkspaceList}>
+      <div className="explorer-header" ref={headerRef} onClick={toggleWorkspaceList}>
         <div className="explorer-header-left">
           <span className="explorer-header-title">{workspace.split(/[/\\]/).pop()}</span>
           <span className="explorer-count">
