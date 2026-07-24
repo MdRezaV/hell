@@ -60,13 +60,11 @@
 }
 
 .ai-chat-welcome-icon {
-  @apply inline-flex items-center justify-center w-[72px] h-[72px] rounded-xl mb-5 text-ctp-mauve border;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--ctp-mauve) 12%, transparent),
-    color-mix(in srgb, var(--ctp-blue) 12%, transparent)
-  );
-  border-color: color-mix(in srgb, var(--ctp-mauve) 15%, transparent);
+  @apply inline-flex items-center justify-center mb-5;
+}
+
+.ai-chat-welcome-icon img {
+  @apply w-24 h-24 object-contain;
 }
 
 .ai-chat-input-bar {

@@ -14,11 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
-  Flame,
   Pencil,
   Plus,
   X
 } from 'lucide-react'
+import fireAnimation from '../assets/img/fire-animation.gif'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import Markdown from './Markdown'
 import ContextMenu from './ContextMenu'
@@ -1055,7 +1055,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         <ContextMenu />
         <div className="ai-chat-welcome-content">
           <div className="ai-chat-welcome-icon">
-            <Flame size={40} strokeWidth={1.25} />
+            <img src={fireAnimation} alt="" width={64} height={64} />
           </div>
           <p className="ai-chat-welcome-tagline">
             {typedWelcome.text}
