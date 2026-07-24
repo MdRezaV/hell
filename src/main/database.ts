@@ -3,7 +3,8 @@ import { app } from 'electron'
 import Database from 'better-sqlite3'
 import { log } from './logger'
 
-const MAX_WORKSPACES = 5
+const MAX_WORKSPACES = 40
+const MAX_SESSIONS_PER_WORKSPACE = 100
 
 // Increment this whenever the database schema changes in a
 // backwards-incompatible way. On startup, if the stored
@@ -163,6 +164,7 @@ export function initDatabase(): void {
   db = new Database(dbPath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+  db.pragma('busy_timeout = 5000')
 
   const storedVersion = (db.pragma('user_version', { simple: true }) as number) ?? 0
 
@@ -223,8 +225,12 @@ export function touchWorkspace(workspacePath: string): void {
       .prepare('SELECT path FROM workspaces ORDER BY last_opened ASC LIMIT ?')
       .all(excess) as Array<{ path: string }>
     const del = d.prepare('DELETE FROM workspaces WHERE path = ?')
+    const delSessions = d.prepare('DELETE FROM chat_sessions WHERE workspace_path = ?')
     const tx = d.transaction(() => {
-      for (const r of oldest) del.run(r.path)
+      for (const r of oldest) {
+        delSessions.run(r.path)
+        del.run(r.path)
+      }
     })
     tx()
   }
@@ -417,6 +423,21 @@ export function createChatSession(
     taskId,
     messagesPreview
   )
+
+  if (workspacePath) {
+    const count = d
+      .prepare('SELECT COUNT(*) AS c FROM chat_sessions WHERE workspace_path = ?')
+      .get(workspacePath) as { c: number }
+    if (count.c > MAX_SESSIONS_PER_WORKSPACE) {
+      const excess = count.c - MAX_SESSIONS_PER_WORKSPACE
+      d.prepare(
+        `DELETE FROM chat_sessions WHERE id IN (
+          SELECT id FROM chat_sessions WHERE workspace_path = ? ORDER BY updated_at ASC LIMIT ?
+        )`
+      ).run(workspacePath, excess)
+    }
+  }
+
   return id
 }
 
