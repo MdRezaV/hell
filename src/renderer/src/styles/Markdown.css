@@ -320,6 +320,10 @@
   @apply inline-flex items-center gap-1.5 min-w-0 text-[12px] font-semibold text-ctp-blue overflow-hidden text-ellipsis whitespace-nowrap tracking-wide;
 }
 
+.md-file-path-icon {
+  @apply flex-shrink-0 text-ctp-blue opacity-70;
+}
+
 .md-file-path-text {
   @apply overflow-hidden text-ellipsis whitespace-nowrap;
 }
@@ -373,7 +377,11 @@
 }
 
 .md-commit-text {
-  @apply flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-text;
+  @apply flex-1 min-w-0 inline-flex items-center gap-1.5 whitespace-nowrap overflow-hidden text-ellipsis text-text;
+}
+
+.md-commit-icon {
+  @apply flex-shrink-0 text-ctp-mauve;
 }
 
 .md-file-replace-block {

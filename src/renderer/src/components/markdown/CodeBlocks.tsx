@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useMemo, useRef, type CSSProperties } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { Check, Copy, Play, Terminal } from 'lucide-react'
+import { Check, Copy, GitCommit, Play, Terminal } from 'lucide-react'
 
 const catppuccinPrism: Record<string, CSSProperties> = {
   'code[class*="language-"]': {
@@ -194,6 +194,7 @@ export const CommitBlock = memo(function CommitBlock({
   return (
     <div className="md-commit-block">
       <span className="md-commit-text" title={code}>
+        <GitCommit size={14} className="md-commit-icon" />
         {code}
       </span>
       <button

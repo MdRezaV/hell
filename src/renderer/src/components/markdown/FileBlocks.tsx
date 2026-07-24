@@ -4,6 +4,7 @@ import {
   Check,
   CircleAlert,
   Copy,
+  FileCode,
   FilePlus,
   ListChecks,
   MoveRight,
@@ -98,6 +99,7 @@ export function FilePathDisplay({ path }: { path: string }): React.JSX.Element {
   const segments = path.split(/[/\\]/)
   return (
     <span className="md-file-path" title={path}>
+      <FileCode size={14} className="md-file-path-icon" />
       <span className="md-file-path-text">
         {segments.map((seg, i) => (
           <span key={i}>
