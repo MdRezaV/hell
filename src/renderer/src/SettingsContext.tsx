@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState
 } from 'react'
+import log from 'electron-log/renderer'
 
 export interface CatppuccinPalette {
   rosewater: string
@@ -42,7 +43,7 @@ export interface SettingsState {
   bgColor: string
   textColor: string
   scale: number
-  palette?: CatppuccinPalette
+  palette: CatppuccinPalette | null
 }
 
 const MOCHA_PALETTE: CatppuccinPalette = {
@@ -249,6 +250,17 @@ function applySettings(s: SettingsState): void {
     root.style.setProperty('--color-border-subtle', surface0)
     root.style.setProperty('--color-text', s.textColor)
     root.style.setProperty('--color-text-secondary', s.textColor + 'cc')
+    root.style.setProperty('--color-text-muted', mix(s.textColor, s.bgColor, 0.3))
+    root.style.setProperty('--color-text-subtle', mix(s.textColor, s.bgColor, 0.55))
+    root.style.setProperty('--color-text-faint', mix(s.textColor, s.bgColor, 0.65))
+    root.style.setProperty('--color-accent-text', isLight(s.accentColor) ? '#1e1e2e' : '#ffffff')
+    root.style.setProperty('--color-border-accent', mix(s.accentColor, '#ffffff', light ? 0.1 : 0.3))
+    root.style.setProperty('--color-success', darkenForLight('#a6e3a1', light))
+    root.style.setProperty('--color-warning', darkenForLight('#f9e2af', light))
+    root.style.setProperty('--color-error', darkenForLight('#f38ba8', light))
+    root.style.setProperty('--color-info', darkenForLight('#89dceb', light))
+    root.style.setProperty('--color-selection', hexToRgba(mix(s.textColor, s.bgColor, 0.45), 0.25))
+    root.style.setProperty('--color-selection-text', s.textColor)
   }
 
   root.style.setProperty('font-size', `${(13 * s.scale) / 100}px`)
@@ -256,18 +268,23 @@ function applySettings(s: SettingsState): void {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [settings, setSettings] = useState<SettingsState>(loadSettings)
-  const loadedFromIpcRef = useRef(false)
+  const ipcLoadedRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
     window.electron.ipcRenderer
       .invoke('settings:load')
       .then((saved: SettingsState | null) => {
-        if (cancelled || !saved) return
-        loadedFromIpcRef.current = true
-        setSettings((prev) => ({ ...prev, ...saved }))
+        if (cancelled) return
+        ipcLoadedRef.current = true
+        if (saved) {
+          setSettings((prev) => ({ ...prev, ...saved }))
+        }
       })
-      .catch(() => {})
+      .catch((e) => {
+        ipcLoadedRef.current = true
+        log.error('Failed to load settings from main process:', e)
+      })
     return () => {
       cancelled = true
     }
@@ -275,9 +292,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }): R
 
   useEffect(() => {
     applySettings(settings)
+    if (!ipcLoadedRef.current) return
     const json = JSON.stringify(settings)
-    localStorage.setItem(STORAGE_KEY, json)
-    window.electron.ipcRenderer.invoke('settings:save', json).catch(() => {})
+    try {
+      localStorage.setItem(STORAGE_KEY, json)
+    } catch (e) {
+      log.error('Failed to persist settings to localStorage:', e)
+    }
+    window.electron.ipcRenderer.invoke('settings:save', json).catch((e) => {
+      log.error('Failed to persist settings to main process:', e)
+    })
   }, [settings])
 
   useEffect(() => {

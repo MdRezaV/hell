@@ -342,7 +342,7 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
     (prop: 'accentColor' | 'bgColor' | 'textColor', hexSetter: (v: string) => void) =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         hexSetter(e.target.value)
-        updateSettings({ [prop]: e.target.value, palette: undefined })
+        updateSettings({ [prop]: e.target.value, palette: null })
       },
     [updateSettings]
   )
@@ -354,7 +354,7 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
         hexSetter(raw)
         const normalized = normalizeHex(raw)
         if (isValidHex(normalized)) {
-          updateSettings({ [prop]: normalized, palette: undefined })
+          updateSettings({ [prop]: normalized, palette: null })
         }
       },
     [updateSettings]
@@ -369,7 +369,7 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
       const normalized = normalizeHex(raw)
       if (isValidHex(normalized)) {
         hexSetter(normalized)
-        updateSettings({ [prop]: normalized, palette: undefined })
+        updateSettings({ [prop]: normalized, palette: null })
       } else {
         hexSetter(settings[prop])
       }

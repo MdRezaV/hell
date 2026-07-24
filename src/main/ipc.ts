@@ -442,13 +442,18 @@ export function registerIpcHandlers(): void {
     try {
       const content = await readFile(settingsPath, 'utf-8')
       return JSON.parse(content)
-    } catch {
+    } catch (e) {
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: unknown }).code !== 'ENOENT') {
+        log.error('Failed to load settings:', e)
+      }
       return null
     }
   })
 
   safeHandle('settings:save', async (_, json: string) => {
-    const settingsPath = join(app.getPath('userData'), 'settings.json')
+    const settingsDir = app.getPath('userData')
+    const settingsPath = join(settingsDir, 'settings.json')
+    await mkdir(settingsDir, { recursive: true })
     await writeFile(settingsPath, json, 'utf-8')
   })
 }
