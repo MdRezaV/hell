@@ -448,7 +448,9 @@ const FileExplorer = forwardRef(function FileExplorer(
   const handleSelectWorkspace = useCallback(
     (path: string) => {
       setShowWorkspaceList(false)
-      if (path !== workspace) {
+      const normalize = (p: string): string =>
+        p.length > 1 && (p.endsWith('/') || p.endsWith('\\')) ? p.slice(0, -1) : p
+      if (normalize(path) !== normalize(workspace ?? '')) {
         onWorkspaceChange(path)
       }
     },
@@ -773,7 +775,7 @@ const FileExplorer = forwardRef(function FileExplorer(
           {workspaceList.map((ws) => (
             <div
               key={ws.path}
-              className={`explorer-workspace-item${ws.path === workspace ? ' explorer-workspace-item--active' : ''}`}
+              className={`explorer-workspace-item${ws.path === workspace || ws.path + '/' === workspace || ws.path === workspace + '/' ? ' explorer-workspace-item--active' : ''}`}
               onClick={() => handleSelectWorkspace(ws.path)}
               title={ws.path}
             >

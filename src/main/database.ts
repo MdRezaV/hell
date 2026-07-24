@@ -10,7 +10,7 @@ const MAX_SESSIONS_PER_WORKSPACE = 100
 // backwards-incompatible way. On startup, if the stored
 // `PRAGMA user_version` does not match, the database is wiped
 // and recreated from scratch.
-const SCHEMA_VERSION = 7
+const SCHEMA_VERSION = 8
 
 let db: Database.Database | null = null
 
@@ -196,7 +196,15 @@ function getDb(): Database.Database {
   return db
 }
 
+function normalizeWorkspacePath(p: string): string {
+  if (p.length > 1 && (p.endsWith('/') || p.endsWith('\\'))) {
+    return p.slice(0, -1)
+  }
+  return p
+}
+
 export function toRelative(workspacePath: string, absolutePath: string): string {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   if (!absolutePath.startsWith(workspacePath)) {
     return absolutePath
   }
@@ -212,6 +220,7 @@ export function toRelative(workspacePath: string, absolutePath: string): string 
 }
 
 export function touchWorkspace(workspacePath: string): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   d.prepare(
     `INSERT INTO workspaces (path, last_opened) VALUES (?, ?)
@@ -242,6 +251,7 @@ export interface WorkspaceState {
 }
 
 export function getWorkspaceState(workspacePath: string): WorkspaceState {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const files = d
     .prepare('SELECT relative_path, tag FROM file_states WHERE workspace_path = ?')
@@ -258,9 +268,19 @@ export function getWorkspaceState(workspacePath: string): WorkspaceState {
 
 export function getWorkspaces(): Array<{ path: string; last_opened: number }> {
   const d = getDb()
-  return d
+  const rows = d
     .prepare('SELECT path, last_opened FROM workspaces ORDER BY last_opened DESC')
     .all() as Array<{ path: string; last_opened: number }>
+  const seen = new Set<string>()
+  const result: Array<{ path: string; last_opened: number }> = []
+  for (const row of rows) {
+    const norm = normalizeWorkspacePath(row.path)
+    if (!seen.has(norm)) {
+      seen.add(norm)
+      result.push({ path: norm, last_opened: row.last_opened })
+    }
+  }
+  return result
 }
 
 export function getLastWorkspace(): string | null {
@@ -271,6 +291,7 @@ export function getLastWorkspace(): string | null {
 }
 
 export function setFileState(workspacePath: string, absolutePath: string, tag: string): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const rel = toRelative(workspacePath, absolutePath)
   d.prepare(
@@ -280,6 +301,7 @@ export function setFileState(workspacePath: string, absolutePath: string, tag: s
 }
 
 export function removeFileState(workspacePath: string, absolutePath: string): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const rel = toRelative(workspacePath, absolutePath)
   d.prepare('DELETE FROM file_states WHERE workspace_path = ? AND relative_path = ?').run(
@@ -292,6 +314,7 @@ export function batchSetFileStates(
   workspacePath: string,
   states: Array<{ absolutePath: string; tag: string }>
 ): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const stmt = d.prepare(
     `INSERT INTO file_states (workspace_path, relative_path, tag) VALUES (?, ?, ?)
@@ -307,6 +330,7 @@ export function batchSetFileStates(
 }
 
 export function batchRemoveFileStates(workspacePath: string, absolutePaths: string[]): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const stmt = d.prepare('DELETE FROM file_states WHERE workspace_path = ? AND relative_path = ?')
   const tx = d.transaction(() => {
@@ -319,6 +343,7 @@ export function batchRemoveFileStates(workspacePath: string, absolutePaths: stri
 }
 
 export function clearFileStates(workspacePath: string): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   d.prepare('DELETE FROM file_states WHERE workspace_path = ?').run(workspacePath)
 }
@@ -328,6 +353,7 @@ export function setDirExpanded(
   absolutePath: string,
   expanded: boolean
 ): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const rel = toRelative(workspacePath, absolutePath)
   if (expanded) {
@@ -346,6 +372,7 @@ export function batchSetDirExpanded(
   workspacePath: string,
   entries: Array<{ absolutePath: string; expanded: boolean }>
 ): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const insertStmt = d.prepare(
     `INSERT OR IGNORE INTO expanded_dirs (workspace_path, relative_path) VALUES (?, ?)`
@@ -480,6 +507,7 @@ export function snapshotWorkspaceStateToSession(workspacePath: string): {
   fileStates: string
   expandedDirs: string
 } {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const files = d
     .prepare('SELECT relative_path, tag FROM file_states WHERE workspace_path = ?')
@@ -561,6 +589,7 @@ export function pruneWorkspaceState(
   validFilePaths: string[],
   validDirPaths: string[]
 ): void {
+  workspacePath = normalizeWorkspacePath(workspacePath)
   const d = getDb()
   const validRelFiles = validFilePaths.map((p) => toRelative(workspacePath, p))
   const validRelDirs = validDirPaths.map((p) => toRelative(workspacePath, p))
