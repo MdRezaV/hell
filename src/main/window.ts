@@ -29,6 +29,16 @@ export function createWindow(): void {
     }
   })
 
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    if (!params.misspelledWord) return
+    mainWindow.webContents.send('context-menu:show', {
+      x: params.x,
+      y: params.y,
+      misspelledWord: params.misspelledWord,
+      dictionarySuggestions: params.dictionarySuggestions
+    })
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }

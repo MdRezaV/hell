@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import Markdown from './Markdown'
+import ContextMenu from './ContextMenu'
 import '../styles/AIChat.css'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
@@ -1051,6 +1052,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   if (!isChatMode) {
     return (
       <div className="ai-chat ai-chat-welcome">
+        <ContextMenu />
         <div className="ai-chat-welcome-content">
           <div className="ai-chat-welcome-icon">
             <Flame size={40} strokeWidth={1.25} />
@@ -1090,6 +1092,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   return (
     <div className="ai-chat">
+      <ContextMenu />
       <div className="ai-chat-header">
         <div className="ai-chat-header-left">
           <Bot size={14} />

@@ -442,6 +442,14 @@ export function registerIpcHandlers(): void {
     return formatTreeText(nodes)
   })
 
+  safeHandle('spellcheck:replace', async (event, word: string) => {
+    event.sender.replaceMisspelling(word)
+  })
+
+  safeHandle('spellcheck:add-to-dictionary', async (event, word: string) => {
+    event.sender.session.addWordToSpellCheckerDictionary(word)
+  })
+
   safeHandle('settings:load', async () => {
     const settingsPath = join(app.getPath('userData'), 'settings.json')
     try {
