@@ -181,6 +181,35 @@ const DRACULA: CatppuccinPalette = {
   crust: '#191a21'
 }
 
+const BLACK: CatppuccinPalette = {
+  rosewater: '#ffb86c',
+  flamingo: '#ff79c6',
+  pink: '#ff79c6',
+  mauve: '#bd93f9',
+  red: '#ff5555',
+  maroon: '#d03a3a',
+  peach: '#ffb86c',
+  yellow: '#f1fa8c',
+  green: '#50fa7b',
+  teal: '#8be9fd',
+  sky: '#8be9fd',
+  sapphire: '#6272a4',
+  blue: '#bd93f9',
+  lavender: '#d6acff',
+  text: '#f8f8f2',
+  subtext1: '#e2e2dc',
+  subtext0: '#bfbfb9',
+  overlay2: '#44445a',
+  overlay1: '#333345',
+  overlay0: '#252530',
+  surface2: '#181822',
+  surface1: '#12121a',
+  surface0: '#0d0d14',
+  base: '#000000',
+  mantle: '#050508',
+  crust: '#020204'
+}
+
 const NORD_DARK: CatppuccinPalette = {
   rosewater: '#d08770',
   flamingo: '#bf616a',
@@ -254,6 +283,7 @@ const COLOR_PRESETS: ThemePreset[] = [
   { label: 'Latte', accent: '#1e66f5', bg: '#eff1f5', text: '#4c4f69', palette: LATTE },
   { label: 'One Dark', accent: '#61afef', bg: '#282c34', text: '#abb2bf', palette: ONEDARK },
   { label: 'Dracula', accent: '#bd93f9', bg: '#282a36', text: '#f8f8f2', palette: DRACULA },
+  { label: 'Black', accent: '#bd93f9', bg: '#000000', text: '#f8f8f2', palette: BLACK },
   { label: 'Nord Dark', accent: '#88c0d0', bg: '#2e3440', text: '#eceff4', palette: NORD_DARK },
   { label: 'Nord Light', accent: '#5e81ac', bg: '#eceff4', text: '#2e3440', palette: NORD_LIGHT },
   { label: 'Ember', accent: '#f38ba8', bg: '#1e1e2e', text: '#f5e0dc' }
