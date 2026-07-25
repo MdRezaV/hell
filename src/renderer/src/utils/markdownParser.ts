@@ -11,10 +11,28 @@ export function wrapInFence(code: string, lang: string): string {
   const tildeMatch = code.match(/~+/g)
   if (tildeMatch) maxTildes = Math.max(...tildeMatch.map((s) => s.length))
 
+  const structured = lang.includes(':') || lang === 'commit'
   let fence: string
-  if (maxBackticks < 3) fence = '```'
-  else if (maxTildes < 3) fence = '~~~'
-  else fence = '`'.repeat(maxBackticks + 1)
+  if (structured) {
+    if (maxBackticks < 3) {
+      fence = '```'
+    } else {
+      const lines = code.split('\n')
+      const hasInfoFence = lines.some((l) => /^`{3,}[^\s`]/.test(l))
+      const hasBareClose = lines.some((l) => /^`{3,}\s*$/.test(l))
+      if (maxTildes < 3 && hasInfoFence && hasBareClose) {
+        fence = '~~~'
+      } else {
+        fence = '`'.repeat(Math.max(maxBackticks, maxTildes) + 1)
+      }
+    }
+  } else if (maxBackticks < 3) {
+    fence = '```'
+  } else if (maxTildes < 3) {
+    fence = maxBackticks === 3 ? '~~~' : '`'.repeat(maxBackticks + 1)
+  } else {
+    fence = '`'.repeat(Math.max(maxBackticks, maxTildes) + 1)
+  }
 
   return `\n${fence}${lang}\n${code}\n${fence}\n`
 }
@@ -58,18 +76,49 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
 }
 
 const BLOCK_MARKER_RE =
-  /^\s*\[FILE .+]\s*$|^\s*\[DELETE FILE .+]\s*$|^\s*\[MOVE FILE FROM .+ TO .+]\s*$|^\s*\[TASK\s+[^\]]+]\s*$|^\s*COMMIT: .+\s*$/
+  /^\s*\[FILE [^[\]]+]\s*$|^\s*\[DELETE FILE [^[\]]+]\s*$|^\s*\[MOVE FILE FROM [^[\]]+ TO [^[\]]+]\s*$|^\s*\[TASK\s+[^\]]+]\s*$|^\s*COMMIT: .*\s*$/
 const FILE_END_RE = /^\s*\[END]\s*$/
 const SEARCH_RE = /^\s*\[SEARCH]\s*$/
 const REPLACE_RE = /^\s*\[REPLACE]\s*$/
-const INCLUDE_INLINE_RE = /\[INCLUDE\s+([^\]]+)]/g
-
 function processIncludeInline(line: string): string {
-  return line.replace(INCLUDE_INLINE_RE, (match, path) => {
-    const trimmed = path.trim()
-    if (!trimmed) return match
-    return `\`file-include:${trimmed}\``
-  })
+  const INCLUDE_START = /\[INCLUDE\s+/g
+  const starts: Array<{ index: number; contentStart: number }> = []
+  let m: RegExpExecArray | null
+  while ((m = INCLUDE_START.exec(line)) !== null) {
+    starts.push({ index: m.index, contentStart: m.index + m[0].length })
+  }
+
+  if (starts.length === 0) return line
+
+  let result = ''
+  let pos = 0
+
+  for (let i = 0; i < starts.length; i++) {
+    const { index, contentStart } = starts[i]
+    result += line.slice(pos, index)
+
+    const searchEnd = i + 1 < starts.length ? starts[i + 1].index : line.length
+    const closingBracket = line.lastIndexOf(']', searchEnd - 1)
+
+    if (closingBracket < contentStart) {
+      result += line.slice(index, searchEnd)
+      pos = searchEnd
+      continue
+    }
+
+    const path = line.slice(contentStart, closingBracket).trim()
+    if (!path) {
+      result += line.slice(index, closingBracket + 1)
+      pos = closingBracket + 1
+      continue
+    }
+
+    result += `\`file-include:${path}\``
+    pos = closingBracket + 1
+  }
+
+  result += line.slice(pos)
+  return result
 }
 
 function safePath(path: string): string {
@@ -182,18 +231,25 @@ function preprocessImpl(
     }
 
     // [FILE path]
-    const fileMatch = /^\s*\[FILE (.+)]\s*$/.exec(line)
+    const fileMatch = /^\s*\[FILE ([^[\]]+)]\s*$/.exec(line)
     if (fileMatch) {
       const path = fileMatch[1].trim()
+      if (!path) {
+        result.push(processIncludeInline(line))
+        i++
+        continue
+      }
       lastFilePath = path
       i++
       const contentLines: string[] = []
+      let seenSearch = false
       while (i < lines.length) {
         if (FILE_END_RE.test(lines[i])) {
           i++
           break
         }
-        if (BLOCK_MARKER_RE.test(lines[i])) break
+        if (!seenSearch && BLOCK_MARKER_RE.test(lines[i])) break
+        if (SEARCH_RE.test(lines[i])) seenSearch = true
         contentLines.push(lines[i])
         i++
       }
@@ -237,7 +293,7 @@ function preprocessImpl(
     }
 
     // [DELETE FILE path]
-    const deleteMatch = /^\s*\[DELETE FILE (.+)]\s*$/.exec(line)
+    const deleteMatch = /^\s*\[DELETE FILE ([^[\]]+)]\s*$/.exec(line)
     if (deleteMatch) {
       const path = deleteMatch[1].trim()
       const fenced = wrapInFence('', `file-delete:${safePath(path)}`)
@@ -247,7 +303,7 @@ function preprocessImpl(
     }
 
     // [MOVE FILE FROM old TO new]
-    const moveMatch = /^\s*\[MOVE FILE FROM (.+?) TO (.+)]\s*$/.exec(line)
+    const moveMatch = /^\s*\[MOVE FILE FROM ([^[\]]+?) TO ([^[\]]+)]\s*$/.exec(line)
     if (moveMatch) {
       const oldPath = moveMatch[1].trim()
       const newPath = moveMatch[2].trim()
@@ -279,7 +335,7 @@ function preprocessImpl(
     }
 
     // COMMIT: message
-    const commitMatch = /^\s*COMMIT: (.+)\s*$/.exec(line)
+    const commitMatch = /^\s*COMMIT: (.*)\s*$/.exec(line)
     if (commitMatch) {
       const message = commitMatch[1].trim()
       const fenced = wrapInFence(message, 'commit')
@@ -415,7 +471,7 @@ function _findLastSafeBoundary(content: string): number {
     const line = lines[i]
 
     if (!inFence && !inFileBlock && !inOrphanSearch) {
-      if (/^\s*\[FILE .+]\s*$/.test(line) || /^\s*\[TASK\s+[^\]]+]\s*$/.test(line)) {
+      if (/^\s*\[FILE [^[\]]+]\s*$/.test(line) || /^\s*\[TASK\s+[^\]]+]\s*$/.test(line)) {
         inFileBlock = true
       } else if (/^\s*\[SEARCH]\s*$/.test(line)) {
         inOrphanSearch = true
