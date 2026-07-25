@@ -51,23 +51,40 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
   const lines = normalizeLineEndings(code).split('\n')
   if (lines.length === 0) return null
 
+  const isSearch = (l: string): boolean => /^\s*\[SEARCH]\s*$/.test(l) || /^@@SEARCH$/.test(l)
+  const isWith = (l: string): boolean => /^\s*\[REPLACE]\s*$/.test(l) || /^@@WITH$/.test(l)
+  const isEnd = (l: string): boolean => /^\s*\[END]\s*$/.test(l) || /^@@END$/.test(l)
+
   let i = 0
-  while (i < lines.length && !/^\s*\[SEARCH]\s*$/.test(lines[i])) {
+  while (i < lines.length && !isSearch(lines[i])) {
     i++
   }
   if (i >= lines.length) return null
   i++
 
   const searchLines: string[] = []
-  while (i < lines.length && !/^\s*\[REPLACE]\s*$/.test(lines[i])) {
+  while (i < lines.length && !isWith(lines[i])) {
     searchLines.push(lines[i])
     i++
   }
-  if (i >= lines.length) return null
+  if (i >= lines.length || !isWith(lines[i])) return null
   i++
 
   const replaceLines: string[] = []
-  while (i < lines.length && !/^\s*\[END]\s*$/.test(lines[i])) {
+  while (i < lines.length && !isEnd(lines[i])) {
+    if (/^\s+@@END\s*$/.test(lines[i])) return null
+    if (isSearch(lines[i])) {
+      let j = i + 1
+      let foundWith = false
+      while (j < lines.length && !isEnd(lines[j])) {
+        if (isWith(lines[j])) {
+          foundWith = true
+          break
+        }
+        j++
+      }
+      if (foundWith) break
+    }
     replaceLines.push(lines[i])
     i++
   }
@@ -76,10 +93,69 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
 }
 
 const BLOCK_MARKER_RE =
-  /^\s*\[FILE [^[\]]+]\s*$|^\s*\[DELETE FILE [^[\]]+]\s*$|^\s*\[MOVE FILE FROM [^[\]]+ TO [^[\]]+]\s*$|^\s*\[TASK\s+[^\]]+]\s*$|^\s*COMMIT: .*\s*$/
-const FILE_END_RE = /^\s*\[END]\s*$/
-const SEARCH_RE = /^\s*\[SEARCH]\s*$/
-const REPLACE_RE = /^\s*\[REPLACE]\s*$/
+  /^@@FILE .+$|^@@REPLACE .+$|^@@DELETE .+$|^@@MOVE .+$|^@@TASK\s+.+$|^@@COMMIT .*$/
+const FILE_END_RE = /^\s*\[END]\s*$|^@@END$/
+const SEARCH_RE = /^\s*\[SEARCH]\s*$|^@@SEARCH$/
+const REPLACE_RE = /^\s*\[REPLACE]\s*$|^@@WITH$/
+function processAtIncludeInline(line: string): string {
+  const re = /@@INCLUDE\s+/g
+  let result = ''
+  let lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(line)) !== null) {
+    result += line.slice(lastIndex, m.index)
+    const restStart = m.index + m[0].length
+
+    const nextInclude = line.indexOf('@@INCLUDE', restStart)
+    const segment = nextInclude !== -1 ? line.slice(restStart, nextInclude) : line.slice(restStart)
+    const trimmed = segment.trimEnd()
+
+    if (!trimmed) {
+      lastIndex = restStart
+      continue
+    }
+
+    const tokens = trimmed.split(/\s+/)
+    const lastToken = tokens[tokens.length - 1].replace(/\.$/, '')
+    const hasExtension = /\.\w+$/.test(lastToken)
+
+    let path: string
+    let trailing: string
+    if (hasExtension && tokens.length > 1) {
+      path = trimmed
+      if (path.endsWith('.')) {
+        path = path.slice(0, -1)
+        trailing = '.' + segment.slice(trimmed.length)
+      } else {
+        trailing = segment.slice(trimmed.length)
+      }
+    } else {
+      const firstSpace = trimmed.search(/\s/)
+      if (firstSpace === -1) {
+        path = trimmed
+        trailing = segment.slice(trimmed.length)
+      } else {
+        path = trimmed.slice(0, firstSpace)
+        trailing = trimmed.slice(firstSpace) + segment.slice(trimmed.length)
+      }
+      if (path.endsWith('.')) {
+        path = path.slice(0, -1)
+        trailing = '.' + trailing
+      }
+    }
+
+    if (!path) {
+      lastIndex = restStart
+      continue
+    }
+
+    result += `\`file-include:${path}\`${trailing}`
+    lastIndex = nextInclude !== -1 ? nextInclude : line.length
+  }
+  result += line.slice(lastIndex)
+  return result
+}
+
 function processIncludeInline(line: string): string {
   const INCLUDE_START = /\[INCLUDE\s+/g
   const starts: Array<{ index: number; contentStart: number }> = []
@@ -122,7 +198,13 @@ function processIncludeInline(line: string): string {
 }
 
 function safePath(path: string): string {
-  return path.replace(/\s/g, '%20')
+  return (
+    path
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1f\x7f]/g, '')
+      .replace(/\\/g, '/')
+      .replace(/\s/g, '%20')
+  )
 }
 
 function isCodeFenceOpen(line: string): { char: string; len: number } | null {
@@ -230,59 +312,51 @@ function preprocessImpl(
       continue
     }
 
-    // [FILE path]
-    const fileMatch = /^\s*\[FILE ([^[\]]+)]\s*$/.exec(line)
-    if (fileMatch) {
-      const path = fileMatch[1].trim()
-      if (!path) {
-        result.push(processIncludeInline(line))
-        i++
-        continue
-      }
+    // @@FILE path
+    const atFileMatch = /^@@FILE (.+)$/.exec(line)
+    if (atFileMatch) {
+      const path = atFileMatch[1].trim()
       lastFilePath = path
       i++
       const contentLines: string[] = []
-      let seenSearch = false
-      while (i < lines.length) {
-        if (FILE_END_RE.test(lines[i])) {
-          i++
-          break
-        }
-        if (!seenSearch && BLOCK_MARKER_RE.test(lines[i])) break
-        if (SEARCH_RE.test(lines[i])) seenSearch = true
+      while (i < lines.length && !/^@@END$/.test(lines[i])) {
+        if (BLOCK_MARKER_RE.test(lines[i])) break
         contentLines.push(lines[i])
         i++
       }
+      if (i < lines.length && /^@@END$/.test(lines[i])) i++
+      const code = contentLines.join('\n')
+      const fenced = wrapInFence(code, `file:${safePath(path)}`)
+      result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+      continue
+    }
 
-      const hasSearch = contentLines.some((l) => SEARCH_RE.test(l))
-
-      if (hasSearch) {
-        const pairs = parseSearchReplacePairs(contentLines)
-        if (pairs.length > 0) {
-          for (const pair of pairs) {
-            const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
-            const fenced = wrapInFence(combined, `file-replace:${safePath(path)}`)
-            result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
-          }
-        } else {
-          const hasReplaceLiteral = contentLines.some((l) => l.includes('[REPLACE]'))
-          if (hasReplaceLiteral) {
-            const searchContent: string[] = []
-            let j = 0
-            while (j < contentLines.length && !SEARCH_RE.test(contentLines[j])) j++
-            j++
-            while (j < contentLines.length) {
-              searchContent.push(contentLines[j])
-              j++
-            }
-            const combined = `[SEARCH]\n${searchContent.join('\n')}\n[REPLACE]\n\n[END]`
-            const fenced = wrapInFence(combined, `file-replace:${safePath(path)}`)
-            result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
-          } else {
-            const code = contentLines.join('\n')
-            const fenced = wrapInFence(code, `file:${safePath(path)}`)
-            result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
-          }
+    // @@REPLACE path
+    const atReplaceMatch = /^@@REPLACE (.+)$/.exec(line)
+    if (atReplaceMatch) {
+      const path = atReplaceMatch[1].trim()
+      lastFilePath = path
+      i++
+      const contentLines: string[] = []
+      while (i < lines.length && !/^@@END$/.test(lines[i])) {
+        if (
+          /^@@FILE /.test(lines[i]) ||
+          /^@@REPLACE /.test(lines[i]) ||
+          /^@@DELETE /.test(lines[i]) ||
+          /^@@MOVE /.test(lines[i]) ||
+          /^@@TASK\s/.test(lines[i])
+        )
+          break
+        contentLines.push(lines[i])
+        i++
+      }
+      if (i < lines.length && /^@@END$/.test(lines[i])) i++
+      const pairs = parseSearchReplacePairs(contentLines)
+      if (pairs.length > 0) {
+        for (const pair of pairs) {
+          const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
+          const fenced = wrapInFence(combined, `file-replace:${safePath(path)}`)
+          result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
         }
       } else {
         const code = contentLines.join('\n')
@@ -292,89 +366,99 @@ function preprocessImpl(
       continue
     }
 
-    // [DELETE FILE path]
-    const deleteMatch = /^\s*\[DELETE FILE ([^[\]]+)]\s*$/.exec(line)
-    if (deleteMatch) {
-      const path = deleteMatch[1].trim()
+    // @@DELETE path
+    const atDeleteMatch = /^@@DELETE (.+)$/.exec(line)
+    if (atDeleteMatch) {
+      const path = atDeleteMatch[1].trim()
       const fenced = wrapInFence('', `file-delete:${safePath(path)}`)
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       i++
       continue
     }
 
-    // [MOVE FILE FROM old TO new]
-    const moveMatch = /^\s*\[MOVE FILE FROM ([^[\]]+?) TO ([^[\]]+)]\s*$/.exec(line)
-    if (moveMatch) {
-      const oldPath = moveMatch[1].trim()
-      const newPath = moveMatch[2].trim()
-      const fenced = wrapInFence('', `file-move:${safePath(oldPath)}->${safePath(newPath)}`)
+    // @@MOVE old -> new
+    const atMoveMatch = /^@@MOVE (.+?) -> (.+)$/.exec(line)
+    if (atMoveMatch) {
+      const oldPath = atMoveMatch[1].trim()
+      const newPath = atMoveMatch[2].trim()
+      const safeSrc = oldPath
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\x00-\x1f\x7f]/g, '')
+        .replace(/\\/g, '/')
+        .replace(/ -> /g, '\x00')
+        .replace(/\s/g, '%20')
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x00/g, ' -> ')
+      const safeDest = newPath
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\x00-\x1f\x7f]/g, '')
+        .replace(/\\/g, '/')
+        .replace(/ -> /g, '\x00')
+        .replace(/\s/g, '%20')
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x00/g, ' -> ')
+      const fenced = wrapInFence('', `file-move:${safeSrc}->${safeDest}`)
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       i++
       continue
     }
 
-    // [TASK id]
-    const taskMatch = /^\s*\[TASK\s+([^\]]+)]\s*$/.exec(line)
-    if (taskMatch) {
-      const taskId = taskMatch[1].trim()
+    // @@TASK id
+    const atTaskMatch = /^@@TASK\s+(.+)$/.exec(line)
+    if (atTaskMatch) {
+      const taskId = atTaskMatch[1].trim()
       i++
       const contentLines: string[] = []
-      while (i < lines.length) {
-        if (FILE_END_RE.test(lines[i])) {
-          i++
-          break
-        }
+      while (i < lines.length && !/^@@END$/.test(lines[i])) {
         if (BLOCK_MARKER_RE.test(lines[i])) break
         contentLines.push(lines[i])
         i++
       }
+      if (i < lines.length && /^@@END$/.test(lines[i])) i++
       const code = contentLines.join('\n')
       const fenced = wrapInFence(code, `task:${safePath(taskId)}`)
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       continue
     }
 
-    // COMMIT: message
-    const commitMatch = /^\s*COMMIT: (.*)\s*$/.exec(line)
-    if (commitMatch) {
-      const message = commitMatch[1].trim()
+    // @@COMMIT message
+    const atCommitMatch = /^@@COMMIT (.*)$/.exec(line)
+    if (atCommitMatch) {
+      const message = atCommitMatch[1].trim()
       const fenced = wrapInFence(message, 'commit')
       result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
       i++
       continue
     }
 
-    // Orphan [SEARCH] outside any [FILE] block — reuse the most recent FILE path
-    if (lastFilePath && SEARCH_RE.test(line)) {
-      const startIdx = i
+    // Orphan @@SEARCH / [SEARCH] block outside any @@FILE/@@REPLACE
+    if (SEARCH_RE.test(line)) {
       const contentLines: string[] = [line]
       i++
-      while (i < lines.length) {
-        if (FILE_END_RE.test(lines[i])) {
-          i++
-          break
-        }
-        if (BLOCK_MARKER_RE.test(lines[i])) break
+      while (i < lines.length && !FILE_END_RE.test(lines[i]) && !BLOCK_MARKER_RE.test(lines[i])) {
         contentLines.push(lines[i])
         i++
       }
-
+      if (i < lines.length && FILE_END_RE.test(lines[i])) {
+        contentLines.push(lines[i])
+        i++
+      }
       const pairs = parseSearchReplacePairs(contentLines)
-      if (pairs.length > 0) {
+      if (pairs.length > 0 && lastFilePath) {
         for (const pair of pairs) {
           const combined = `[SEARCH]\n${pair.old}\n[REPLACE]\n${pair.new}\n[END]`
           const fenced = wrapInFence(combined, `file-replace:${safePath(lastFilePath)}`)
           result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
         }
       } else {
-        for (let k = startIdx; k < i; k++) {
-          result.push(processIncludeInline(lines[k]))
+        for (const l of contentLines) {
+          result.push(l)
         }
       }
       continue
     }
 
-    result.push(processIncludeInline(line))
+    result.push(processAtIncludeInline(processIncludeInline(line)))
     i++
   }
 
@@ -465,16 +549,13 @@ function _findLastSafeBoundary(content: string): number {
   let fenceChar = ''
   let fenceLen = 0
   let inFileBlock = false
-  let inOrphanSearch = false
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
-    if (!inFence && !inFileBlock && !inOrphanSearch) {
-      if (/^\s*\[FILE [^[\]]+]\s*$/.test(line) || /^\s*\[TASK\s+[^\]]+]\s*$/.test(line)) {
+    if (!inFence && !inFileBlock) {
+      if (/^@@FILE .+$/.test(line) || /^@@REPLACE .+$/.test(line) || /^@@TASK\s+.+$/.test(line)) {
         inFileBlock = true
-      } else if (/^\s*\[SEARCH]\s*$/.test(line)) {
-        inOrphanSearch = true
       } else {
         const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)
         if (m) {
@@ -483,10 +564,9 @@ function _findLastSafeBoundary(content: string): number {
           fenceLen = m[2].length
         }
       }
-    } else if (inFileBlock || inOrphanSearch) {
-      if (/^\s*\[END]\s*$/.test(line)) {
+    } else if (inFileBlock) {
+      if (/^@@END$/.test(line)) {
         inFileBlock = false
-        inOrphanSearch = false
         lastSafeEnd = charPos + line.length + 1
       }
     } else {
