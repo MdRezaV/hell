@@ -391,7 +391,7 @@ export const FileMoveBlock = memo(function FileMoveBlock({
         <div className="md-file-header-left">
           <span className="md-file-status-label moved">
             <MoveRight size={12} />
-            MOVED
+            MOVE
           </span>
           <FilePathDisplay path={oldPath} />
           <ArrowRight size={16} className="md-file-move-arrow" />
