@@ -11,6 +11,7 @@ import { deriveTitle, joinWithWorkspace } from './utils/appUtils'
 import { invalidateWorkspaceFileCache } from './utils/fileApply'
 import { resetPreprocessCache } from './utils/markdownParser'
 import { CHAT_MODES } from './utils/PromptEngine'
+import { selectPromptContent } from './utils/promptFileSelection'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import { useSettings } from './SettingsContext'
 import ChatHistory, { type ChatHistoryHandle } from './components/ChatHistory'
@@ -421,20 +422,14 @@ function App(): React.JSX.Element {
         const currentFileStates = fileStatesRef.current
         const currentDirStructureTag = dirStructureTagRef.current
 
-        // 1. Transition PND -> INQ first and collect paths synchronously
-        const pathsToInclude: string[] = []
-        const pathsToMarkInq: string[] = []
-
-        currentFileStates.forEach((state, path) => {
-          if (filePaths.has(path)) {
-            if (state === 'PND') {
-              pathsToMarkInq.push(path)
-            }
-            if (state === 'PND' || state === 'INQ') {
-              pathsToInclude.push(path)
-            }
-          }
-        })
+                // 1. Determine what to include in the prompt
+        const { pathsToInclude, pathsToMarkInq, includeDirStructure, transitionDirTag } =
+          selectPromptContent(
+            currentFileStates,
+            filePaths,
+            lastPasteAddedRef.current,
+            currentDirStructureTag
+          )
 
         if (pathsToMarkInq.length > 0) {
           setFileStates((prev) => {
@@ -454,13 +449,7 @@ function App(): React.JSX.Element {
         // Record which paths are newly transitioned for copySnapshotRef
         copySnapshotRef.current = new Set(pathsToInclude)
 
-        // Include ADD files that were added by the most recent paste
-        const lastPasteAdded = lastPasteAddedRef.current
-        lastPasteAdded.forEach((path) => {
-          if (currentFileStates.get(path) === 'ADD' && !pathsToInclude.includes(path)) {
-            pathsToInclude.push(path)
-          }
-        })
+
 
         // 2. Read file contents for all targeted paths
         const pendingFilesPromises = pathsToInclude.map(async (absolutePath) => {
@@ -486,9 +475,9 @@ function App(): React.JSX.Element {
 
         // 3. Prepare context and copy
         let dirStructure: string | undefined
-        if (currentDirStructureTag === 'PND' || currentDirStructureTag === 'INQ') {
+        if (includeDirStructure) {
           dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
-          if (currentDirStructureTag === 'PND') {
+          if (transitionDirTag) {
             setDirStructureTag('INQ')
             dirStructureTagRef.current = 'INQ'
           }
