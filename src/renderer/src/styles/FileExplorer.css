@@ -136,8 +136,8 @@
 }
 
 .tree-node--focused {
-  background-color: color-mix(in srgb, var(--ctp-surface1) 18%, transparent);
-  outline: 1px solid color-mix(in srgb, var(--ctp-blue) 12%, transparent);
+  background-color: color-mix(in srgb, var(--ctp-surface1) 50%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--ctp-blue) 10%, transparent);
   outline-offset: -1px;
 }
 
