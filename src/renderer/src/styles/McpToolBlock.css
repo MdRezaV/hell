@@ -1,0 +1,90 @@
+.md-mcp-block {
+  @apply rounded-lg border border-border overflow-hidden my-2;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+  contain: layout style;
+}
+
+.md-mcp-header {
+  @apply flex items-center justify-between px-3 py-2 bg-surface-0 border-b border-border-subtle;
+}
+
+.md-mcp-header-left {
+  @apply flex items-center gap-1.5 min-w-0;
+}
+
+.md-mcp-badge {
+  @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide;
+  background: color-mix(in srgb, var(--ctp-mauve) 18%, transparent);
+  color: var(--ctp-mauve);
+}
+
+.md-mcp-server {
+  @apply text-[12px] font-medium text-text-secondary truncate;
+}
+
+.md-mcp-separator {
+  @apply text-text-faint text-[12px] flex-shrink-0;
+}
+
+.md-mcp-tool-name {
+  @apply text-[12px] font-mono text-text truncate;
+}
+
+.md-mcp-header-actions {
+  @apply flex items-center gap-2 flex-shrink-0;
+}
+
+.md-mcp-params-error {
+  @apply inline-flex items-center gap-1 text-[11px] text-error;
+}
+
+.md-mcp-execute {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md border cursor-pointer transition-colors duration-fast;
+  @apply bg-accent text-accent-text border-accent;
+}
+
+.md-mcp-execute:hover:not(:disabled) {
+  @apply bg-accent-hover border-accent-hover;
+}
+
+.md-mcp-execute:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.md-mcp-execute.executed {
+  @apply bg-surface-1 text-success border-border;
+  cursor: default;
+}
+
+.md-mcp-execute.error {
+  @apply bg-surface-1 text-error border-border;
+}
+
+.md-mcp-section {
+  @apply border-b border-border-subtle last:border-b-0;
+}
+
+.md-mcp-section-toggle {
+  @apply flex items-center gap-1 w-full px-3 py-1.5 text-[11px] font-medium text-text-muted bg-transparent border-none cursor-pointer text-left hover:bg-surface-0 transition-colors duration-fast;
+}
+
+.md-mcp-params,
+.md-mcp-result {
+  @apply m-0 px-3 py-2 text-[11px] font-mono text-text-secondary overflow-x-auto whitespace-pre-wrap break-words;
+  @apply bg-background;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.md-mcp-result {
+  @apply text-success;
+}
+
+.md-mcp-error {
+  @apply flex items-start gap-1.5 px-3 py-2 text-[11px] text-error bg-surface-0;
+}
+
+.md-mcp-error span {
+  @apply break-words;
+}

@@ -26,7 +26,13 @@ import ContextMenu from './ContextMenu'
 import '../styles/AIChat.css'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
-import { buildPrompt, CHAT_MODES, type FileContext, getModeByLabel } from '../utils/PromptEngine'
+import {
+  buildPrompt,
+  CHAT_MODES,
+  type FileContext,
+  getModeByLabel,
+  type McpToolInfo
+} from '../utils/PromptEngine'
 import { useWorkspace } from '../WorkspaceContext'
 
 export interface MessageVariant {
@@ -873,13 +879,23 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         const userContent = userMsg.variants[userMsg.activeVariant].content
         const modeConfig = getModeByLabel(modeLabel || mode)
         const hellMdContent = await readHellMd()
+        let mcpTools: McpToolInfo[] = []
+        try {
+          mcpTools = (await window.electron.ipcRenderer.invoke(
+            'mcp:get-tools',
+            workspace
+          )) as McpToolInfo[]
+        } catch {
+          /* MCP not available — continue without tools */
+        }
         const promptText = buildPrompt(
           userContent,
           resolvedIndex,
           modeConfig,
           files,
           dirStructure,
-          hellMdContent
+          hellMdContent,
+          mcpTools
         )
         try {
           await window.electron.ipcRenderer.invoke('clipboard:write-text', promptText)
@@ -912,13 +928,23 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         const modeConfig = getModeByLabel('Coding')
         const userCount = newMessages.filter((m) => m.role === 'user').length
         const hellMdContent = await readHellMd()
+        let mcpTools: McpToolInfo[] = []
+        try {
+          mcpTools = (await window.electron.ipcRenderer.invoke(
+            'mcp:get-tools',
+            workspace
+          )) as McpToolInfo[]
+        } catch {
+          /* MCP not available — continue without tools */
+        }
         const promptText = buildPrompt(
           description,
           userCount - 1,
           modeConfig,
           files,
           dirStructure,
-          hellMdContent
+          hellMdContent,
+          mcpTools
         )
         try {
           await window.electron.ipcRenderer.invoke('clipboard:write-text', promptText)
@@ -960,7 +986,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
         }
       }
     }
-  }, [mode, readHellMd])
+  }, [mode, readHellMd, workspace])
 
   const handleSend = (): void => {
     const trimmed = input.trim()

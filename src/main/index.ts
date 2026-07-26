@@ -5,6 +5,8 @@ import { stopWatching } from './watcher'
 import { initializeLogging, log } from './logger'
 import { createWindow } from './window'
 import { registerIpcHandlers } from './ipc'
+import { registerMcpIpcHandlers } from './mcp/mcpIpc'
+import { mcpManager } from './mcp/McpClientManager'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -29,6 +31,7 @@ app.whenReady().then(() => {
   })
 
   registerIpcHandlers()
+  registerMcpIpcHandlers()
 
   createWindow()
 
@@ -42,6 +45,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   log.info('App quitting')
   stopWatching()
+  mcpManager.shutdown().catch((e) => log.error('MCP shutdown error:', e))
   closeDatabase()
 })
 

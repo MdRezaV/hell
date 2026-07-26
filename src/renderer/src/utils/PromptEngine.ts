@@ -674,6 +674,59 @@ export interface FileContext {
   content: string
 }
 
+export interface McpToolInfo {
+  serverId: string
+  serverName: string
+  toolName: string
+  description: string
+  inputSchema: Record<string, unknown>
+}
+
+function formatMcpToolsSection(tools: McpToolInfo[]): string {
+  if (tools.length === 0) return ''
+
+  const byServer = new Map<string, { name: string; tools: McpToolInfo[] }>()
+  for (const t of tools) {
+    let entry = byServer.get(t.serverId)
+    if (!entry) {
+      entry = { name: t.serverName, tools: [] }
+      byServer.set(t.serverId, entry)
+    }
+    entry.tools.push(t)
+  }
+
+  const lines: string[] = [
+    '<available_mcp_tools>',
+    'The following MCP (Model Context Protocol) tools are available. To invoke a tool, output a block in this exact format:',
+    '',
+    '@@MCP <server-id>',
+    'tool: <tool_name>',
+    'params: { "key": "value" }',
+    '@@END',
+    '',
+    'Rules:',
+    '- params must be valid JSON on a single line.',
+    '- Only call tools listed below. Do not invent tool names.',
+    '- Multiple tool calls are allowed; output each as a separate @@MCP block.',
+    '- Tool results will be executed by the environment and returned in the next turn.',
+    ''
+  ]
+
+  for (const [serverId, entry] of byServer) {
+    lines.push(`Server: ${entry.name} (id: ${serverId})`)
+    for (const t of entry.tools) {
+      lines.push(`  - ${t.toolName}: ${t.description}`)
+      if (t.inputSchema && Object.keys(t.inputSchema).length > 0) {
+        lines.push(`    params schema: ${JSON.stringify(t.inputSchema)}`)
+      }
+    }
+    lines.push('')
+  }
+
+  lines.push('</available_mcp_tools>')
+  return lines.join('\n')
+}
+
 function normalizeLineEndings(text: string): string {
   return text.replace(/\r\n?/g, '\n')
 }
@@ -721,7 +774,8 @@ export function buildPrompt(
   mode: ChatModeConfig,
   files: FileContext[] = [],
   dirStructure?: string,
-  hellMd?: string | null
+  hellMd?: string | null,
+  mcpTools?: McpToolInfo[]
 ): string {
   const contextSection = formatContext(files, dirStructure)
   const template = findPromptTemplate(mode.prompts, index)
@@ -729,5 +783,12 @@ export function buildPrompt(
   const hellMdBody =
     hellMd && hellMd.trim().length > 0 ? normalizeLineEndings(hellMd.trim()) : 'HELL.md is empty.'
 
-  return `${template.start.replace('[CONTENT OF HELL.md SHOULD BE HERE]', hellMdBody)}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
+  let startSection = template.start.replace('[CONTENT OF HELL.md SHOULD BE HERE]', hellMdBody)
+
+  if (mcpTools && mcpTools.length > 0) {
+    const toolsSection = formatMcpToolsSection(mcpTools)
+    startSection = startSection.replace('<context>', `${toolsSection}\n\n<context>`)
+  }
+
+  return `${startSection}\n${contextSection}\n${template.middle}\n${userMessage}\n${template.end}`
 }

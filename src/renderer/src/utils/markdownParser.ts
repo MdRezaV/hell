@@ -93,7 +93,7 @@ export function parseReplaceBlock(code: string): { oldCode: string; newCode: str
 }
 
 const BLOCK_MARKER_RE =
-  /^@@FILE .+$|^@@REPLACE .+$|^@@DELETE .+$|^@@MOVE .+$|^@@TASK\s+.+$|^@@COMMIT .*$/
+  /^@@FILE .+$|^@@REPLACE .+$|^@@DELETE .+$|^@@MOVE .+$|^@@TASK\s+.+$|^@@COMMIT .*$|^@@MCP .+$/
 const FILE_END_RE = /^\s*\[END]\s*$|^@@END$/
 const SEARCH_RE = /^\s*\[SEARCH]\s*$|^@@SEARCH$/
 const REPLACE_RE = /^\s*\[REPLACE]\s*$|^@@WITH$/
@@ -421,6 +421,24 @@ function preprocessImpl(
       continue
     }
 
+    // @@MCP server-id
+    const atMcpMatch = /^@@MCP (.+)$/.exec(line)
+    if (atMcpMatch) {
+      const serverId = atMcpMatch[1].trim()
+      i++
+      const contentLines: string[] = []
+      while (i < lines.length && !/^@@END$/.test(lines[i])) {
+        if (BLOCK_MARKER_RE.test(lines[i])) break
+        contentLines.push(lines[i])
+        i++
+      }
+      if (i < lines.length && /^@@END$/.test(lines[i])) i++
+      const code = contentLines.join('\n')
+      const fenced = wrapInFence(code, `mcp-tool:${safePath(serverId)}`)
+      result.push(fenced.replace(/^\n/, '').replace(/\n$/, ''))
+      continue
+    }
+
     // @@COMMIT message
     const atCommitMatch = /^@@COMMIT (.*)$/.exec(line)
     if (atCommitMatch) {
@@ -554,7 +572,12 @@ function _findLastSafeBoundary(content: string): number {
     const line = lines[i]
 
     if (!inFence && !inFileBlock) {
-      if (/^@@FILE .+$/.test(line) || /^@@REPLACE .+$/.test(line) || /^@@TASK\s+.+$/.test(line)) {
+      if (
+        /^@@FILE .+$/.test(line) ||
+        /^@@REPLACE .+$/.test(line) ||
+        /^@@TASK\s+.+$/.test(line) ||
+        /^@@MCP .+$/.test(line)
+      ) {
         inFileBlock = true
       } else {
         const m = /^(\s{0,3})(`{3,}|~{3,})/.exec(line)

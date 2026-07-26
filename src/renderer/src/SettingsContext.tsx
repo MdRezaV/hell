@@ -38,6 +38,18 @@ export interface CatppuccinPalette {
   crust: string
 }
 
+export interface McpServerEntry {
+  id: string
+  name: string
+  transport: 'stdio' | 'sse' | 'streamable-http'
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+  enabled: boolean
+}
+
 export interface SettingsState {
   accentColor: string
   bgColor: string
@@ -45,6 +57,7 @@ export interface SettingsState {
   scale: number
   palette: CatppuccinPalette | null
   autoCopy: boolean
+  mcpServers: McpServerEntry[]
 }
 
 const MOCHA_PALETTE: CatppuccinPalette = {
@@ -82,7 +95,17 @@ const DEFAULT_SETTINGS: SettingsState = {
   textColor: '#cdd6f4',
   scale: 100,
   palette: MOCHA_PALETTE,
-  autoCopy: false
+  autoCopy: false,
+  mcpServers: [
+    {
+      id: 'shadcn',
+      name: 'shadcn/ui',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@anthropic/shadcn-mcp@latest'],
+      enabled: true
+    }
+  ]
 }
 
 const STORAGE_KEY = 'hell-settings'

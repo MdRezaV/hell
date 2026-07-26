@@ -189,3 +189,85 @@
 .settings-ok-btn {
   @apply px-5 py-1.5 text-[13px] font-medium bg-accent text-accent-text border border-accent rounded-md cursor-pointer transition-colors duration-fast hover:bg-accent-hover hover:border-accent-hover;
 }
+
+.settings-mcp-list {
+  @apply flex flex-col gap-1.5 mb-3;
+}
+
+.settings-mcp-empty {
+  @apply text-[12px] text-text-muted m-0 py-2;
+}
+
+.settings-mcp-row {
+  @apply flex items-center justify-between px-3 py-2 bg-surface-0 border border-border rounded-md;
+}
+
+.settings-mcp-info {
+  @apply flex flex-col gap-0.5 min-w-0;
+}
+
+.settings-mcp-name {
+  @apply text-[13px] font-medium text-text truncate;
+}
+
+.settings-mcp-meta {
+  @apply text-[11px] text-text-muted font-mono truncate;
+}
+
+.settings-mcp-actions {
+  @apply flex items-center gap-2 flex-shrink-0;
+}
+
+.settings-mcp-remove {
+  @apply p-1 rounded bg-transparent border-none cursor-pointer text-text-faint hover:text-error hover:bg-surface-1 transition-colors duration-fast;
+}
+
+.settings-mcp-add-btn {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-surface-0 border border-border rounded-md cursor-pointer text-text-secondary hover:bg-surface-1 hover:border-ctp-overlay0 transition-colors duration-fast;
+}
+
+.settings-mcp-form {
+  @apply flex flex-col gap-2 p-3 bg-surface-0 border border-border rounded-md mb-3;
+}
+
+.settings-mcp-form-row {
+  @apply flex items-center gap-2;
+}
+
+.settings-mcp-form-row label {
+  @apply text-[12px] text-text-secondary w-[70px] flex-shrink-0;
+}
+
+.settings-mcp-form-row input,
+.settings-mcp-form-row select {
+  @apply flex-1 px-2 py-1 text-[12px] font-mono text-text bg-background border border-border rounded cursor-text;
+}
+
+.settings-mcp-form-row input:focus,
+.settings-mcp-form-row select:focus {
+  @apply outline-none border-accent;
+}
+
+.settings-mcp-form-actions {
+  @apply flex justify-end gap-2 mt-1;
+}
+
+.settings-mcp-cancel {
+  @apply px-3 py-1 text-[12px] bg-transparent border border-border rounded-md cursor-pointer text-text-secondary hover:bg-surface-1 transition-colors duration-fast;
+}
+
+.settings-mcp-add-confirm {
+  @apply px-3 py-1 text-[12px] font-medium bg-accent text-accent-text border border-accent rounded-md cursor-pointer transition-colors duration-fast hover:bg-accent-hover;
+}
+
+.settings-mcp-add-confirm:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.settings-mcp-hint {
+  @apply text-[11px] text-text-faint mt-2 mb-0;
+}
+
+.settings-mcp-hint code {
+  @apply px-1 py-0.5 bg-surface-1 rounded text-[10px] font-mono text-text-muted;
+}

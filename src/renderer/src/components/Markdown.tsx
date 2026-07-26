@@ -14,6 +14,7 @@ import {
   FileReplaceBlock,
   TaskBlock
 } from './markdown/FileBlocks'
+import { McpToolBlock } from './markdown/McpToolBlock'
 
 import { CommandBlock, CommitBlock, GenericCodeBlock } from './markdown/CodeBlocks'
 import { DeferredHighlightingContext } from './markdown/DeferredHighlighting'
@@ -96,6 +97,9 @@ function Pre({
         } else if (childProps.className.startsWith('language-task:')) {
           filePath = childProps.className.slice('language-task:'.length).replace(/%20/g, ' ')
           language = 'task'
+        } else if (childProps.className.startsWith('language-mcp-tool:')) {
+          filePath = childProps.className.slice('language-mcp-tool:'.length).replace(/%20/g, ' ')
+          language = 'mcp-tool'
         } else {
           const match = /language-(\w+)/.exec(childProps.className)
           if (match) language = match[1]
@@ -104,6 +108,10 @@ function Pre({
       codeText = extractText(childProps.children).replace(/\n$/, '')
     }
   })
+
+  if (filePath && language === 'mcp-tool') {
+    return <McpToolBlock serverId={filePath} code={codeText} />
+  }
 
   if (filePath && language === 'task') {
     const lines = codeText.split('\n')

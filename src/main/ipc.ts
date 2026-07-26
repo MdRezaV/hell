@@ -31,7 +31,7 @@ import { startWatching, stopWatching } from './watcher'
 import { log } from './logger'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function safeHandle(channel: string, fn: (...args: any[]) => any): void {
+export function safeHandle(channel: string, fn: (...args: any[]) => any): void {
   ipcMain.handle(channel, async (event, ...args) => {
     try {
       return await fn(event, ...args)

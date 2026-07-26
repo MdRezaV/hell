@@ -14,6 +14,7 @@ prompts, clipboard-based integration with external LLMs, and automated parsing o
 - better-sqlite3 (synchronous, main process)
 - chokidar (file watching), electron-log (main + renderer)
 - react-markdown + remark-gfm + remark-breaks (chat markdown)
+- @modelcontextprotocol/sdk (MCP client, main process only)
 - react-syntax-highlighter + highlight.js (deferred code highlighting)
 - @tanstack/react-virtual (virtualized file tree and lists)
 - js-tiktoken (cl100k_base token counting, main process only)
@@ -199,6 +200,7 @@ src/
 
 - **Do not** call state setters in the render body (sole exception: the prev-prop pattern in `useFileContent`).
 - **Do not** use array indices as keys for reorderable items; use stable unique IDs.
+- `safeHandle` is exported from `ipc.ts` for use by `mcp/mcpIpc.ts`. Do not revert to non-exported.
 - **All keyboard shortcuts live in `useGlobalShortcuts`** (one window `keydown` listener). Extend its handler map
   instead of adding per-component listeners. Shortcuts are suppressed in INPUT/TEXTAREA/contentEditable, except
   Ctrl/Cmd+digit mode switching on the welcome screen.
@@ -219,8 +221,29 @@ src/
     event handled in `App.tsx`
   - `language-command` — Shell command
   - `language-commit` — Commit message
+  - `language-mcp-tool:<serverId>` — MCP tool call block (tool: / params: metadata); executing one
+    calls the MCP server via `mcp:call-tool` IPC
   - All other `language-*` — Generic code block; untagged blocks auto-detect language
 - Inline code `file-include:<path>` triggers file inclusion in the FileExplorer.
+
+### MCP Integration
+
+- **MCP client lives in main process** (`src/main/mcp/McpClientManager.ts`). Singleton `mcpManager`
+  manages lazy connections to MCP servers via `@modelcontextprotocol/sdk`.
+- **Two config tiers:** app-level (`settings.json` → `mcpServers` array, managed in Settings UI) and
+  workspace-level (`.hell/mcp.json` at workspace root). Workspace entries override app-level by `id`.
+- **Default server:** shadcn/ui (`npx -y @anthropic/shadcn-mcp@latest`, stdio transport).
+- **IPC channels:** `mcp:get-servers`, `mcp:get-tools`, `mcp:call-tool`, `mcp:server-status`,
+  `mcp:disconnect-server`, `mcp:save-workspace-config`, `mcp:load-workspace-config`.
+- **Prompt injection:** `buildPrompt` accepts optional `McpToolInfo[]`; when present, an
+  `<available_mcp_tools>` section is injected before `<context>` with tool schemas and the `@@MCP`
+  block format.
+- **AI output format:** `@@MCP <server-id>` / `tool:` / `params:` / `@@END` → preprocessed to
+  `mcp-tool:<serverId>` fenced block → rendered by `McpToolBlock` with Execute button.
+- **MCP blocks register with `ApplyAllBar`** via `useApplyRegistration` (stableKey
+  `mcp:<server>:<tool>:<params>`). "Execute All" runs all pending MCP calls sequentially.
+- **Connections are lazy** — established on first `getAllTools` or `callTool`, not at startup.
+  `mcpManager.shutdown()` closes all connections on app quit.
 
 ### File Operations
 

@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { RotateCcw, X } from 'lucide-react'
-import { type CatppuccinPalette, useSettings } from '../SettingsContext'
+import { Plus, RotateCcw, Trash2, X } from 'lucide-react'
+import { type CatppuccinPalette, type McpServerEntry, useSettings } from '../SettingsContext'
 import '../styles/Settings.css'
 
 interface SettingsProps {
@@ -342,8 +342,28 @@ const ColorField = memo(function ColorField({
   )
 })
 
-const SECTIONS = ['Appearance', 'Behavior'] as const
+const SECTIONS = ['Appearance', 'Behavior', 'MCP Servers'] as const
 type Section = (typeof SECTIONS)[number]
+
+const TRANSPORT_OPTIONS = ['stdio', 'sse', 'streamable-http'] as const
+
+interface NewServerForm {
+  id: string
+  name: string
+  transport: (typeof TRANSPORT_OPTIONS)[number]
+  command: string
+  args: string
+  url: string
+}
+
+const EMPTY_FORM: NewServerForm = {
+  id: '',
+  name: '',
+  transport: 'stdio',
+  command: '',
+  args: '',
+  url: ''
+}
 
 function Settings({ onClose }: SettingsProps): React.JSX.Element {
   const { settings, updateSettings, resetSettings } = useSettings()
@@ -351,6 +371,8 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
   const [bgHex, setBgHex] = useState(settings.bgColor)
   const [textHex, setTextHex] = useState(settings.textColor)
   const [activeSection, setActiveSection] = useState<Section>('Appearance')
+  const [showAddServer, setShowAddServer] = useState(false)
+  const [serverForm, setServerForm] = useState<NewServerForm>({ ...EMPTY_FORM })
   const backdropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -440,6 +462,49 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
     setTextHex(MOCHA.text)
   }, [resetSettings])
 
+  const handleToggleMcpServer = useCallback(
+    (serverId: string) => {
+      const updated = settings.mcpServers.map((s) =>
+        s.id === serverId ? { ...s, enabled: !s.enabled } : s
+      )
+      updateSettings({ mcpServers: updated })
+    },
+    [settings.mcpServers, updateSettings]
+  )
+
+  const handleRemoveMcpServer = useCallback(
+    (serverId: string) => {
+      updateSettings({ mcpServers: settings.mcpServers.filter((s) => s.id !== serverId) })
+    },
+    [settings.mcpServers, updateSettings]
+  )
+
+  const handleAddMcpServer = useCallback(() => {
+    const id = serverForm.id.trim()
+    const name = serverForm.name.trim()
+    if (!id || !name) return
+    if (settings.mcpServers.some((s) => s.id === id)) return
+
+    const entry: McpServerEntry = {
+      id,
+      name,
+      transport: serverForm.transport,
+      enabled: true
+    }
+    if (serverForm.transport === 'stdio') {
+      entry.command = serverForm.command.trim() || 'npx'
+      entry.args = serverForm.args
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean)
+    } else {
+      entry.url = serverForm.url.trim()
+    }
+    updateSettings({ mcpServers: [...settings.mcpServers, entry] })
+    setServerForm({ ...EMPTY_FORM })
+    setShowAddServer(false)
+  }, [serverForm, settings.mcpServers, updateSettings])
+
   return (
     <div className="settings-backdrop" ref={backdropRef} onClick={handleBackdropClick}>
       <div className="settings-panel">
@@ -484,6 +549,164 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
                     <span className="settings-toggle-knob" />
                   </button>
                 </div>
+              </section>
+            )}
+
+            {activeSection === 'MCP Servers' && (
+              <section className="settings-section">
+                <h3>Configured Servers</h3>
+                <div className="settings-mcp-list">
+                  {settings.mcpServers.length === 0 && (
+                    <p className="settings-mcp-empty">No MCP servers configured.</p>
+                  )}
+                  {settings.mcpServers.map((server) => (
+                    <div key={server.id} className="settings-mcp-row">
+                      <div className="settings-mcp-info">
+                        <span className="settings-mcp-name">{server.name}</span>
+                        <span className="settings-mcp-meta">
+                          {server.id} · {server.transport}
+                          {server.command ? ` · ${server.command}` : ''}
+                          {server.url ? ` · ${server.url}` : ''}
+                        </span>
+                      </div>
+                      <div className="settings-mcp-actions">
+                        <button
+                          type="button"
+                          className={`settings-toggle ${server.enabled ? 'active' : ''}`}
+                          onClick={() => handleToggleMcpServer(server.id)}
+                          role="switch"
+                          aria-checked={server.enabled}
+                          title={server.enabled ? 'Disable' : 'Enable'}
+                        >
+                          <span className="settings-toggle-knob" />
+                        </button>
+                        <button
+                          type="button"
+                          className="settings-mcp-remove"
+                          onClick={() => handleRemoveMcpServer(server.id)}
+                          title="Remove server"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {showAddServer ? (
+                  <div className="settings-mcp-form">
+                    <div className="settings-mcp-form-row">
+                      <label>ID</label>
+                      <input
+                        type="text"
+                        value={serverForm.id}
+                        onChange={(e) => setServerForm((f) => ({ ...f, id: e.target.value }))}
+                        placeholder="my-server"
+                        spellCheck={false}
+                      />
+                    </div>
+                    <div className="settings-mcp-form-row">
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        value={serverForm.name}
+                        onChange={(e) => setServerForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="My MCP Server"
+                        spellCheck={false}
+                      />
+                    </div>
+                    <div className="settings-mcp-form-row">
+                      <label>Transport</label>
+                      <select
+                        value={serverForm.transport}
+                        onChange={(e) =>
+                          setServerForm((f) => ({
+                            ...f,
+                            transport: e.target.value as NewServerForm['transport']
+                          }))
+                        }
+                      >
+                        {TRANSPORT_OPTIONS.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {serverForm.transport === 'stdio' ? (
+                      <>
+                        <div className="settings-mcp-form-row">
+                          <label>Command</label>
+                          <input
+                            type="text"
+                            value={serverForm.command}
+                            onChange={(e) =>
+                              setServerForm((f) => ({ ...f, command: e.target.value }))
+                            }
+                            placeholder="npx"
+                            spellCheck={false}
+                          />
+                        </div>
+                        <div className="settings-mcp-form-row">
+                          <label>Args</label>
+                          <input
+                            type="text"
+                            value={serverForm.args}
+                            onChange={(e) => setServerForm((f) => ({ ...f, args: e.target.value }))}
+                            placeholder="-y, @scope/mcp-server"
+                            spellCheck={false}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="settings-mcp-form-row">
+                        <label>URL</label>
+                        <input
+                          type="text"
+                          value={serverForm.url}
+                          onChange={(e) => setServerForm((f) => ({ ...f, url: e.target.value }))}
+                          placeholder="http://localhost:3000/mcp"
+                          spellCheck={false}
+                        />
+                      </div>
+                    )}
+                    <div className="settings-mcp-form-actions">
+                      <button
+                        type="button"
+                        className="settings-mcp-cancel"
+                        onClick={() => {
+                          setShowAddServer(false)
+                          setServerForm({ ...EMPTY_FORM })
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="settings-mcp-add-confirm"
+                        onClick={handleAddMcpServer}
+                        disabled={!serverForm.id.trim() || !serverForm.name.trim()}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="settings-mcp-add-btn"
+                    onClick={() => setShowAddServer(true)}
+                  >
+                    <Plus size={13} />
+                    Add Server
+                  </button>
+                )}
+
+                <p className="settings-mcp-hint">
+                  Workspace-level servers can be configured in{' '}
+                  <code>.hell/mcp.json</code> at the workspace root. They override app-level
+                  servers with the same ID.
+                </p>
               </section>
             )}
 
