@@ -1893,7 +1893,10 @@ describe('segmentContent', () => {
   it('handles consecutive fences', () => {
     const input = '```\na\n```\n```\nb\n```\nend'
     const segs = segmentContent(input)
-    expect(segs.length).toBe(3)
+    expect(segs.length).toBe(2)
+    expect(segs[0].content).toContain('a')
+    expect(segs[0].content).toContain('b')
+    expect(segs[1].content).toBe('end')
   })
 
   it('preserves blank lines in segments', () => {
