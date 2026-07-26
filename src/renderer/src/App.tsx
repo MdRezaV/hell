@@ -427,7 +427,7 @@ function App(): React.JSX.Element {
         const currentFileStates = fileStatesRef.current
         const currentDirStructureTag = dirStructureTagRef.current
 
-                // 1. Determine what to include in the prompt
+        // 1. Determine what to include in the prompt
         const { pathsToInclude, pathsToMarkInq, includeDirStructure, transitionDirTag } =
           selectPromptContent(
             currentFileStates,
@@ -455,8 +455,6 @@ function App(): React.JSX.Element {
         // Record which paths are newly transitioned for copySnapshotRef
         copySnapshotRef.current = new Set(pathsToInclude)
         dirStructureCopiedRef.current = includeDirStructure
-
-
 
         // 2. Read file contents for all targeted paths
         const pendingFilesPromises = pathsToInclude.map(async (absolutePath) => {

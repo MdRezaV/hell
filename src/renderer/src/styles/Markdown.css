@@ -386,10 +386,6 @@
   color: var(--ctp-green);
 }
 
-.md-file-syntax code > span {
-  display: block;
-}
-
 .md-file-syntax span.md-file-line-removed {
   background-color: color-mix(in srgb, var(--ctp-red) 15%, transparent);
 }

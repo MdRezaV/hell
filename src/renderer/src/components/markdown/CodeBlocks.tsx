@@ -80,35 +80,20 @@ export const LinesDisplay = memo(function LinesDisplay({
   const hasSyntax = useMemo(() => language && language !== 'text', [language])
   const gutterRef = useRef<HTMLDivElement>(null)
   const codeRef = useRef<HTMLDivElement>(null)
-  const syncing = useRef(false)
   const deferHeavy = useDeferHeavyRendering()
   const highlightReady = useDeferredHighlighting(deferHeavy, codeRef)
   const showPlain = isStreaming || (deferHeavy && !highlightReady)
 
   const handleCodeScroll = useCallback(() => {
-    if (syncing.current) return
     if (gutterRef.current && codeRef.current) {
-      if (gutterRef.current.scrollTop !== codeRef.current.scrollTop) {
-        syncing.current = true
-        gutterRef.current.scrollTop = codeRef.current.scrollTop
-        setTimeout(() => {
-          syncing.current = false
-        }, 50)
-      }
+      gutterRef.current.scrollTop = codeRef.current.scrollTop
     }
     onScroll?.()
   }, [onScroll])
 
   const handleGutterScroll = useCallback(() => {
-    if (syncing.current) return
     if (gutterRef.current && codeRef.current) {
-      if (codeRef.current.scrollTop !== gutterRef.current.scrollTop) {
-        syncing.current = true
-        codeRef.current.scrollTop = gutterRef.current.scrollTop
-        setTimeout(() => {
-          syncing.current = false
-        }, 50)
-      }
+      codeRef.current.scrollTop = gutterRef.current.scrollTop
     }
   }, [])
 
