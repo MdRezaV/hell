@@ -70,11 +70,11 @@
 }
 
 .md-content code {
-  @apply font-mono text-[0.9em] px-1.5 py-0.5 bg-surface-1 rounded-xs text-ctp-peach;
+  @apply font-mono text-[1em] px-1.5 py-0.5 bg-surface-1 rounded-xs text-ctp-peach;
 }
 
 .md-content pre {
-  @apply my-2.5 px-3.5 py-3 bg-background-mute border border-border-subtle rounded-md overflow-x-auto text-[12px] leading-snug;
+  @apply my-2.5 px-3.5 py-3 bg-background-mute border border-border-subtle rounded-md overflow-x-auto text-[1em] leading-[1.55];
 }
 
 .md-content pre code {
@@ -337,7 +337,7 @@
 }
 
 .md-file-code {
-  @apply flex flex-row overflow-hidden text-[12px] leading-snug max-h-[404px] min-w-0 bg-background-mute;
+  @apply flex flex-row overflow-hidden text-[1em] leading-[1.55] max-h-[404px] min-w-0 bg-background-mute;
 }
 
 .md-file-gutter {
@@ -345,7 +345,7 @@
 }
 
 .md-file-gutter .md-file-line-number {
-  @apply block px-3 text-text-muted text-[12px] font-medium leading-snug whitespace-nowrap min-h-[1.55em];
+  @apply block px-3 text-text-muted text-[1em] font-medium leading-[1.55] whitespace-nowrap font-mono;
 }
 
 .md-file-code-scroll {
@@ -361,7 +361,7 @@
 }
 
 .md-file-line-content {
-  @apply px-4 py-0 pr-3 whitespace-pre leading-snug;
+  @apply px-4 py-0 pr-3 whitespace-pre leading-[1.55];
 }
 
 .md-file-line-content:hover {
@@ -386,18 +386,20 @@
   color: var(--ctp-green);
 }
 
-.md-file-syntax span.md-file-line-removed {
+.md-file-syntax code > span {
   display: block;
+}
+
+.md-file-syntax span.md-file-line-removed {
   background-color: color-mix(in srgb, var(--ctp-red) 15%, transparent);
 }
 
 .md-file-syntax span.md-file-line-added {
-  display: block;
   background-color: color-mix(in srgb, var(--ctp-green) 15%, transparent);
 }
 
 .md-file-line-content code {
-  @apply block min-h-[1.55em] p-0 bg-none rounded-none text-inherit font-[inherit] leading-[inherit];
+  @apply block p-0 bg-transparent rounded-none text-inherit font-[inherit] leading-[inherit];
 }
 
 .md-commit-block {
@@ -479,7 +481,7 @@
 }
 
 .md-file-syntax {
-  @apply !m-0 !p-0 !bg-transparent text-[12px] leading-snug min-w-max !border-none;
+  @apply !m-0 !p-0 !bg-transparent !text-[1em] !leading-[1.55] min-w-max !border-none !overflow-visible;
 }
 
 .md-file-syntax code {
@@ -487,16 +489,16 @@
 }
 
 .md-command-syntax {
-  @apply !m-0 !px-3.5 !py-2.5 !bg-transparent !border-none !rounded-none text-[12.5px] leading-snug;
+  @apply !m-0 !px-3.5 !py-2.5 !bg-transparent !border-none !rounded-none text-[1em] leading-[1.55];
 }
 
 .md-syntax-block {
-  @apply !m-0 !text-[12.5px] !leading-[1.5] !bg-transparent;
+  @apply !m-0 !text-[1em] !leading-[1.55] !bg-transparent;
   border-radius: 0 0 6px 6px !important;
 }
 
 .md-plain-pre {
-  @apply py-3 px-3.5 overflow-auto whitespace-pre font-mono;
+  @apply py-3 px-3.5 overflow-auto whitespace-pre font-mono text-[1em] leading-[1.55];
   background: var(--color-background-mute);
   color: var(--ctp-subtext0);
 }

@@ -156,7 +156,7 @@ export const LinesDisplay = memo(function LinesDisplay({
                   key={i}
                   className={`md-file-line-content${hl && hl !== 'unchanged' ? ` md-file-line-${hl}` : ''}`}
                 >
-                  <code>{line}</code>
+                  <code>{line || '\u200B'}</code>
                 </div>
               )
             })}

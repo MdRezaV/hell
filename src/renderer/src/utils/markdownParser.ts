@@ -510,7 +510,17 @@ export function segmentContent(content: string): Segment[] {
           : new RegExp(`^\\s{0,3}~{${fenceLen},}\\s*$`)
       if (closeRe.test(line)) {
         inFence = false
-        if (i < lines.length - 1) {
+        // Only split here if the next non-empty line is NOT another fence
+        // open. This keeps consecutive fenced blocks (e.g. multiple @@FILE
+        // blocks) in the same segment, preventing orphaned closing fences
+        // from being misinterpreted as paragraph content by remark-breaks.
+        let nextNonEmpty = i + 1
+        while (nextNonEmpty < lines.length && lines[nextNonEmpty].trim() === '') {
+          nextNonEmpty++
+        }
+        const nextOpensFence =
+          nextNonEmpty < lines.length && /^(\s{0,3})(`{3,}|~{3,})/.test(lines[nextNonEmpty])
+        if (!nextOpensFence && nextNonEmpty < lines.length) {
           const segContent = lines.slice(segStartLine, i + 1).join('\n')
           segments.push({ content: segContent, startIndex: segStartChar })
           segStartLine = i + 1

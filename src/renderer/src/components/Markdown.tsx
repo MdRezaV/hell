@@ -48,9 +48,11 @@ function extractText(node: ReactNode): string {
         stack.push(current[i])
       }
     } else if (typeof current === 'object' && 'props' in current) {
-      const props = (current as { props?: { children?: ReactNode } }).props
-      if (props?.children != null) {
-        stack.push(props.children)
+      const el = current as { type?: unknown; props?: { children?: ReactNode } }
+      if (el.props?.children != null) {
+        stack.push(el.props.children)
+      } else if (el.type === 'br') {
+        parts.push('\n')
       }
     }
   }

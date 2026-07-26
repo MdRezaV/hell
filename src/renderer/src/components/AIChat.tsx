@@ -48,7 +48,7 @@ function generateId(): string {
 
 const NEAR_BOTTOM_THRESHOLD = 100
 
-const HAS_INCLUDE_RE = /\[INCLUDE\s+[^\]]+]/
+const HAS_INCLUDE_RE = /\[INCLUDE\s+[^\]]+]|@@INCLUDE\s+\S/
 
 type ChatMode = string
 
