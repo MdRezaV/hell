@@ -76,8 +76,9 @@ function App(): React.JSX.Element {
       const batchStates: Array<{ absolutePath: string; tag: string }> = []
       for (const [rel, tag] of state.fileStates) {
         const abs = joinWithWorkspace(path, rel)
-        fsMap.set(abs, tag as FileTag)
-        batchStates.push({ absolutePath: abs, tag })
+        const normalizedTag: FileTag = tag === 'ADD' || tag === 'INQ' ? 'PND' : (tag as FileTag)
+        fsMap.set(abs, normalizedTag)
+        batchStates.push({ absolutePath: abs, tag: normalizedTag })
       }
       if (batchStates.length > 0) {
         await window.electron.ipcRenderer.invoke('db:batch-set-file-states', path, batchStates)
