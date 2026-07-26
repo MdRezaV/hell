@@ -268,6 +268,35 @@ const NORD_LIGHT: CatppuccinPalette = {
   crust: '#d8dee9'
 }
 
+const FURUSATO: CatppuccinPalette = {
+  rosewater: '#b86a6a',
+  flamingo: '#b86a6a',
+  pink: '#7a8db0',
+  mauve: '#8f8fb3',
+  red: '#b86a6a',
+  maroon: '#b86a6a',
+  peach: '#b86a6a',
+  yellow: '#f2d49e',
+  green: '#526d7c',
+  teal: '#7fa8c9',
+  sky: '#7fa8c9',
+  sapphire: '#64778d',
+  blue: '#64778d',
+  lavender: '#7a8db0',
+  text: '#adbac7',
+  subtext1: '#9aa3ad',
+  subtext0: '#8a949e',
+  overlay2: '#aab3bd',
+  overlay1: '#8a949e',
+  overlay0: '#54657d',
+  surface2: '#1e2025',
+  surface1: '#181a1e',
+  surface0: '#121417',
+  base: '#090b0d',
+  mantle: '#0f1114',
+  crust: '#07080a'
+}
+
 interface ThemePreset {
   label: string
   accent: string
@@ -286,6 +315,7 @@ const COLOR_PRESETS: ThemePreset[] = [
   { label: 'Black', accent: '#bd93f9', bg: '#030307', text: '#f8f8f2', palette: BLACK },
   { label: 'Nord Dark', accent: '#88c0d0', bg: '#2e3440', text: '#eceff4', palette: NORD_DARK },
   { label: 'Nord Light', accent: '#5e81ac', bg: '#eceff4', text: '#2e3440', palette: NORD_LIGHT },
+  { label: 'Furusato', accent: '#64778d', bg: '#090b0d', text: '#adbac7', palette: FURUSATO },
   { label: 'Ember', accent: '#f38ba8', bg: '#1e1e2e', text: '#f5e0dc' }
 ]
 
