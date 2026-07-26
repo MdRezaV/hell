@@ -22,13 +22,15 @@ export interface PromptContentSelection {
  *
  * Directory structure:
  * - Included when its tag is PND or INQ.
+ * - Also included when tag is ADD if it was part of the most recent paste.
  * - Tag transitions from PND to INQ after inclusion.
  */
 export function selectPromptContent(
   fileStates: Map<string, FileTag>,
   filePaths: Set<string>,
   lastPasteAdded: Set<string>,
-  dirStructureTag: FileTag | null
+  dirStructureTag: FileTag | null,
+  dirStructureInLastPaste: boolean
 ): PromptContentSelection {
   const pathsToInclude: string[] = []
   const pathsToMarkInq: string[] = []
@@ -53,7 +55,10 @@ export function selectPromptContent(
   return {
     pathsToInclude,
     pathsToMarkInq,
-    includeDirStructure: dirStructureTag === 'PND' || dirStructureTag === 'INQ',
+    includeDirStructure:
+      dirStructureTag === 'PND' ||
+      dirStructureTag === 'INQ' ||
+      (dirStructureTag === 'ADD' && dirStructureInLastPaste),
     transitionDirTag: dirStructureTag === 'PND'
   }
 }

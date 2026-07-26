@@ -44,6 +44,8 @@ function App(): React.JSX.Element {
   const fileStatesRef = useRef<FileStates>(new Map())
   const expandedDirsRef = useRef<Set<string>>(new Set())
   const dirStructureTagRef = useRef<FileTag | null>('PND')
+  const dirStructureCopiedRef = useRef(false)
+  const dirStructureInLastPasteRef = useRef(false)
   const isNewChatRef = useRef(false)
 
   useEffect(() => {
@@ -330,6 +332,8 @@ function App(): React.JSX.Element {
       })
       copySnapshotRef.current = new Set()
       lastPasteAddedRef.current = new Set()
+      dirStructureCopiedRef.current = false
+      dirStructureInLastPasteRef.current = false
       lastCopiedUserIndexRef.current = -1
     } catch (e) {
       log.error('Failed to clear selections:', e)
@@ -416,6 +420,7 @@ function App(): React.JSX.Element {
         const currentUserIndex = chatRef.current?.getResolvedUserIndex() ?? 0
         if (currentUserIndex !== lastCopiedUserIndexRef.current) {
           lastPasteAddedRef.current = new Set()
+          dirStructureInLastPasteRef.current = false
           lastCopiedUserIndexRef.current = currentUserIndex
         }
 
@@ -428,7 +433,8 @@ function App(): React.JSX.Element {
             currentFileStates,
             filePaths,
             lastPasteAddedRef.current,
-            currentDirStructureTag
+            currentDirStructureTag,
+            dirStructureInLastPasteRef.current
           )
 
         if (pathsToMarkInq.length > 0) {
@@ -448,6 +454,7 @@ function App(): React.JSX.Element {
 
         // Record which paths are newly transitioned for copySnapshotRef
         copySnapshotRef.current = new Set(pathsToInclude)
+        dirStructureCopiedRef.current = includeDirStructure
 
 
 
@@ -518,6 +525,8 @@ function App(): React.JSX.Element {
 
       copySnapshotRef.current = new Set()
       lastPasteAddedRef.current = new Set()
+      dirStructureCopiedRef.current = false
+      dirStructureInLastPasteRef.current = false
       lastCopiedUserIndexRef.current = -1
       if (dirStructureTag === 'ADD' || dirStructureTag === 'INQ') {
         setDirStructureTag('PND')
@@ -701,6 +710,7 @@ function App(): React.JSX.Element {
           if (state === 'INQ') newlyAdded.add(path)
         })
         lastPasteAddedRef.current = newlyAdded
+        dirStructureInLastPasteRef.current = dirStructureCopiedRef.current
         setFileStates((prev) => {
           const next = new Map(prev)
           const toAdd = new Set<string>()
@@ -798,6 +808,8 @@ function App(): React.JSX.Element {
         chatRef.current?.loadChat([])
         copySnapshotRef.current = new Set()
         lastPasteAddedRef.current = new Set()
+        dirStructureCopiedRef.current = false
+        dirStructureInLastPasteRef.current = false
         lastCopiedUserIndexRef.current = -1
         setDirStructureTag('PND')
         dirStructureTagRef.current = 'PND'
