@@ -71,10 +71,10 @@ function App(): React.JSX.Element {
         await window.electron.ipcRenderer.invoke('db:get-workspace-state', path)
       const fsMap = new Map<string, FileTag>()
       const batchStates: Array<{ absolutePath: string; tag: string }> = []
-      for (const [rel] of state.fileStates) {
+      for (const [rel, tag] of state.fileStates) {
         const abs = joinWithWorkspace(path, rel)
-        fsMap.set(abs, 'PND')
-        batchStates.push({ absolutePath: abs, tag: 'PND' })
+        fsMap.set(abs, tag as FileTag)
+        batchStates.push({ absolutePath: abs, tag })
       }
       if (batchStates.length > 0) {
         await window.electron.ipcRenderer.invoke('db:batch-set-file-states', path, batchStates)
