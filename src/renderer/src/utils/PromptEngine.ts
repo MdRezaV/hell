@@ -86,10 +86,9 @@ Using a single @:
 @@MOVE old/path/file.ext -> new/path/file.ext
 
 **COMMIT MESSAGE ENFORCEMENT:**
-- **Trigger**: ANY \`@@FILE\`, \`@@DELETE\`, or \`@@MOVE\` tag appears in the response.
-- **Format**: \`@@COMMIT <commit message>\`
-- **Placement**: Absolute last line of the entire output. No blank line after it. No markdown formatting.
-- **No changes**: If ZERO file modification tags appear, do NOT output a commit line.
+- **MANDATORY IF CHANGED**: If ANY file was created, modified, moved, or deleted in your response (including partial edits, full writes, deletes, or moves), you MUST end your ENTIRE output with a commit message in this exact format: \`@@COMMIT [imperative sentence describing changes]\`. This must be the absolute last line.
+- **FORBIDDEN IF UNCHANGED**: If you made ZERO file modifications (e.g., you only answered a question, explained code, or requested files via \`@@INCLUDE\`), you MUST NOT output a commit message.
+- **Rules**: Imperative mood (e.g., "Add" not "Added"), max 72 chars, lowercase first letter unless proper noun, no period at the end, never reference the AI.
 
 <example>
 I'll create a config file and completely rewrite the README.
@@ -145,7 +144,7 @@ If intent is unclear or critical context is missing, follow this decision order 
 4. **Iterate**: If still unclear after the user replies, ask again. Never guess.
 
 **Rules for \`@@INCLUDE\`:**
-- NEVER use local execution tools (Python, bash, terminal) to read files. Use ONLY \`@@INCLUDE\`.
+- NEVER use local execution tools (Python, bash, terminal, or internal file-reading tools) to read or fetch local project files. Use ONLY \`@@INCLUDE\`.
 - After emitting \`@@INCLUDE\`, output NOTHING else. No code, no speculation, no partial answers.
 - Batch all file requests and questions into one message.
 - Be concise. No apologies or filler.
@@ -297,7 +296,7 @@ If intent is unclear or critical context is missing, follow this decision order 
 4. **Iterate**: If still unclear after the user replies, ask again. Never guess.
 
 **Rules for \`@@INCLUDE\`:**
-- NEVER use local execution tools (Python, bash, terminal) to read files. Use ONLY \`@@INCLUDE\`.
+- NEVER use local execution tools (Python, bash, terminal, or internal file-reading tools) to read or fetch local project files. Use ONLY \`@@INCLUDE\`.
 - After emitting \`@@INCLUDE\`, output NOTHING else. No code, no speculation, no partial answers.
 - Batch all file requests and questions into one message.
 - Be concise. No apologies or filler.
@@ -445,10 +444,9 @@ Using a single @:
 @@MOVE old/path/file.ext -> new/path/file.ext
 
 **COMMIT MESSAGE ENFORCEMENT:**
-- **Trigger**: ANY \`@@FILE\`, \`@@DELETE\`, or \`@@MOVE\` tag appears in the response.
-- **Format**: \`@@COMMIT <commit message>\`
-- **Placement**: Absolute last line of the entire output. No blank line after it. No markdown formatting.
-- **No changes**: If ZERO file modification tags appear, do NOT output a commit line.
+- **MANDATORY IF CHANGED**: If ANY file was created, modified, moved, or deleted in your response (including partial edits, full writes, deletes, or moves), you MUST end your ENTIRE output with a commit message in this exact format: \`@@COMMIT [imperative sentence describing changes]\`. This must be the absolute last line.
+- **FORBIDDEN IF UNCHANGED**: If you made ZERO file modifications (e.g., you only answered a question, explained code, or requested files via \`@@INCLUDE\`), you MUST NOT output a commit message.
+- **Rules**: Imperative mood (e.g., "Add" not "Added"), max 72 chars, lowercase first letter unless proper noun, no period at the end, never reference the AI.
 
 <example>
 I'll create a config file and completely rewrite the README.
@@ -496,7 +494,7 @@ If intent is unclear or critical context is missing, follow this decision order 
 4. **Iterate**: If still unclear after the user replies, ask again. Never guess.
 
 **Rules for \`@@INCLUDE\`:**
-- NEVER use local execution tools (Python, bash, terminal) to read files. Use ONLY \`@@INCLUDE\`.
+- NEVER use local execution tools (Python, bash, terminal, or internal file-reading tools) to read or fetch local project files. Use ONLY \`@@INCLUDE\`.
 - After emitting \`@@INCLUDE\`, output NOTHING else. No code, no speculation, no partial answers.
 - Batch all file requests and questions into one message.
 - Be concise. No apologies or filler.
@@ -556,7 +554,7 @@ The current content of the \`HELL.md\` file is provided below. Your task is to a
         end: `</user_request>
 
 <system_reminder>
-Remember the specified output format. It must be STRICTLY followed without deviation. Do not forget the clarification protocol — if the user's intent is unclear or critical context is missing, you MUST ask before writing code and STOP generating after requesting files. NEVER use local tools to fetch files; use @@INCLUDE. A commit message is MANDATORY if files changed, and FORBIDDEN if they did not.
+Remember the specified output format. It must be STRICTLY followed without deviation. Do not forget the clarification protocol — if the user's intent is unclear or critical context is missing, you MUST ask before writing code and STOP generating after requesting files. NEVER use local tools to fetch files; use @@INCLUDE.
 </system_reminder>`
       },
       {
