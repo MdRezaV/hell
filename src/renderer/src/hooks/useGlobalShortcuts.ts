@@ -11,6 +11,7 @@ interface GlobalShortcutHandlers {
   onNavigateHistoryDown: () => void
   onCopy: () => void
   onPaste: () => void
+  onToggleWhip: () => void
   onModeKey: (digit: number) => void
   isWelcomeScreen: () => boolean
 }
@@ -64,6 +65,9 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
         } else if (lower === 'v') {
           e.preventDefault()
           handlersRef.current.onPaste()
+        } else if (lower === 'w') {
+          e.preventDefault()
+          handlersRef.current.onToggleWhip()
         }
         return
       }

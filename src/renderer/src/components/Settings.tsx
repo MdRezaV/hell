@@ -444,6 +444,13 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
     [updateSettings]
   )
 
+  const handleWhipVolumeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateSettings({ whipVolume: Number(e.target.value) })
+    },
+    [updateSettings]
+  )
+
   const applyPreset = useCallback(
     (preset: ThemePreset) => {
       setAccentHex(preset.accent)
@@ -495,26 +502,42 @@ function Settings({ onClose }: SettingsProps): React.JSX.Element {
 
           <div className="settings-content">
             {activeSection === 'Behavior' && (
-              <section className="settings-section">
-                <h3>Clipboard</h3>
-                <div className="settings-toggle-row">
-                  <div className="settings-toggle-info">
-                    <label>Auto Copy</label>
-                    <span className="settings-toggle-desc">
-                      Automatically copy the prompt to clipboard when sending a message
-                    </span>
+              <>
+                <section className="settings-section">
+                  <h3>Clipboard</h3>
+                  <div className="settings-toggle-row">
+                    <div className="settings-toggle-info">
+                      <label>Auto Copy</label>
+                      <span className="settings-toggle-desc">
+                        Automatically copy the prompt to clipboard when sending a message
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`settings-toggle ${settings.autoCopy ? 'active' : ''}`}
+                      onClick={handleAutoCopyToggle}
+                      role="switch"
+                      aria-checked={settings.autoCopy}
+                    >
+                      <span className="settings-toggle-knob" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className={`settings-toggle ${settings.autoCopy ? 'active' : ''}`}
-                    onClick={handleAutoCopyToggle}
-                    role="switch"
-                    aria-checked={settings.autoCopy}
-                  >
-                    <span className="settings-toggle-knob" />
-                  </button>
-                </div>
-              </section>
+                </section>
+                <section className="settings-section">
+                  <h3>Sound</h3>
+                  <div className="settings-scale">
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={settings.whipVolume}
+                      onChange={handleWhipVolumeChange}
+                    />
+                    <span className="settings-scale-value">{settings.whipVolume}%</span>
+                  </div>
+                </section>
+              </>
             )}
 
             {activeSection === 'Appearance' && (

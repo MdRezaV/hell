@@ -55,14 +55,7 @@ async function moveFileSafe(fullOldPath: string, fullNewPath: string): Promise<v
     await rename(fullOldPath, fullNewPath)
     return
   } catch (e: unknown) {
-    if (
-      !(
-        e &&
-        typeof e === 'object' &&
-        'code' in e &&
-        (e as { code: unknown }).code === 'EXDEV'
-      )
-    ) {
+    if (!(e && typeof e === 'object' && 'code' in e && (e as { code: unknown }).code === 'EXDEV')) {
       throw e
     }
   }

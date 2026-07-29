@@ -123,6 +123,11 @@
     height: 100vh;
     margin: 0;
   }
+
+  .whip-active:not(.whip-dropping),
+  .whip-active:not(.whip-dropping) * {
+    cursor: none !important;
+  }
 }
 
 @layer components {

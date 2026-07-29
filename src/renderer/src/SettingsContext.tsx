@@ -45,6 +45,7 @@ export interface SettingsState {
   scale: number
   palette: CatppuccinPalette | null
   autoCopy: boolean
+  whipVolume: number
 }
 
 const MOCHA_PALETTE: CatppuccinPalette = {
@@ -82,7 +83,8 @@ const DEFAULT_SETTINGS: SettingsState = {
   textColor: '#cdd6f4',
   scale: 100,
   palette: MOCHA_PALETTE,
-  autoCopy: false
+  autoCopy: false,
+  whipVolume: 50
 }
 
 const STORAGE_KEY = 'hell-settings'
@@ -257,7 +259,10 @@ function applySettings(s: SettingsState): void {
     root.style.setProperty('--color-text-subtle', mix(s.textColor, s.bgColor, 0.55))
     root.style.setProperty('--color-text-faint', mix(s.textColor, s.bgColor, 0.65))
     root.style.setProperty('--color-accent-text', isLight(s.accentColor) ? '#1e1e2e' : '#ffffff')
-    root.style.setProperty('--color-border-accent', mix(s.accentColor, '#ffffff', light ? 0.1 : 0.3))
+    root.style.setProperty(
+      '--color-border-accent',
+      mix(s.accentColor, '#ffffff', light ? 0.1 : 0.3)
+    )
     root.style.setProperty('--color-success', darkenForLight('#a6e3a1', light))
     root.style.setProperty('--color-warning', darkenForLight('#f9e2af', light))
     root.style.setProperty('--color-error', darkenForLight('#f38ba8', light))

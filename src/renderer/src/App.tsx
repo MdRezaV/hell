@@ -16,6 +16,7 @@ import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import { useSettings } from './SettingsContext'
 import ChatHistory, { type ChatHistoryHandle } from './components/ChatHistory'
 import { FileIncludeProvider } from './components/markdown/ApplyAll'
+import Whip from './components/Whip'
 
 type FileStates = Map<string, FileTag>
 
@@ -33,6 +34,7 @@ function App(): React.JSX.Element {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [chatHistoryKey, setChatHistoryKey] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
+  const [whipActive, setWhipActive] = useState(false)
   const copySnapshotRef = useRef<Set<string>>(new Set())
   const lastPasteAddedRef = useRef<Set<string>>(new Set())
   const lastCopiedUserIndexRef = useRef<number>(-1)
@@ -754,6 +756,21 @@ function App(): React.JSX.Element {
     dirStructureTagRef.current = tag
   }, [])
 
+  const handleToggleWhip = useCallback(() => {
+    setWhipActive((prev) => !prev)
+  }, [])
+
+  useEffect(() => {
+    if (whipActive) {
+      document.body.classList.add('whip-active')
+    } else {
+      document.body.classList.remove('whip-active')
+    }
+    return () => {
+      document.body.classList.remove('whip-active')
+    }
+  }, [whipActive])
+
   useGlobalShortcuts({
     onNewChat: handleNewChat,
     onOpenWorkspace: handleOpenWorkspaceShortcut,
@@ -765,6 +782,7 @@ function App(): React.JSX.Element {
     onNavigateHistoryDown: handleNavigateHistoryDown,
     onCopy: handleCopy,
     onPaste: handlePaste,
+    onToggleWhip: handleToggleWhip,
     onModeKey: handleModeKey,
     isWelcomeScreen
   })
@@ -1040,6 +1058,7 @@ function App(): React.JSX.Element {
           />
         </div>
         {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+        <Whip active={whipActive} onToggle={handleToggleWhip} />
       </FileIncludeProvider>
     </WorkspaceContext.Provider>
   )
