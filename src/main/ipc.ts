@@ -1,7 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'path'
 import { createReadStream } from 'fs'
-import { access, mkdir, readFile, unlink, writeFile } from 'fs/promises'
+import { access, copyFile, mkdir, readFile, rename, unlink, writeFile } from 'fs/promises'
 import { getEncoding } from 'js-tiktoken'
 import { formatTreeText, readDirTree } from './fsUtils'
 import {
@@ -37,7 +37,7 @@ function safeHandle(channel: string, fn: (...args: any[]) => any): void {
       return await fn(event, ...args)
     } catch (e) {
       log.error(`IPC handler '${channel}' failed:`, e)
-      throw e
+      return Promise.reject(e)
     }
   })
 }
@@ -48,6 +48,34 @@ function getTiktokenEncoder(): ReturnType<typeof getEncoding> {
     tiktokenEncoder = getEncoding('cl100k_base')
   }
   return tiktokenEncoder
+}
+
+async function moveFileSafe(fullOldPath: string, fullNewPath: string): Promise<void> {
+  try {
+    await rename(fullOldPath, fullNewPath)
+    return
+  } catch (e: unknown) {
+    if (
+      !(
+        e &&
+        typeof e === 'object' &&
+        'code' in e &&
+        (e as { code: unknown }).code === 'EXDEV'
+      )
+    ) {
+      throw e
+    }
+  }
+  // Cross-device move fallback. fs.copyFile copies raw bytes, so binary
+  // files are preserved. If the copy fails midway, remove the partial
+  // destination so we never leave a corrupted file behind.
+  try {
+    await copyFile(fullOldPath, fullNewPath)
+  } catch (copyError) {
+    await unlink(fullNewPath).catch(() => {})
+    throw copyError
+  }
+  await unlink(fullOldPath)
 }
 
 export function registerIpcHandlers(): void {
@@ -104,6 +132,19 @@ export function registerIpcHandlers(): void {
       return { success: true }
     } catch (e: unknown) {
       log.error('Failed to delete file:', relativePath, e)
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  safeHandle('move-file', async (_, workspace: string, oldPath: string, newPath: string) => {
+    try {
+      const fullOldPath = join(workspace, oldPath)
+      const fullNewPath = join(workspace, newPath)
+      await mkdir(dirname(fullNewPath), { recursive: true })
+      await moveFileSafe(fullOldPath, fullNewPath)
+      return { success: true }
+    } catch (e: unknown) {
+      log.error('Failed to move file:', oldPath, e)
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })

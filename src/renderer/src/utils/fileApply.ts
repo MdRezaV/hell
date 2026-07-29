@@ -211,16 +211,11 @@ export async function applyFileMove(
   newPath: string
 ): Promise<ApplyResult> {
   try {
-    const readResult = await readFile(workspace, oldPath)
-    if (!readResult.exists || readResult.content === null) {
-      return { success: false, error: 'Source file not found' }
-    }
-    const writeResult = await applyFileWrite(workspace, newPath, readResult.content)
-    if (!writeResult.success) return writeResult
     return await (window.electron.ipcRenderer.invoke(
-      'delete-file',
+      'move-file',
       workspace,
-      oldPath
+      oldPath,
+      newPath
     ) as Promise<ApplyResult>)
   } catch (e) {
     log.error('Failed to apply move:', e)
