@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   Eraser,
-  File,
   Folder,
   Folder as FolderBig,
   FolderOpen,
@@ -24,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import log from 'electron-log/renderer'
+import FileIcon from './FileIcon'
 import '../styles/FileExplorer.css'
 
 export type FileTag = 'PND' | 'INQ' | 'ADD'
@@ -189,7 +189,7 @@ const VirtualTreeNode = memo(function VirtualTreeNode({
         </span>
       )}
       <span className={`tree-icon ${node.type === 'directory' ? 'folder' : 'file'}`}>
-        {node.type === 'directory' ? <Folder size={15} /> : <File size={15} />}
+        {node.type === 'directory' ? <Folder size={15} /> : <FileIcon name={node.name} />}
       </span>
       <span className={`tree-label${isBinary ? ' tree-label--binary' : ''}`}>{node.name}</span>
       {isHell && <span className="tree-tag tree-tag--HELL">HELL</span>}
