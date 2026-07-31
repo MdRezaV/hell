@@ -60,6 +60,29 @@ import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { normalizeLineEndings } from '../../utils/markdownParser'
 import { useDeferHeavyRendering, useDeferredHighlighting } from './DeferredHighlighting'
 
+function dedentCode(code: string): string {
+  const lines = code.split('\n')
+
+  let minIndent = Infinity
+  for (const line of lines) {
+    if (line.trim() === '') continue
+    const match = line.match(/^(\s*)/)
+    const indent = match ? match[1].length : 0
+    if (indent < minIndent) {
+      minIndent = indent
+    }
+  }
+
+  if (!isFinite(minIndent) || minIndent === 0) return code
+
+  return lines
+    .map((line) => {
+      if (line.trim() === '') return line
+      return line.slice(minIndent)
+    })
+    .join('\n')
+}
+
 export type LineHighlight = 'added' | 'removed' | 'unchanged'
 
 export const LinesDisplay = memo(function LinesDisplay({
@@ -76,7 +99,8 @@ export const LinesDisplay = memo(function LinesDisplay({
   lineHighlights?: LineHighlight[]
 }): React.JSX.Element {
   const normalizedCode = useMemo(() => normalizeLineEndings(code), [code])
-  const lines = useMemo(() => normalizedCode.split('\n'), [normalizedCode])
+  const dedentedCode = useMemo(() => dedentCode(normalizedCode), [normalizedCode])
+  const lines = useMemo(() => dedentedCode.split('\n'), [dedentedCode])
   const hasSyntax = useMemo(() => language && language !== 'text', [language])
   const gutterRef = useRef<HTMLDivElement>(null)
   const codeRef = useRef<HTMLDivElement>(null)
@@ -130,7 +154,7 @@ export const LinesDisplay = memo(function LinesDisplay({
             wrapLines={!!lineHighlights}
             lineProps={lineProps}
           >
-            {normalizedCode}
+            {dedentedCode}
           </SyntaxHighlighter>
         ) : (
           <div className="md-file-code-lines">
@@ -158,7 +182,7 @@ export const CommandBlock = memo(function CommandBlock({
   code: string
 }): React.JSX.Element {
   const { copied, copy } = useCopyToClipboard()
-  const memoizedCode = useMemo(() => code, [code])
+  const memoizedCode = useMemo(() => dedentCode(code), [code])
 
   const handleRun = useCallback(async (): Promise<void> => {
     await copy(code)
@@ -242,7 +266,7 @@ export const GenericCodeBlock = memo(function GenericCodeBlock({
   const containerRef = useRef<HTMLDivElement>(null)
   const highlightReady = useDeferredHighlighting(deferHeavy, containerRef)
   const showPlain = isStreaming || (deferHeavy && !highlightReady)
-  const memoizedCode = useMemo(() => code, [code])
+  const memoizedCode = useMemo(() => dedentCode(code), [code])
 
   const handleCopy = useCallback(async (): Promise<void> => {
     await copy(code)
