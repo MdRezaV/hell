@@ -242,12 +242,12 @@ export function formatTreeText(nodes: FileNode[]): string {
   const walk = (list: FileNode[], indent: string): void => {
     for (const node of list) {
       if (node.type === 'directory') {
-        result += `${indent}- ${node.name}/\n`
+        result += `${indent}${node.name}/\n`
         if (node.children && node.children.length > 0) {
           walk(node.children, indent + '  ')
         }
       } else {
-        result += `${indent}- ${node.name}\n`
+        result += `${indent}${node.name}\n`
       }
     }
   }
