@@ -26,17 +26,16 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       const mod = e.ctrlKey || e.metaKey
-      const key = e.key
-      const lower = key.toLowerCase()
+      const code = e.code
 
       const target = e.target as HTMLElement
       const isInput = ['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable
 
       // Ctrl/Cmd + 1..9 — switch chat mode (welcome screen only, works even in input)
-      if (mod && !e.shiftKey && !e.altKey && /^\d$/.test(key)) {
+      if (mod && !e.shiftKey && !e.altKey && /^Digit[1-9]$/.test(code)) {
         if (handlersRef.current.isWelcomeScreen()) {
           e.preventDefault()
-          handlersRef.current.onModeKey(parseInt(key, 10))
+          handlersRef.current.onModeKey(parseInt(code.slice(5), 10))
         }
         return
       }
@@ -44,28 +43,28 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
       // Ctrl/Cmd-only shortcuts
       if (mod && !e.altKey && !e.shiftKey) {
         if (isInput) return
-        if (lower === 'n') {
+        if (code === 'KeyN') {
           e.preventDefault()
           handlersRef.current.onNewChat()
-        } else if (lower === 'o') {
+        } else if (code === 'KeyO') {
           e.preventDefault()
           handlersRef.current.onOpenWorkspace()
-        } else if (lower === 'k') {
+        } else if (code === 'KeyK') {
           e.preventDefault()
           handlersRef.current.onClearSelections()
-        } else if (lower === 'f') {
+        } else if (code === 'KeyF') {
           e.preventDefault()
           handlersRef.current.onFocusFileSearch()
-        } else if (lower === 'c') {
+        } else if (code === 'KeyC') {
           const selection = window.getSelection()
           if (!selection || selection.toString().length === 0) {
             e.preventDefault()
             handlersRef.current.onCopy()
           }
-        } else if (lower === 'v') {
+        } else if (code === 'KeyV') {
           e.preventDefault()
           handlersRef.current.onPaste()
-        } else if (lower === 'w') {
+        } else if (code === 'KeyW') {
           e.preventDefault()
           handlersRef.current.onToggleWhip()
         }
@@ -75,10 +74,10 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
       // Alt + Shift + C/E — collapse/expand all directories
       if (e.altKey && e.shiftKey && !mod) {
         if (isInput) return
-        if (lower === 'c') {
+        if (code === 'KeyC') {
           e.preventDefault()
           handlersRef.current.onCollapseAll()
-        } else if (lower === 'e') {
+        } else if (code === 'KeyE') {
           e.preventDefault()
           handlersRef.current.onExpandAll()
         }
@@ -88,10 +87,10 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
       // Alt + Arrow — navigate chat history
       if (e.altKey && !e.shiftKey && !mod) {
         if (isInput) return
-        if (key === 'ArrowUp') {
+        if (code === 'ArrowUp') {
           e.preventDefault()
           handlersRef.current.onNavigateHistoryUp()
-        } else if (key === 'ArrowDown') {
+        } else if (code === 'ArrowDown') {
           e.preventDefault()
           handlersRef.current.onNavigateHistoryDown()
         }
