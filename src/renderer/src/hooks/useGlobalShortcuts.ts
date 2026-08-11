@@ -13,6 +13,9 @@ interface GlobalShortcutHandlers {
   onPaste: () => void
   onToggleWhip: () => void
   onModeKey: (digit: number) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onZoomReset: () => void
   isWelcomeScreen: () => boolean
 }
 
@@ -32,11 +35,30 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
       const target = e.target as HTMLElement
       const isInput = ['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable
 
-      // Ctrl/Cmd + 1..9 — switch chat mode (welcome screen only, works even in input)
+      // Ctrl/Cmd + 1..9 — switch chat mode (welcome screen only, works even in input).
+      // Ctrl/Cmd+0 is shared with zoom reset: on the welcome screen it switches mode,
+      // everywhere else it resets zoom (see the zoom branch below for the other keys).
       if (mod && !e.shiftKey && !e.altKey && /^\d$/.test(key)) {
         if (handlersRef.current.isWelcomeScreen()) {
           e.preventDefault()
           handlersRef.current.onModeKey(parseInt(key, 10))
+          return
+        }
+        if (key === '0' && !isInput) {
+          e.preventDefault()
+          handlersRef.current.onZoomReset()
+        }
+        return
+      }
+
+      // Ctrl/Cmd +/- — zoom in/out
+      if (mod && !e.altKey && !e.shiftKey && (key === '=' || key === '+' || key === '-')) {
+        if (isInput) return
+        e.preventDefault()
+        if (key === '-') {
+          handlersRef.current.onZoomOut()
+        } else {
+          handlersRef.current.onZoomIn()
         }
         return
       }

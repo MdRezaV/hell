@@ -371,13 +371,13 @@ const FileExplorer = forwardRef(function FileExplorer(
       selectablePathsRef.current = selectablePaths
       onFilePathsChangeRef.current(filePaths)
       onDirPathsChangeRef.current(dirPaths)
-      window.electron.ipcRenderer
-        .invoke('db:prune-workspace-state', workspace, Array.from(filePaths), Array.from(dirPaths))
+      window.api
+        .pruneWorkspaceState(workspace, Array.from(filePaths), Array.from(dirPaths))
         .catch((e) => log.error('Failed to prune workspace state:', e))
     }
 
-    window.electron.ipcRenderer
-      .invoke('read-directory', workspace)
+    window.api
+      .readDirectory(workspace)
       .then((files: FileNode[]) => {
         if (cancelled) return
         processFiles(files)
@@ -394,25 +394,25 @@ const FileExplorer = forwardRef(function FileExplorer(
       const now = Date.now()
       if (now - lastRefresh < MIN_REFRESH_MS) return
       lastRefresh = now
-      window.electron.ipcRenderer
-        .invoke('read-directory', workspace)
+      window.api
+        .readDirectory(workspace)
         .then((files: FileNode[]) => {
           if (cancelled) return
           processFiles(files)
         })
         .catch((e) => log.error('Failed to read directory:', e))
     }
-    window.electron.ipcRenderer.on('workspace:changed', handleChange)
+    const unsubscribe = window.api.events.onWorkspaceChanged(handleChange)
 
     return () => {
       cancelled = true
-      window.electron.ipcRenderer.removeListener('workspace:changed', handleChange)
+      unsubscribe()
     }
   }, [workspace])
 
   const handleOpenWorkspace = async (): Promise<void> => {
     try {
-      const path = await window.electron.ipcRenderer.invoke('open-workspace')
+      const path = await window.api.openWorkspace()
       if (path) {
         onWorkspaceChange(path)
       }
@@ -424,8 +424,8 @@ const FileExplorer = forwardRef(function FileExplorer(
   const toggleWorkspaceList = useCallback(() => {
     setShowWorkspaceList((prev) => {
       if (!prev) {
-        window.electron.ipcRenderer
-          .invoke('db:get-workspaces')
+        window.api
+          .getWorkspaces()
           .then((list: Array<{ path: string; last_opened: number }>) => {
             setWorkspaceList(list)
           })
@@ -496,8 +496,8 @@ const FileExplorer = forwardRef(function FileExplorer(
       clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(async () => {
         try {
-          const results: string[] = await window.electron.ipcRenderer.invoke(
-            'search-file-content',
+          const results: string[] = await window.api.searchFileContent(
+            workspace,
             Array.from(filePathSet),
             q
           )

@@ -15,6 +15,13 @@ export interface Tokenized {
 export interface LooseMatch {
   start: number
   end: number
+  /**
+   * True when the same token sequence also matches elsewhere in the file.
+   * Callers that apply an edit at `start`/`end` should treat this as a signal
+   * to refuse rather than silently picking the first occurrence — the file's
+   * real target may be a different one.
+   */
+  ambiguous: boolean
 }
 
 function isWhitespace(ch: string): boolean {
@@ -240,14 +247,22 @@ export function findLooseMatch(fileContent: string, oldCode: string): LooseMatch
   if (old.tokens.length === 0) return null
   if (old.tokens.length > file.tokens.length) return null
 
+  let first: LooseMatch | null = null
+
   for (let i = 0; i <= file.tokens.length - old.tokens.length; i++) {
     if (matchesAt(file, old, i)) {
-      return {
-        start: file.tokens[i].start,
-        end: file.tokens[i + old.tokens.length - 1].end
+      if (!first) {
+        first = {
+          start: file.tokens[i].start,
+          end: file.tokens[i + old.tokens.length - 1].end,
+          ambiguous: false
+        }
+      } else {
+        first.ambiguous = true
+        break
       }
     }
   }
 
-  return null
+  return first
 }

@@ -1,25 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import type { ContextMenuShowPayload } from '../../../preload/index'
 import '../styles/ContextMenu.css'
 
-interface ContextMenuData {
-  x: number
-  y: number
-  misspelledWord: string
-  dictionarySuggestions: string[]
-}
-
 export default function ContextMenu(): React.JSX.Element | null {
-  const [menu, setMenu] = useState<ContextMenuData | null>(null)
+  const [menu, setMenu] = useState<ContextMenuShowPayload | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = (_: unknown, data: ContextMenuData): void => {
-      setMenu(data)
-    }
-    window.electron.ipcRenderer.on('context-menu:show', handler)
-    return () => {
-      window.electron.ipcRenderer.removeListener('context-menu:show', handler)
-    }
+    return window.api.events.onContextMenuShow(setMenu)
   }, [])
 
   const close = useCallback(() => setMenu(null), [])
@@ -67,7 +55,7 @@ export default function ContextMenu(): React.JSX.Element | null {
             key={s + i}
             className="ctx-menu-item"
             onClick={() => {
-              window.electron.ipcRenderer.invoke('spellcheck:replace', s)
+              window.api.spellcheckReplace(s)
               close()
             }}
           >
@@ -81,7 +69,7 @@ export default function ContextMenu(): React.JSX.Element | null {
       <button
         className="ctx-menu-item ctx-menu-item--muted"
         onClick={() => {
-          window.electron.ipcRenderer.invoke('spellcheck:add-to-dictionary', menu.misspelledWord)
+          window.api.spellcheckAddToDictionary(menu.misspelledWord)
           close()
         }}
       >

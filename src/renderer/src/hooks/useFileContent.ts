@@ -58,12 +58,12 @@ export function useFileContent(path: string): FileState | null {
         if (!cancelled) setCache({ data: result, path, workspace })
       })
     } else {
-      const promise = ipcThrottle(
-        () => window.electron.ipcRenderer.invoke('read-file', workspace, path) as Promise<FileState>
-      ).catch((e) => {
-        log.error(`Failed to read file ${path}:`, e)
-        return { exists: false, content: null }
-      })
+      const promise = ipcThrottle<FileState>(() => window.api.readFile(workspace, path)).catch(
+        (e) => {
+          log.error(`Failed to read file ${path}:`, e)
+          return { exists: false, content: null }
+        }
+      )
       if (fileContentCache.size >= FILE_CACHE_MAX) {
         const firstKey = fileContentCache.keys().next().value
         if (firstKey !== undefined) fileContentCache.delete(firstKey)

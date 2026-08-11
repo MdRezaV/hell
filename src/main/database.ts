@@ -1,4 +1,5 @@
 import { join } from 'path'
+import { copyFileSync } from 'fs'
 import { app } from 'electron'
 import Database from 'better-sqlite3'
 import { log } from './logger'
@@ -149,6 +150,23 @@ function createTables(d: Database.Database): void {
   `)
 }
 
+/**
+ * A schema-version mismatch wipes every table (see `dropAllTables`). Copy the
+ * database file aside first so a schema bump — which happens on ordinary app
+ * updates, not just intentional migrations — never destroys chat history and
+ * workspace state with no recovery path.
+ */
+function backupBeforeReset(d: Database.Database, dbPath: string, storedVersion: number): void {
+  try {
+    d.pragma('wal_checkpoint(TRUNCATE)')
+    const backupPath = `${dbPath}.v${storedVersion}.bak`
+    copyFileSync(dbPath, backupPath)
+    log.info(`Backed up pre-reset database to ${backupPath}`)
+  } catch (e) {
+    log.error('Failed to back up database before schema reset:', e)
+  }
+}
+
 function dropAllTables(d: Database.Database): void {
   d.exec(`
     DROP TABLE IF EXISTS chat_sessions;
@@ -172,6 +190,7 @@ export function initDatabase(): void {
     log.info(
       `Schema version mismatch (stored=${storedVersion}, current=${SCHEMA_VERSION}). Resetting database.`
     )
+    backupBeforeReset(db, dbPath, storedVersion)
     dropAllTables(db)
     db.pragma(`user_version = ${SCHEMA_VERSION}`)
   }
@@ -203,9 +222,21 @@ function normalizeWorkspacePath(p: string): string {
   return p
 }
 
+// Windows paths are case-insensitive at the filesystem level, so the same workspace
+// reopened with different drive-letter/segment casing must still prefix-match here —
+// otherwise every file resolves as "outside the workspace" and returns as a bogus
+// absolute "relative" path. This only affects the comparison; the returned relative
+// path is sliced from the original-case `absolutePath`, so casing on disk is preserved.
+function startsWithPath(value: string, prefix: string): boolean {
+  if (process.platform === 'win32') {
+    return value.toLowerCase().startsWith(prefix.toLowerCase())
+  }
+  return value.startsWith(prefix)
+}
+
 export function toRelative(workspacePath: string, absolutePath: string): string {
   workspacePath = normalizeWorkspacePath(workspacePath)
-  if (!absolutePath.startsWith(workspacePath)) {
+  if (!startsWithPath(absolutePath, workspacePath)) {
     return absolutePath
   }
   if (absolutePath.length !== workspacePath.length) {
