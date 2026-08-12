@@ -237,6 +237,10 @@ function App(): React.JSX.Element {
   )
 
   useEffect(() => {
+    if (!window.api) {
+      log.error('window.api is undefined - preload script may have failed to load')
+      return
+    }
     let cancelled = false
     withLoading(async () => {
       const path: string | null = await window.api.getLastWorkspace()

@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import 'electron-log/preload'
 
 // Defaults to `any`, matching Electron's own `ipcRenderer.invoke` typing, so callers that don't
 // need a specific shape (or that annotate it themselves at the call site) aren't forced into
