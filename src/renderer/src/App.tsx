@@ -74,35 +74,38 @@ function App(): React.JSX.Element {
     dirStructureTagRef.current = dirStructureTag
   }, [dirStructureTag])
 
-  const loadWorkspaceState = useCallback(async (path: string, generation?: number): Promise<void> => {
-    try {
-      const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
-        await window.api.getWorkspaceState(path)
-      if (generation !== undefined && sessionGenerationRef.current !== generation) return
-      const fsMap = new Map<string, FileTag>()
-      const batchStates: Array<{ absolutePath: string; tag: string }> = []
-      for (const [rel, tag] of state.fileStates) {
-        const abs = joinWithWorkspace(path, rel)
-        const normalizedTag: FileTag = tag === 'ADD' || tag === 'INQ' ? 'PND' : (tag as FileTag)
-        fsMap.set(abs, normalizedTag)
-        batchStates.push({ absolutePath: abs, tag: normalizedTag })
+  const loadWorkspaceState = useCallback(
+    async (path: string, generation?: number): Promise<void> => {
+      try {
+        const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
+          await window.api.getWorkspaceState(path)
+        if (generation !== undefined && sessionGenerationRef.current !== generation) return
+        const fsMap = new Map<string, FileTag>()
+        const batchStates: Array<{ absolutePath: string; tag: string }> = []
+        for (const [rel, tag] of state.fileStates) {
+          const abs = joinWithWorkspace(path, rel)
+          const normalizedTag: FileTag = tag === 'ADD' || tag === 'INQ' ? 'PND' : (tag as FileTag)
+          fsMap.set(abs, normalizedTag)
+          batchStates.push({ absolutePath: abs, tag: normalizedTag })
+        }
+        if (batchStates.length > 0) {
+          await window.api.batchSetFileStates(path, batchStates)
+        }
+        if (generation !== undefined && sessionGenerationRef.current !== generation) return
+        const expSet = new Set<string>()
+        for (const rel of state.expandedDirs) {
+          expSet.add(joinWithWorkspace(path, rel))
+        }
+        setFileStates(fsMap)
+        setExpandedDirs(expSet)
+        setDirStructureTag('PND')
+        dirStructureTagRef.current = 'PND'
+      } catch (e) {
+        log.error('Failed to load workspace state:', e)
       }
-      if (batchStates.length > 0) {
-        await window.api.batchSetFileStates(path, batchStates)
-      }
-      if (generation !== undefined && sessionGenerationRef.current !== generation) return
-      const expSet = new Set<string>()
-      for (const rel of state.expandedDirs) {
-        expSet.add(joinWithWorkspace(path, rel))
-      }
-      setFileStates(fsMap)
-      setExpandedDirs(expSet)
-      setDirStructureTag('PND')
-      dirStructureTagRef.current = 'PND'
-    } catch (e) {
-      log.error('Failed to load workspace state:', e)
-    }
-  }, [])
+    },
+    []
+  )
 
   const applyChatSessionState = useCallback(
     async (
@@ -239,6 +242,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     let cancelled = false
     withLoading(async () => {
+      if (!window.api) return
       const path: string | null = await window.api.getLastWorkspace()
       if (!cancelled && path) {
         await handleWorkspaceChange(path)
