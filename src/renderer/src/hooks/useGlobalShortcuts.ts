@@ -37,13 +37,13 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
       // Ctrl/Cmd + 1..9 — switch chat mode (welcome screen only, works even in input).
       // Ctrl/Cmd+0 is shared with zoom reset: on the welcome screen it switches mode,
       // everywhere else it resets zoom (see the zoom branch below for the other keys).
-      if (mod && !e.shiftKey && !e.altKey && /^Digit[1-9]$/.test(code)) {
+      if (mod && !e.shiftKey && !e.altKey && /^Digit[0-9]$/.test(code)) {
         if (handlersRef.current.isWelcomeScreen()) {
           e.preventDefault()
           handlersRef.current.onModeKey(parseInt(code.slice(5), 10))
           return
         }
-        if (key === '0' && !isInput) {
+        if (code === 'Digit0' && !isInput) {
           e.preventDefault()
           handlersRef.current.onZoomReset()
         }
@@ -51,10 +51,10 @@ export function useGlobalShortcuts(handlers: GlobalShortcutHandlers): void {
       }
 
       // Ctrl/Cmd +/- — zoom in/out
-      if (mod && !e.altKey && !e.shiftKey && (key === '=' || key === '+' || key === '-')) {
+      if (mod && !e.altKey && !e.shiftKey && (e.key === '=' || e.key === '+' || e.key === '-')) {
         if (isInput) return
         e.preventDefault()
-        if (key === '-') {
+        if (e.key === '-') {
           handlersRef.current.onZoomOut()
         } else {
           handlersRef.current.onZoomIn()
