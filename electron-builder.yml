@@ -1,4 +1,6 @@
-appId: com.electron.app
+# TODO: replace with your own reverse-DNS id before shipping a real release —
+# com.electron.app is the electron-vite template default, not a real identity.
+appId: com.hell.app
 productName: hell
 directories:
   buildResources: build
@@ -21,8 +23,6 @@ nsis:
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
@@ -37,6 +37,6 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+# No `publish` config: there's no electron-updater wired into the app, so a
+# placeholder feed URL here would only be misleading. Add one back once an
+# auto-update flow actually exists to point at.

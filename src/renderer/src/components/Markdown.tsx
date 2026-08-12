@@ -26,6 +26,8 @@ interface MarkdownProps {
   content: string
   isStreaming?: boolean
   deferHeavyRendering?: boolean
+  /** Identifies this message/variant to the parser's incremental-preprocess cache. */
+  cacheKey?: string
 }
 
 function extractText(node: ReactNode): string {
@@ -229,9 +231,13 @@ const MarkdownSegment = memo(function MarkdownSegment({
 const Markdown = memo(function Markdown({
   content,
   isStreaming = false,
-  deferHeavyRendering = false
+  deferHeavyRendering = false,
+  cacheKey
 }: MarkdownProps): React.JSX.Element {
-  const processedContent = useMemo(() => getActiveParser().preprocess(content), [content])
+  const processedContent = useMemo(
+    () => getActiveParser().preprocess(content, cacheKey),
+    [content, cacheKey]
+  )
   const segments = useMemo(() => segmentContent(processedContent), [processedContent])
   const lastIndex = segments.length - 1
   const { workspace } = useWorkspace()

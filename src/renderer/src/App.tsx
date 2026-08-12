@@ -24,7 +24,7 @@ function App(): React.JSX.Element {
   const { leftWidth, rightWidth, layoutRef, startResizeLeft, startResizeRight } =
     useResizableLayout()
   const { withLoading } = useLoading()
-  const { settings } = useSettings()
+  const { settings, zoomIn, zoomOut, resetZoom } = useSettings()
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [fileStates, setFileStates] = useState<FileStates>(new Map())
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
@@ -49,6 +49,10 @@ function App(): React.JSX.Element {
   const dirStructureCopiedRef = useRef(false)
   const dirStructureInLastPasteRef = useRef(false)
   const isNewChatRef = useRef(false)
+  // Bumped at the start of handleWorkspaceChange/handleSelectChat so a stale flow
+  // that's still awaiting IPC can detect it's been superseded and bail before
+  // writing state from the wrong chat/workspace.
+  const sessionGenerationRef = useRef(0)
 
   useEffect(() => {
     activeChatIdRef.current = activeChatId
@@ -70,10 +74,11 @@ function App(): React.JSX.Element {
     dirStructureTagRef.current = dirStructureTag
   }, [dirStructureTag])
 
-  const loadWorkspaceState = useCallback(async (path: string): Promise<void> => {
+  const loadWorkspaceState = useCallback(async (path: string, generation?: number): Promise<void> => {
     try {
       const state: { fileStates: Array<[string, string]>; expandedDirs: string[] } =
-        await window.electron.ipcRenderer.invoke('db:get-workspace-state', path)
+        await window.api.getWorkspaceState(path)
+      if (generation !== undefined && sessionGenerationRef.current !== generation) return
       const fsMap = new Map<string, FileTag>()
       const batchStates: Array<{ absolutePath: string; tag: string }> = []
       for (const [rel, tag] of state.fileStates) {
@@ -83,8 +88,9 @@ function App(): React.JSX.Element {
         batchStates.push({ absolutePath: abs, tag: normalizedTag })
       }
       if (batchStates.length > 0) {
-        await window.electron.ipcRenderer.invoke('db:batch-set-file-states', path, batchStates)
+        await window.api.batchSetFileStates(path, batchStates)
       }
+      if (generation !== undefined && sessionGenerationRef.current !== generation) return
       const expSet = new Set<string>()
       for (const rel of state.expandedDirs) {
         expSet.add(joinWithWorkspace(path, rel))
@@ -117,11 +123,7 @@ function App(): React.JSX.Element {
           batchStates.push({ absolutePath, tag })
         }
         if (batchStates.length > 0) {
-          await window.electron.ipcRenderer.invoke(
-            'db:batch-set-file-states',
-            targetWorkspace,
-            batchStates
-          )
+          await window.api.batchSetFileStates(targetWorkspace, batchStates)
         }
 
         const expSet = new Set<string>(savedExpandedDirs)
@@ -166,8 +168,7 @@ function App(): React.JSX.Element {
       const mode = chatRef.current.getMode()
       const taskId = chatRef.current.getTaskId()
       if (activeChatIdRef.current) {
-        await window.electron.ipcRenderer.invoke(
-          'db:update-chat-session',
+        await window.api.updateChatSession(
           activeChatIdRef.current,
           title,
           JSON.stringify(messages),
@@ -178,8 +179,7 @@ function App(): React.JSX.Element {
           taskId
         )
       } else {
-        const id = await window.electron.ipcRenderer.invoke(
-          'db:create-chat-session',
+        const id = await window.api.createChatSession(
           ws,
           title,
           JSON.stringify(messages),
@@ -198,9 +198,11 @@ function App(): React.JSX.Element {
 
   const handleWorkspaceChange = useCallback(
     async (path: string | null, { restore = true } = {}): Promise<void> => {
+      const generation = ++sessionGenerationRef.current
       await withLoading(async () => {
         try {
           await saveCurrentChat()
+          if (sessionGenerationRef.current !== generation) return
           log.info('Workspace changed:', path ?? '(none)')
           setActiveChatId(null)
           chatRef.current?.loadChat([])
@@ -208,11 +210,12 @@ function App(): React.JSX.Element {
           setFilePaths(new Set())
           setAllDirPaths(new Set())
           copySnapshotRef.current = new Set()
-          await window.electron.ipcRenderer.invoke('workspace:watch', path)
+          await window.api.watchWorkspace(path)
+          if (sessionGenerationRef.current !== generation) return
           if (path) {
-            await window.electron.ipcRenderer.invoke('db:touch-workspace', path)
+            await window.api.touchWorkspace(path)
             if (restore) {
-              await loadWorkspaceState(path)
+              await loadWorkspaceState(path, generation)
             } else {
               setFileStates(new Map())
               setExpandedDirs(new Set())
@@ -236,7 +239,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     let cancelled = false
     withLoading(async () => {
-      const path: string | null = await window.electron.ipcRenderer.invoke('db:get-last-workspace')
+      const path: string | null = await window.api.getLastWorkspace()
       if (!cancelled && path) {
         await handleWorkspaceChange(path)
       }
@@ -272,16 +275,15 @@ function App(): React.JSX.Element {
         })
         if (workspace) {
           if (checked) {
-            window.electron.ipcRenderer
-              .invoke(
-                'db:batch-set-file-states',
+            window.api
+              .batchSetFileStates(
                 workspace,
                 filteredPaths.map((p) => ({ absolutePath: p, tag: 'PND' }))
               )
               .catch((e) => log.error('Failed to batch set file states:', e))
           } else {
-            window.electron.ipcRenderer
-              .invoke('db:batch-remove-file-states', workspace, filteredPaths)
+            window.api
+              .batchRemoveFileStates(workspace, filteredPaths)
               .catch((e) => log.error('Failed to batch remove file states:', e))
           }
         }
@@ -302,8 +304,8 @@ function App(): React.JSX.Element {
           return next
         })
         if (workspace) {
-          window.electron.ipcRenderer
-            .invoke('db:set-dir-expanded', workspace, path, expanded)
+          window.api
+            .setDirExpanded(workspace, path, expanded)
             .catch((e) => log.error('Failed to set dir expanded:', e))
         }
       } catch (e) {
@@ -327,8 +329,8 @@ function App(): React.JSX.Element {
           }
         })
         if (toRemove.length > 0) {
-          window.electron.ipcRenderer
-            .invoke('db:batch-remove-file-states', workspace, toRemove)
+          window.api
+            .batchRemoveFileStates(workspace, toRemove)
             .catch((e) => log.error('Failed to batch remove file states:', e))
         }
         return next
@@ -353,7 +355,7 @@ function App(): React.JSX.Element {
 
   const handleOpenWorkspaceShortcut = useCallback(async (): Promise<void> => {
     try {
-      const path = await window.electron.ipcRenderer.invoke('open-workspace')
+      const path = await window.api.openWorkspace()
       if (path) {
         await handleWorkspaceChange(path)
       }
@@ -370,9 +372,8 @@ function App(): React.JSX.Element {
     const currentExpanded = expandedDirsRef.current
     setExpandedDirs(new Set())
     if (workspace && currentExpanded.size > 0) {
-      window.electron.ipcRenderer
-        .invoke(
-          'db:batch-set-dir-expanded',
+      window.api
+        .batchSetDirExpanded(
           workspace,
           [...currentExpanded].map((p) => ({ absolutePath: p, expanded: false }))
         )
@@ -383,9 +384,8 @@ function App(): React.JSX.Element {
   const handleExpandAll = useCallback((): void => {
     setExpandedDirs(new Set(allDirPaths))
     if (workspace && allDirPaths.size > 0) {
-      window.electron.ipcRenderer
-        .invoke(
-          'db:batch-set-dir-expanded',
+      window.api
+        .batchSetDirExpanded(
           workspace,
           [...allDirPaths].map((p) => ({ absolutePath: p, expanded: true }))
         )
@@ -448,8 +448,7 @@ function App(): React.JSX.Element {
             }
             return next
           })
-          await window.electron.ipcRenderer.invoke(
-            'db:batch-set-file-states',
+          await window.api.batchSetFileStates(
             workspace,
             pathsToMarkInq.map((p) => ({ absolutePath: p, tag: 'INQ' }))
           )
@@ -468,8 +467,7 @@ function App(): React.JSX.Element {
               relativePath = relativePath.substring(1)
             }
           }
-          const res: { exists: boolean; error: boolean; content: string | null } =
-            await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
+          const res = await window.api.readFile(workspace, relativePath)
           if (!res.exists) return null
           if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
           if (res.content !== null) return { path: relativePath, content: res.content }
@@ -484,7 +482,7 @@ function App(): React.JSX.Element {
         // 3. Prepare context and copy
         let dirStructure: string | undefined
         if (includeDirStructure) {
-          dirStructure = await window.electron.ipcRenderer.invoke('read-directory-tree', workspace)
+          dirStructure = await window.api.readDirectoryTree(workspace)
           if (transitionDirTag) {
             setDirStructureTag('INQ')
             dirStructureTagRef.current = 'INQ'
@@ -546,9 +544,8 @@ function App(): React.JSX.Element {
       setFileStates(nextFileStates)
       const currentWorkspace = workspaceRef.current
       if (currentWorkspace && toConvert.length > 0) {
-        window.electron.ipcRenderer
-          .invoke(
-            'db:batch-set-file-states',
+        window.api
+          .batchSetFileStates(
             currentWorkspace,
             toConvert.map((p) => ({ absolutePath: p, tag: 'PND' }))
           )
@@ -563,8 +560,7 @@ function App(): React.JSX.Element {
         const savedMode = chatRef.current?.getMode() ?? ''
         const savedTaskId = chatRef.current?.getTaskId() ?? ''
         if (prevActiveChatId) {
-          await window.electron.ipcRenderer.invoke(
-            'db:update-chat-session',
+          await window.api.updateChatSession(
             prevActiveChatId,
             title,
             JSON.stringify(currentMessages),
@@ -575,8 +571,7 @@ function App(): React.JSX.Element {
             savedTaskId
           )
         } else {
-          await window.electron.ipcRenderer.invoke(
-            'db:create-chat-session',
+          await window.api.createChatSession(
             ws,
             title,
             JSON.stringify(currentMessages),
@@ -598,27 +593,33 @@ function App(): React.JSX.Element {
 
   const handleSelectChat = useCallback(
     async (id: string): Promise<void> => {
+      const generation = ++sessionGenerationRef.current
       await withLoading(async () => {
         try {
           await saveCurrentChat()
+          if (sessionGenerationRef.current !== generation) return
           resetPreprocessCache()
           chatRef.current?.loadChat([])
           setActiveChatId(null)
 
           await new Promise<void>((resolve) => setTimeout(resolve, 0))
+          if (sessionGenerationRef.current !== generation) return
 
-          const session = await window.electron.ipcRenderer.invoke('db:get-chat-session', id)
+          const session = await window.api.getChatSession(id)
+          if (sessionGenerationRef.current !== generation) return
           if (session) {
             const sessionWorkspace = session.workspace_path
             if (sessionWorkspace && sessionWorkspace !== workspace) {
               setWorkspace(sessionWorkspace)
-              await window.electron.ipcRenderer.invoke('workspace:watch', sessionWorkspace)
-              await window.electron.ipcRenderer.invoke('db:touch-workspace', sessionWorkspace)
+              await window.api.watchWorkspace(sessionWorkspace)
+              await window.api.touchWorkspace(sessionWorkspace)
+              if (sessionGenerationRef.current !== generation) return
             }
 
             const targetWorkspace = sessionWorkspace || workspace
             if (targetWorkspace) {
               await applyChatSessionState(session, targetWorkspace)
+              if (sessionGenerationRef.current !== generation) return
             }
 
             const restoredTag = session.dir_structure_tag
@@ -628,6 +629,7 @@ function App(): React.JSX.Element {
             dirStructureTagRef.current = restoredTag
 
             await new Promise<void>((resolve) => setTimeout(resolve, 0))
+            if (sessionGenerationRef.current !== generation) return
 
             const messages = JSON.parse(session.messages).map((m: ChatMessage) => ({
               ...m,
@@ -663,8 +665,7 @@ function App(): React.JSX.Element {
         const ed = serializeExpandedDirs(expandedDirsRef.current)
         const dst = dirStructureTagRef.current ?? ''
         if (activeChatIdRef.current) {
-          await window.electron.ipcRenderer.invoke(
-            'db:update-chat-session',
+          await window.api.updateChatSession(
             activeChatIdRef.current,
             title,
             JSON.stringify(messages),
@@ -675,8 +676,7 @@ function App(): React.JSX.Element {
             taskId
           )
         } else {
-          const id = await window.electron.ipcRenderer.invoke(
-            'db:create-chat-session',
+          const id = await window.api.createChatSession(
             ws,
             title,
             JSON.stringify(messages),
@@ -726,9 +726,8 @@ function App(): React.JSX.Element {
             }
           })
           if (workspace && toAdd.size > 0) {
-            window.electron.ipcRenderer
-              .invoke(
-                'db:batch-set-file-states',
+            window.api
+              .batchSetFileStates(
                 workspace,
                 [...toAdd].map((p) => ({ absolutePath: p, tag: 'ADD' }))
               )
@@ -784,6 +783,9 @@ function App(): React.JSX.Element {
     onPaste: handlePaste,
     onToggleWhip: handleToggleWhip,
     onModeKey: handleModeKey,
+    onZoomIn: zoomIn,
+    onZoomOut: zoomOut,
+    onZoomReset: resetZoom,
     isWelcomeScreen
   })
 
@@ -838,27 +840,28 @@ function App(): React.JSX.Element {
           const fs = serializeCurrentFileStates(fileStatesRef.current, ws)
           const ed = serializeExpandedDirs(expandedDirsRef.current)
           const savedMode = chatRef.current?.getMode() ?? ''
+          const savedTaskId = chatRef.current?.getTaskId() ?? ''
           if (prevActiveChatId) {
-            await window.electron.ipcRenderer.invoke(
-              'db:update-chat-session',
+            await window.api.updateChatSession(
               prevActiveChatId,
               title,
               JSON.stringify(currentMessages),
               fs,
               ed,
               savedDirStructureTag,
-              savedMode
+              savedMode,
+              savedTaskId
             )
           } else {
-            await window.electron.ipcRenderer.invoke(
-              'db:create-chat-session',
+            await window.api.createChatSession(
               ws,
               title,
               JSON.stringify(currentMessages),
               fs,
               ed,
               savedDirStructureTag,
-              savedMode
+              savedMode,
+              savedTaskId
             )
           }
         }
@@ -866,9 +869,7 @@ function App(): React.JSX.Element {
 
         // 3. Set file states
         if (filePaths.size > 0) {
-          await window.electron.ipcRenderer.invoke('db:batch-remove-file-states', workspace, [
-            ...filePaths
-          ])
+          await window.api.batchRemoveFileStates(workspace, [...filePaths])
         }
 
         const nextFileStates = new Map<string, FileTag>()
@@ -878,8 +879,7 @@ function App(): React.JSX.Element {
         setFileStates(nextFileStates)
 
         if (matchedPaths.length > 0) {
-          await window.electron.ipcRenderer.invoke(
-            'db:batch-set-file-states',
+          await window.api.batchSetFileStates(
             workspace,
             matchedPaths.map((p) => ({ absolutePath: p, tag: 'PND' }))
           )
@@ -894,8 +894,7 @@ function App(): React.JSX.Element {
               relativePath = relativePath.substring(1)
             }
           }
-          const res: { exists: boolean; error: boolean; content: string | null } =
-            await window.electron.ipcRenderer.invoke('read-file', workspace, relativePath)
+          const res = await window.api.readFile(workspace, relativePath)
           if (!res.exists) return null
           if (res.error) return { path: relativePath, content: 'ERROR READING FILE' }
           if (res.content !== null) return { path: relativePath, content: res.content }
@@ -906,10 +905,7 @@ function App(): React.JSX.Element {
           (f): f is { path: string; content: string } => f !== null
         )
 
-        const dirStructure = await window.electron.ipcRenderer.invoke(
-          'read-directory-tree',
-          workspace
-        )
+        const dirStructure = await window.api.readDirectoryTree(workspace)
 
         await chatRef.current?.runTask(description, pendingFiles, dirStructure, detail.taskId)
         copySnapshotRef.current = new Set(matchedPaths)
@@ -921,8 +917,7 @@ function App(): React.JSX.Element {
           return next
         })
         if (matchedPaths.length > 0) {
-          await window.electron.ipcRenderer.invoke(
-            'db:batch-set-file-states',
+          await window.api.batchSetFileStates(
             workspace,
             matchedPaths.map((p) => ({ absolutePath: p, tag: 'INQ' }))
           )
@@ -966,11 +961,7 @@ function App(): React.JSX.Element {
         return rel
       })
       try {
-        const result = (await window.electron.ipcRenderer.invoke(
-          'count-lines',
-          workspace,
-          relativePaths
-        )) as { lines: number; tokens: number }
+        const result = await window.api.countLines(workspace, relativePaths)
         if (!cancelled) {
           setLineCount(result.lines)
           setTokenCount(result.tokens)

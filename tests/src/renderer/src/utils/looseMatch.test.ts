@@ -868,4 +868,20 @@ describe('Edge cases', () => {
     expect(result).not.toBeNull()
     expect(result!.start).toBe(6)
   })
+
+  it('flags ambiguous when the token sequence repeats in the file', () => {
+    const file = 'foo(1, 2)\nbar()\nfoo(1, 2)'
+    const old = 'foo(1, 2)'
+    const result = findLooseMatch(file, old)
+    expect(result).not.toBeNull()
+    expect(result!.ambiguous).toBe(true)
+  })
+
+  it('does not flag ambiguous when the token sequence is unique', () => {
+    const file = 'foo(1, 2)\nbar()\nbaz(3, 4)'
+    const old = 'foo(1, 2)'
+    const result = findLooseMatch(file, old)
+    expect(result).not.toBeNull()
+    expect(result!.ambiguous).toBe(false)
+  })
 })

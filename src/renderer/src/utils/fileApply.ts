@@ -66,11 +66,7 @@ export function invalidateWorkspaceFileCache(workspace: string): void {
 }
 
 export async function readFile(workspace: string, path: string): Promise<FileState> {
-  return (await window.electron.ipcRenderer.invoke(
-    'read-file',
-    workspace,
-    path
-  )) as Promise<FileState>
+  return await window.api.readFile(workspace, path)
 }
 
 export async function applyFileWrite(
@@ -79,12 +75,7 @@ export async function applyFileWrite(
   content: string
 ): Promise<ApplyResult> {
   try {
-    return await ((await window.electron.ipcRenderer.invoke(
-      'write-file',
-      workspace,
-      path,
-      content
-    )) as Promise<ApplyResult>)
+    return await window.api.writeFile(workspace, path, content)
   } catch (e) {
     log.error('Failed to write file:', e)
     return { success: false, error: String(e) }
@@ -108,6 +99,12 @@ export async function applyFileReplace(
 
     const exactIdx = content.indexOf(normalizedOldCode)
     if (exactIdx !== -1) {
+      if (content.indexOf(normalizedOldCode, exactIdx + 1) !== -1) {
+        return {
+          success: false,
+          error: 'Search text matches multiple locations in file; add more context to disambiguate'
+        }
+      }
       const newContent =
         content.slice(0, exactIdx) +
         normalizedNewCode +
@@ -117,6 +114,12 @@ export async function applyFileReplace(
 
     const loose = findLooseMatch(content, normalizedOldCode)
     if (loose) {
+      if (loose.ambiguous) {
+        return {
+          success: false,
+          error: 'Search text matches multiple locations in file; add more context to disambiguate'
+        }
+      }
       const newContent =
         content.slice(0, loose.start) + normalizedNewCode + content.slice(loose.end)
       return applyFileWrite(workspace, path, newContent)
@@ -211,12 +214,7 @@ export async function applyFileMove(
   newPath: string
 ): Promise<ApplyResult> {
   try {
-    return await (window.electron.ipcRenderer.invoke(
-      'move-file',
-      workspace,
-      oldPath,
-      newPath
-    ) as Promise<ApplyResult>)
+    return await window.api.moveFile(workspace, oldPath, newPath)
   } catch (e) {
     log.error('Failed to apply move:', e)
     return { success: false, error: String(e) }
@@ -225,11 +223,7 @@ export async function applyFileMove(
 
 export async function applyFileDelete(workspace: string, path: string): Promise<ApplyResult> {
   try {
-    return await (window.electron.ipcRenderer.invoke(
-      'delete-file',
-      workspace,
-      path
-    ) as Promise<ApplyResult>)
+    return await window.api.deleteFile(workspace, path)
   } catch (e) {
     log.error('Failed to delete file:', e)
     return { success: false, error: String(e) }

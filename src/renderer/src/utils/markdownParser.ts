@@ -543,7 +543,7 @@ export function segmentContent(content: string): Segment[] {
 export interface MarkdownParser {
   id: string
   name: string
-  preprocess: (content: string) => string
+  preprocess: (content: string, cacheKey?: string) => string
 }
 
 /**
@@ -596,33 +596,46 @@ function _findLastSafeBoundary(content: string): number {
   return lastSafeEnd
 }
 
-let _incRawPrefix = ''
-let _incRawPrefixLen = 0
-let _incProcessedPrefix = ''
-let _incLastFilePath = ''
-
-export function resetPreprocessCache(): void {
-  _incRawPrefix = ''
-  _incRawPrefixLen = 0
-  _incProcessedPrefix = ''
-  _incLastFilePath = ''
+interface IncrementalCacheEntry {
+  rawPrefix: string
+  rawPrefixLen: number
+  processedPrefix: string
+  lastFilePath: string
 }
 
-export function preprocess(content: string): string {
+// Keyed per message/segment (see `cacheKey` on <Markdown>) rather than a single
+// global slot: without a key, message B reusing message A's cached prefix would
+// misattribute an orphan [SEARCH]/@@SEARCH block to the wrong file path whenever
+// two different chat bubbles happen to share a text prefix while streaming/scrolling.
+const incrementalCache = new Map<string, IncrementalCacheEntry>()
+const INCREMENTAL_CACHE_MAX = 64
+const DEFAULT_CACHE_KEY = '__default__'
+
+export function resetPreprocessCache(key?: string): void {
+  if (key === undefined) {
+    incrementalCache.clear()
+  } else {
+    incrementalCache.delete(key)
+  }
+}
+
+export function preprocess(content: string, cacheKey: string = DEFAULT_CACHE_KEY): string {
   const normalized = content.indexOf('\r') === -1 ? content : normalizeLineEndings(content)
+  const cached = incrementalCache.get(cacheKey)
 
   // Fast path: content extends the cached prefix — only preprocess the suffix.
   // A single O(prefix) slice comparison confirms the prefix is intact.
   // This runs once per new-token batch, not per character, keeping the
   // amortised cost O(1) per token.
   if (
-    _incRawPrefixLen > 0 &&
-    normalized.length >= _incRawPrefixLen &&
-    normalized.slice(0, _incRawPrefixLen) === _incRawPrefix
+    cached &&
+    cached.rawPrefixLen > 0 &&
+    normalized.length >= cached.rawPrefixLen &&
+    normalized.slice(0, cached.rawPrefixLen) === cached.rawPrefix
   ) {
-    const suffix = normalized.slice(_incRawPrefixLen)
-    if (!suffix) return _incProcessedPrefix
-    return _incProcessedPrefix + preprocessImpl(suffix, _incLastFilePath).result
+    const suffix = normalized.slice(cached.rawPrefixLen)
+    if (!suffix) return cached.processedPrefix
+    return cached.processedPrefix + preprocessImpl(suffix, cached.lastFilePath).result
   }
 
   // Slow path: full preprocessing
@@ -631,16 +644,20 @@ export function preprocess(content: string): string {
   // Cache at the last safe boundary so subsequent appends hit the fast path
   const safeEnd = _findLastSafeBoundary(normalized)
   if (safeEnd > 0 && safeEnd < normalized.length) {
-    _incRawPrefix = normalized.slice(0, safeEnd)
-    _incRawPrefixLen = safeEnd
-    const prefixResult = preprocessImpl(_incRawPrefix)
-    _incProcessedPrefix = prefixResult.result
-    _incLastFilePath = prefixResult.lastFilePath
+    const rawPrefix = normalized.slice(0, safeEnd)
+    const prefixResult = preprocessImpl(rawPrefix)
+    if (incrementalCache.size >= INCREMENTAL_CACHE_MAX && !incrementalCache.has(cacheKey)) {
+      const oldestKey = incrementalCache.keys().next().value
+      if (oldestKey !== undefined) incrementalCache.delete(oldestKey)
+    }
+    incrementalCache.set(cacheKey, {
+      rawPrefix,
+      rawPrefixLen: safeEnd,
+      processedPrefix: prefixResult.result,
+      lastFilePath: prefixResult.lastFilePath
+    })
   } else {
-    _incRawPrefix = ''
-    _incRawPrefixLen = 0
-    _incProcessedPrefix = ''
-    _incLastFilePath = ''
+    incrementalCache.delete(cacheKey)
   }
 
   return result

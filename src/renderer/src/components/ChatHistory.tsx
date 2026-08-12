@@ -163,8 +163,8 @@ const ChatHistory = forwardRef<ChatHistoryHandle, ChatHistoryProps>(function Cha
     }
     let ignore = false
     setLoading(true)
-    window.electron.ipcRenderer
-      .invoke('db:get-chat-sessions', workspace)
+    window.api
+      .getChatSessions(workspace)
       .then((result: ChatSession[]) => {
         if (!ignore) {
           setSessions(result || [])
@@ -184,11 +184,8 @@ const ChatHistory = forwardRef<ChatHistoryHandle, ChatHistoryProps>(function Cha
     async (e: React.MouseEvent, id: string) => {
       e.stopPropagation()
       try {
-        await window.electron.ipcRenderer.invoke('db:delete-chat-session', id)
-        const result: ChatSession[] = await window.electron.ipcRenderer.invoke(
-          'db:get-chat-sessions',
-          workspace
-        )
+        await window.api.deleteChatSession(id)
+        const result: ChatSession[] = await window.api.getChatSessions(workspace)
         setSessions(result || [])
         if (activeChatId === id) {
           onNewChat()
@@ -213,11 +210,7 @@ const ChatHistory = forwardRef<ChatHistoryHandle, ChatHistoryProps>(function Cha
     clearTimeout(searchDebounceRef.current)
     searchDebounceRef.current = setTimeout(async () => {
       try {
-        const results: ChatSession[] = await window.electron.ipcRenderer.invoke(
-          'db:search-chat-sessions',
-          workspace,
-          q
-        )
+        const results: ChatSession[] = await window.api.searchChatSessions(workspace, q)
         setSearchResults(results || [])
       } catch (e) {
         log.error('Failed to search chat sessions:', e)

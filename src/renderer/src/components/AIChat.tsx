@@ -497,6 +497,7 @@ const MessageBubble = memo(function MessageBubble({
                 <div className="chat-bubble-content">
                   <Markdown
                     key={`${message.id}-${message.activeVariant}`}
+                    cacheKey={`${message.id}-${message.activeVariant}`}
                     content={variant.content}
                     deferHeavyRendering={true}
                   />
@@ -686,11 +687,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
   const readHellMd = useCallback(async (): Promise<string | null> => {
     if (!workspace) return null
     try {
-      const result = (await window.electron.ipcRenderer.invoke(
-        'read-file',
-        workspace,
-        'HELL.md'
-      )) as { exists: boolean; error: boolean; content: string | null }
+      const result = await window.api.readFile(workspace, 'HELL.md')
       if (result && !result.error && result.exists) {
         return result.content
       }
@@ -882,7 +879,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           hellMdContent
         )
         try {
-          await window.electron.ipcRenderer.invoke('clipboard:write-text', promptText)
+          await window.api.clipboardWriteText(promptText)
           return true
         } catch {
           return false
@@ -921,7 +918,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
           hellMdContent
         )
         try {
-          await window.electron.ipcRenderer.invoke('clipboard:write-text', promptText)
+          await window.api.clipboardWriteText(promptText)
           return true
         } catch {
           return false
@@ -929,7 +926,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
       },
       async pasteAsAssistant(): Promise<boolean> {
         try {
-          const text = await window.electron.ipcRenderer.invoke('clipboard:read-text')
+          const text = await window.api.clipboardReadText()
           if (!text) return false
           setIsAwaitingResponse(false)
           setMessages((prev) => {
@@ -1033,7 +1030,7 @@ const AIChat = forwardRef<AIChatHandle, AIChatProps>(function AIChat(
 
   const handleCopy = useCallback(async (messageId: string, content: string): Promise<void> => {
     try {
-      await window.electron.ipcRenderer.invoke('clipboard:write-text', content)
+      await window.api.clipboardWriteText(content)
       setCopiedId(messageId)
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
