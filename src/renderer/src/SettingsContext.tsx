@@ -105,6 +105,9 @@ interface SettingsContextValue {
   settings: SettingsState
   updateSettings: (patch: Partial<SettingsState>) => void
   resetSettings: () => void
+  zoomIn: () => void
+  zoomOut: () => void
+  resetZoom: () => void
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
@@ -281,8 +284,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }): R
 
   useEffect(() => {
     let cancelled = false
-    window.electron.ipcRenderer
-      .invoke('settings:load')
+    window.api
+      .loadSettings()
       .then((saved: SettingsState | null) => {
         if (cancelled) return
         ipcLoadedRef.current = true
@@ -308,36 +311,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }): R
     } catch (e) {
       log.error('Failed to persist settings to localStorage:', e)
     }
-    window.electron.ipcRenderer.invoke('settings:save', json).catch((e) => {
+    window.api.saveSettings(json).catch((e) => {
       log.error('Failed to persist settings to main process:', e)
     })
   }, [settings])
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (!e.ctrlKey && !e.metaKey) return
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+  // Zoom shortcuts are wired through useGlobalShortcuts's single window keydown
+  // listener (see App.tsx), not a listener of our own — a second independent
+  // listener here previously fired on every Ctrl+0 alongside the welcome
+  // screen's mode-switch shortcut, which also binds Ctrl+0.
+  const zoomIn = useCallback(() => {
+    setSettings((prev) => ({ ...prev, scale: Math.min(200, prev.scale + 5) }))
+  }, [])
 
-      if (e.key === '=' || e.key === '+') {
-        e.preventDefault()
-        setSettings((prev) => ({
-          ...prev,
-          scale: Math.min(200, prev.scale + 5)
-        }))
-      } else if (e.key === '-') {
-        e.preventDefault()
-        setSettings((prev) => ({
-          ...prev,
-          scale: Math.max(60, prev.scale - 5)
-        }))
-      } else if (e.key === '0') {
-        e.preventDefault()
-        setSettings((prev) => ({ ...prev, scale: 100 }))
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+  const zoomOut = useCallback(() => {
+    setSettings((prev) => ({ ...prev, scale: Math.max(60, prev.scale - 5) }))
+  }, [])
+
+  const resetZoom = useCallback(() => {
+    setSettings((prev) => ({ ...prev, scale: 100 }))
   }, [])
 
   const updateSettings = useCallback((patch: Partial<SettingsState>) => {
@@ -349,8 +341,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }): R
   }, [])
 
   const value = useMemo<SettingsContextValue>(
-    () => ({ settings, updateSettings, resetSettings }),
-    [settings, updateSettings, resetSettings]
+    () => ({ settings, updateSettings, resetSettings, zoomIn, zoomOut, resetZoom }),
+    [settings, updateSettings, resetSettings, zoomIn, zoomOut, resetZoom]
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>
