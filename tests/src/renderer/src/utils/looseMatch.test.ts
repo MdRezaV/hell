@@ -195,21 +195,21 @@ describe('findLooseMatch', () => {
     const file = 'const x = 42'
     const old = 'const x = 42'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 12 })
+    expect(result).toEqual({ start: 0, end: 12, ambiguous: false })
   })
 
   it('should match with extra whitespace between symbols', () => {
     const file = 'x = 42'
     const old = 'x=42'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 6 })
+    expect(result).toEqual({ start: 0, end: 6, ambiguous: false })
   })
 
   it('should match with no whitespace between symbols', () => {
     const file = 'x=42'
     const old = 'x = 42'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 4 })
+    expect(result).toEqual({ start: 0, end: 4, ambiguous: false })
   })
 
   it('should require whitespace between identifiers', () => {
@@ -230,42 +230,42 @@ describe('findLooseMatch', () => {
     const file = '(x) => x'
     const old = '(x)=>x'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 8 })
+    expect(result).toEqual({ start: 0, end: 8, ambiguous: false })
   })
 
   it('should match arrow function without spaces', () => {
     const file = '(x)=>x'
     const old = '(x) => x'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 6 })
+    expect(result).toEqual({ start: 0, end: 6, ambiguous: false })
   })
 
   it('should match increment operator with variations', () => {
     const file = 'i + +'
     const old = 'i++'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 5 })
+    expect(result).toEqual({ start: 0, end: 5, ambiguous: false })
   })
 
   it('should match compound operators', () => {
     const file = 'x += 5'
     const old = 'x+=5'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 6 })
+    expect(result).toEqual({ start: 0, end: 6, ambiguous: false })
   })
 
   it('should match comparison operators', () => {
     const file = 'a !== b'
     const old = 'a!==b'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 7 })
+    expect(result).toEqual({ start: 0, end: 7, ambiguous: false })
   })
 
   it('should require exact string match', () => {
     const file = '"hello" "world"'
     const old = '"hello"'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 7 })
+    expect(result).toEqual({ start: 0, end: 7, ambiguous: false })
   })
 
   it('should not match different strings', () => {
@@ -279,21 +279,21 @@ describe('findLooseMatch', () => {
     const file = '// comment\ncode'
     const old = '// comment'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 10 })
+    expect(result).toEqual({ start: 0, end: 10, ambiguous: false })
   })
 
   it('should match in middle of file', () => {
     const file = 'before\nconst x = 42\nafter'
     const old = 'const x = 42'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 7, end: 19 })
+    expect(result).toEqual({ start: 7, end: 19, ambiguous: false })
   })
 
   it('should match with tabs and newlines', () => {
     const file = 'a\t+\nb'
     const old = 'a + b'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 5 })
+    expect(result).toEqual({ start: 0, end: 5, ambiguous: false })
   })
 
   it('should return null for no match', () => {
@@ -321,42 +321,42 @@ describe('findLooseMatch', () => {
     const file = 'if (a && b || c)'
     const old = 'if(a&&b||c)'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 16 })
+    expect(result).toEqual({ start: 0, end: 16, ambiguous: false })
   })
 
   it('should match array access with variations', () => {
     const file = 'arr[0]'
     const old = 'arr [ 0 ]'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 6 })
+    expect(result).toEqual({ start: 0, end: 6, ambiguous: false })
   })
 
   it('should match object literal with variations', () => {
     const file = '{key: value}'
     const old = '{ key : value }'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 12 })
+    expect(result).toEqual({ start: 0, end: 12, ambiguous: false })
   })
 
   it('should match function call with variations', () => {
     const file = 'fn(1, 2, 3)'
     const old = 'fn ( 1 , 2 , 3 )'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 11 })
+    expect(result).toEqual({ start: 0, end: 11, ambiguous: false })
   })
 
   it('should match ternary operator with variations', () => {
     const file = 'a ? b : c'
     const old = 'a?b:c'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 9 })
+    expect(result).toEqual({ start: 0, end: 9, ambiguous: false })
   })
 
   it('should preserve exact character boundaries', () => {
     const file = '  x  =  42  '
     const old = 'x=42'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 2, end: 10 })
+    expect(result).toEqual({ start: 2, end: 10, ambiguous: false })
     expect(file.slice(result!.start, result!.end)).toBe('x  =  42')
   })
 
@@ -364,28 +364,28 @@ describe('findLooseMatch', () => {
     const file = 'my_var = 1'
     const old = 'my_var=1'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 10 })
+    expect(result).toEqual({ start: 0, end: 10, ambiguous: false })
   })
 
   it('should handle numbers with leading dot', () => {
     const file = '.5 + .3'
     const old = '.5+.3'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 7 })
+    expect(result).toEqual({ start: 0, end: 7, ambiguous: false })
   })
 
   it('should not match across line boundaries when whitespace is required', () => {
     const file = 'foo\nbar'
     const old = 'foo bar'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 7 })
+    expect(result).toEqual({ start: 0, end: 7, ambiguous: false })
   })
 
   it('should handle \\r\\n line endings', () => {
     const file = 'x = 5\r\ny = 10'
     const old = 'x = 5'
     const result = findLooseMatch(file, old)
-    expect(result).toEqual({ start: 0, end: 5 })
+    expect(result).toEqual({ start: 0, end: 5, ambiguous: false })
   })
 
   it('should tokenize template literal with embedded expression', () => {

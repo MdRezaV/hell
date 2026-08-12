@@ -244,7 +244,7 @@ describe('IPC Handlers', () => {
         mockStream as unknown as ReturnType<typeof fs.createReadStream>
       )
 
-      const result = await handler({}, ['/workspace/test.txt'], 'foo')
+      const result = await handler({}, '/workspace', ['/workspace/test.txt'], 'foo')
 
       expect(result).toEqual(['/workspace/test.txt'])
     })
@@ -256,7 +256,7 @@ describe('IPC Handlers', () => {
         mockStream as unknown as ReturnType<typeof fs.createReadStream>
       )
 
-      const result = await handler({}, ['/workspace/test.txt'], 'missing')
+      const result = await handler({}, '/workspace', ['/workspace/test.txt'], 'missing')
 
       expect(result).toEqual([])
     })
