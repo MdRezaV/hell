@@ -232,7 +232,7 @@ src/
   manages lazy connections to MCP servers via `@modelcontextprotocol/sdk`.
 - **Two config tiers:** app-level (`settings.json` → `mcpServers` array, managed in Settings UI) and
   workspace-level (`.hell/mcp.json` at workspace root). Workspace entries override app-level by `id`.
-- **Default server:** shadcn/ui (`npx -y @anthropic/shadcn-mcp@latest`, stdio transport).
+- **Default server:** shadcn/ui (official `shadcn` CLI, stdio transport via `npx -y shadcn@latest mcp`).
 - **IPC channels:** `mcp:get-servers`, `mcp:get-tools`, `mcp:call-tool`, `mcp:server-status`,
   `mcp:disconnect-server`, `mcp:save-workspace-config`, `mcp:load-workspace-config`.
 - **Prompt injection:** `buildPrompt` accepts optional `McpToolInfo[]`; when present, an

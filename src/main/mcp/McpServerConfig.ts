@@ -35,7 +35,7 @@ export const DEFAULT_MCP_SERVERS: McpServerConfig[] = [
     name: 'shadcn/ui',
     transport: 'stdio',
     command: 'npx',
-    args: ['-y', '@anthropic/shadcn-mcp@latest'],
+    args: ['-y', 'shadcn@latest', 'mcp'],
     enabled: true
   }
 ]

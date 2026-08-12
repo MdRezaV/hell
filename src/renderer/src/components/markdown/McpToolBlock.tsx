@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo, useState } from 'react'
-import { Check, ChevronDown, ChevronRight, CircleAlert, Play, X, Zap } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, CircleAlert, Copy, Play, X, Zap } from 'lucide-react'
 import { useWorkspace } from '../../WorkspaceContext'
-import { useApplyRegistration, type ApplyBlockStatus } from '../../hooks/useApplyAll'
+import { useApplyAllContext, useApplyRegistration, type ApplyBlockStatus } from '../../hooks/useApplyAll'
 import '../../styles/McpToolBlock.css'
 
 interface ParsedMcpTool {
@@ -53,6 +53,9 @@ export const McpToolBlock = memo(function McpToolBlock({
   const [error, setError] = useState<string | null>(null)
   const [showParams, setShowParams] = useState(true)
   const [showResult, setShowResult] = useState(true)
+  const [resultCopied, setResultCopied] = useState(false)
+  const ctx = useApplyAllContext()
+  const stableKey = `mcp:${serverId}:${toolName}:${JSON.stringify(params)}`
 
   const handleExecute = useCallback(async (): Promise<void> => {
     if (!toolName || paramsError) return
@@ -70,6 +73,7 @@ export const McpToolBlock = memo(function McpToolBlock({
       if (res.success && !res.isError) {
         setResult(res.content)
         setExecState('success')
+        ctx?.registerMcpResult(stableKey, serverId, toolName, res.content)
       } else {
         setError(res.error || res.content || 'Tool execution failed')
         setExecState('error')
@@ -82,11 +86,21 @@ export const McpToolBlock = memo(function McpToolBlock({
       }
       throw e
     }
-  }, [workspace, serverId, toolName, params, paramsError, execState])
+  }, [workspace, serverId, toolName, params, paramsError, execState, ctx, stableKey])
+
+  const handleCopyResult = useCallback(async (): Promise<void> => {
+    if (result === null) return
+    try {
+      await window.electron.ipcRenderer.invoke('clipboard:write-text', result)
+      setResultCopied(true)
+      window.setTimeout(() => setResultCopied(false), 1500)
+    } catch {
+      /* ignore clipboard errors */
+    }
+  }, [result])
 
   const applyStatus: ApplyBlockStatus =
     execState === 'success' ? 'applied' : execState === 'error' ? 'error' : 'idle'
-  const stableKey = `mcp:${serverId}:${toolName}:${JSON.stringify(params)}`
   const effectiveStatus = useApplyRegistration(handleExecute, applyStatus, undefined, stableKey)
 
   const paramsJson = useMemo(() => {
@@ -169,14 +183,24 @@ export const McpToolBlock = memo(function McpToolBlock({
 
       {result !== null && (
         <div className="md-mcp-section">
-          <button
-            type="button"
-            className="md-mcp-section-toggle"
-            onClick={() => setShowResult((v) => !v)}
-          >
-            {showResult ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            <span>Result</span>
-          </button>
+          <div className="md-mcp-section-header">
+            <button
+              type="button"
+              className="md-mcp-section-toggle"
+              onClick={() => setShowResult((v) => !v)}
+            >
+              {showResult ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <span>Result</span>
+            </button>
+            <button
+              type="button"
+              className="md-mcp-copy-result"
+              onClick={handleCopyResult}
+              title="Copy result to clipboard"
+            >
+              {resultCopied ? <Check size={12} /> : <Copy size={12} />}
+            </button>
+          </div>
           {showResult && <pre className="md-mcp-result">{result}</pre>}
         </div>
       )}

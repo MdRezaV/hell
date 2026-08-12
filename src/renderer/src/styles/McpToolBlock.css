@@ -69,6 +69,18 @@
   @apply flex items-center gap-1 w-full px-3 py-1.5 text-[11px] font-medium text-text-muted bg-transparent border-none cursor-pointer text-left hover:bg-surface-0 transition-colors duration-fast;
 }
 
+.md-mcp-section-header {
+  @apply flex items-center;
+}
+
+.md-mcp-section-header .md-mcp-section-toggle {
+  @apply flex-1 w-auto;
+}
+
+.md-mcp-copy-result {
+  @apply inline-flex items-center justify-center px-2.5 py-1.5 text-text-muted bg-transparent border-none cursor-pointer hover:text-text hover:bg-surface-0 transition-colors duration-fast flex-shrink-0;
+}
+
 .md-mcp-params,
 .md-mcp-result {
   @apply m-0 px-3 py-2 text-[11px] font-mono text-text-secondary overflow-x-auto whitespace-pre-wrap break-words;

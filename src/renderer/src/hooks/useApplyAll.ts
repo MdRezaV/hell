@@ -8,6 +8,12 @@ export interface ApplyBlockInfo {
   status: ApplyBlockStatus
 }
 
+export interface McpResultEntry {
+  serverId: string
+  toolName: string
+  result: string
+}
+
 function hashString(str: string): string {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -23,6 +29,8 @@ export interface ApplyAllContextValue {
   unregister: (id: string) => void
   setStatus: (id: string, status: ApplyBlockStatus) => void
   blocks: Map<string, ApplyBlockInfo>
+  registerMcpResult: (key: string, serverId: string, toolName: string, result: string) => void
+  mcpResults: Map<string, McpResultEntry>
 }
 
 export const ApplyAllContext = createContext<ApplyAllContextValue | null>(null)

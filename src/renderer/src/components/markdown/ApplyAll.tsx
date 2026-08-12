@@ -1,9 +1,10 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { Check, Plus, Undo2 } from 'lucide-react'
+import { Check, Copy, Plus, Undo2 } from 'lucide-react'
 import {
   ApplyAllContext,
   type ApplyBlockInfo,
   type ApplyBlockStatus,
+  type McpResultEntry,
   useApplyAllContext
 } from '@renderer/hooks/useApplyAll'
 
@@ -76,6 +77,19 @@ export function FileIncludeProvider({ children }: { children: ReactNode }): Reac
 export function ApplyAllProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [blocks, setBlocks] = useState<Map<string, ApplyBlockInfo>>(new Map())
 
+  const [mcpResults, setMcpResults] = useState<Map<string, McpResultEntry>>(new Map())
+
+  const registerMcpResult = useCallback(
+    (key: string, serverId: string, toolName: string, result: string) => {
+      setMcpResults((prev) => {
+        const next = new Map(prev)
+        next.set(key, { serverId, toolName, result })
+        return next
+      })
+    },
+    []
+  )
+
   const register = useCallback(
     (id: string, apply: () => Promise<void>, unapply?: () => Promise<void>) => {
       setBlocks((prev) => {
@@ -112,8 +126,8 @@ export function ApplyAllProvider({ children }: { children: ReactNode }): React.J
   }, [])
 
   const value = useMemo(
-    () => ({ blocks, register, unregister, setStatus }),
-    [blocks, register, unregister, setStatus]
+    () => ({ blocks, register, unregister, setStatus, mcpResults, registerMcpResult }),
+    [blocks, register, unregister, setStatus, mcpResults, registerMcpResult]
   )
 
   return <ApplyAllContext.Provider value={value}>{children}</ApplyAllContext.Provider>
@@ -123,6 +137,7 @@ export function ApplyAllBar(): React.JSX.Element | null {
   const ctx = useApplyAllContext()
   const includeCtx = useFileIncludeContext()
   const [busy, setBusy] = useState<'idle' | 'applying' | 'unapplying'>('idle')
+  const [resultsCopied, setResultsCopied] = useState(false)
 
   useEffect(() => {
     if (!includeCtx) return
@@ -143,8 +158,10 @@ export function ApplyAllBar(): React.JSX.Element | null {
 
   const hasApplyBlocks = !!ctx && ctx.blocks.size > 0
   const hasIncludePaths = !!includeCtx && includeCtx.paths.size > 0
+  const mcpResultEntries = ctx ? [...ctx.mcpResults.values()] : []
+  const hasMcpResults = mcpResultEntries.length > 0
 
-  if (!hasApplyBlocks && !hasIncludePaths) return null
+  if (!hasApplyBlocks && !hasIncludePaths && !hasMcpResults) return null
 
   const blockArr = ctx ? [...ctx.blocks.values()] : []
   const idleBlocks = blockArr.filter((b) => b.status === 'idle')
@@ -200,7 +217,20 @@ export function ApplyAllBar(): React.JSX.Element | null {
     }
   }
 
-
+  const handleCopyAllResults = async (): Promise<void> => {
+    if (!hasMcpResults) return
+    const parts = mcpResultEntries.map(
+      (entry) => `### ${entry.serverId} › ${entry.toolName}\n${entry.result}`
+    )
+    const payload = `MCP tool results:\n\n${parts.join('\n\n')}`
+    try {
+      await window.electron.ipcRenderer.invoke('clipboard:write-text', payload)
+      setResultsCopied(true)
+      window.setTimeout(() => setResultsCopied(false), 1500)
+    } catch {
+      /* ignore clipboard errors */
+    }
+  }
 
   let variantClass = ''
   let label = `Apply All (${idleCount})`
@@ -255,6 +285,12 @@ export function ApplyAllBar(): React.JSX.Element | null {
 
   return (
     <div className="md-apply-all-bar">
+      {hasMcpResults && (
+        <button type="button" className="md-apply-all" onClick={handleCopyAllResults}>
+          {resultsCopied ? <Check size={12} /> : <Copy size={12} />}
+          <span>{resultsCopied ? 'Copied' : `Copy Results (${mcpResultEntries.length})`}</span>
+        </button>
+      )}
       {hasApplyBlocks && (
         <button
           type="button"
